@@ -3,9 +3,13 @@
 const TAU = Math.PI * 2;
 const OSC_NAMES = ["click", "sine", "saw", "square"];
 const STORAGE_KEY = "QuadSynth.PersistentState.v1";
+const TOUCH_VELOCITY = 127;
+const SCHEDULER_INTERVAL_MS = 20;
+const SCHEDULE_AHEAD_SECONDS = .075;
 
 let audioCtx = null, masterGain = null, analyser = null, scopeData = null;
 let scopeCanvas = null, scopeContext = null;
+const waveCache = new Map();
 const activeVoices = new Map(), pointerNotes = new Map(), computerHeld = new Set(), midiHeld = new Map();
 
 const synthState = {
@@ -13,14 +17,14 @@ const synthState = {
     sine: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     saw: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     square: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
-    envelope: { attack: .02, decay: .10, sustain: .75, release: .25 },
-    velocity: 127
+    envelope: { attack: .02, decay: .10, sustain: .75, release: .25 }
 };
 
 const sequencer = {
     steps: Array(8).fill(null), armedStep: null, currentStep: -1,
     recording: false, lockMode: false, playing: false, bpm: 120,
-    timer: null, soundingKey: null
+    timer: null, soundingKey: null, nextStepTime: 0, sequenceNumber: 0,
+    externalClock: false, midiClockCount: 0, lastClockAt: 0, clockIntervals: []
 };
 let stepButtons = [], playButton, recordButton, lockButton, clearButton;
 
@@ -58,7 +62,6 @@ function loadPersistentState() {
             synthState.envelope.sustain = clamp(Number(e.sustain) || 0, 0, 1);
             synthState.envelope.release = clamp(Number(e.release) || 0, 0, 4);
         }
-        synthState.velocity = Math.round(clamp(Number(saved.synth?.velocity) || 127, 1, 127));
         const seq = saved.sequencer;
         if (seq?.steps?.length === 8) sequencer.steps = seq.steps.map(validateSavedStep);
         if (Number.isInteger(seq?.armedStep) && seq.armedStep >= 0 && seq.armedStep < 8) sequencer.armedStep = seq.armedStep;
@@ -82,10 +85,20 @@ function ensureAudio() {
         masterGain = audioCtx.createGain(); masterGain.gain.value = .22;
         analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .04;
         masterGain.connect(analyser); analyser.connect(audioCtx.destination);
+        primeWaveCache();
     }
     if (audioCtx.state === "suspended") audioCtx.resume().catch(console.error);
     return true;
 }
+
+function waveKey(type, phase) { return `${type}:${wrap(Number(phase) || 0, 0, TAU).toFixed(2)}`; }
+function cachedPhaseWave(type, phase) {
+    const key = waveKey(type, phase);
+    let wave = waveCache.get(key);
+    if (!wave) { wave = createPhaseWave(type, phase); waveCache.set(key, wave); }
+    return wave;
+}
+function primeWaveCache() { OSC_NAMES.forEach(name => cachedPhaseWave(name, synthState[name].phase)); }
 
 function oscillatorIsAudible(settings, name) {
     if (settings[name].mute) return false;
@@ -130,20 +143,20 @@ function createStandardWave(type, phase) {
 }
 function createPhaseWave(type, phase) { return type === "click" ? createClickWave(phase) : createStandardWave(type, phase); }
 
-function createVoiceSource(name, voice, settings) {
+function createVoiceSource(name, voice, settings, when = audioCtx.currentTime) {
     const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), s = settings[name];
-    osc.frequency.setValueAtTime(tunedFrequency(voice.baseFrequency, s), audioCtx.currentTime);
-    osc.setPeriodicWave(createPhaseWave(name, s.phase));
-    gain.gain.setValueAtTime(oscillatorGain(settings, name), audioCtx.currentTime);
-    osc.connect(gain); gain.connect(voice.envelopeNode); osc.start();
+    osc.frequency.setValueAtTime(tunedFrequency(voice.baseFrequency, s), when);
+    osc.setPeriodicWave(cachedPhaseWave(name, s.phase));
+    gain.gain.setValueAtTime(oscillatorGain(settings, name), when);
+    osc.connect(gain); gain.connect(voice.envelopeNode); osc.start(when);
     voice.sources[name] = { oscillator: osc, gain };
 }
 
-function noteOn(midi, velocity = synthState.velocity, overrideState = null, voiceKey = null) {
+function noteOn(midi, velocity = TOUCH_VELOCITY, overrideState = null, voiceKey = null, when = null) {
     if (!ensureAudio() || !Number.isFinite(midi = Number(midi))) return;
     const key = voiceKey || `note:${midi}`; if (activeVoices.has(key)) killVoice(key);
     const settings = overrideState ? JSON.parse(JSON.stringify(overrideState)) : synthState;
-    const now = audioCtx.currentTime, vg = clamp(Number(velocity) / 127, .001, 1);
+    const now = Math.max(audioCtx.currentTime, Number.isFinite(when) ? when : audioCtx.currentTime), vg = clamp(Number(velocity) / 127, .001, 1);
     const a = Math.max(.002, settings.envelope.attack), d = Math.max(.002, settings.envelope.decay);
     const env = audioCtx.createGain(); env.gain.setValueAtTime(.0001, now);
     env.gain.linearRampToValueAtTime(vg, now + a);
@@ -151,7 +164,7 @@ function noteOn(midi, velocity = synthState.velocity, overrideState = null, voic
     env.connect(masterGain);
     const voice = { key, midi, baseFrequency: midiToFrequency(midi), envelopeNode: env, sources: {}, locked: !!overrideState, released: false, release: Math.max(.01, settings.envelope.release) };
     activeVoices.set(key, voice);
-    try { OSC_NAMES.forEach(name => createVoiceSource(name, voice, settings)); }
+    try { OSC_NAMES.forEach(name => createVoiceSource(name, voice, settings, now)); }
     catch (e) { console.error(e); killVoice(key); }
 }
 
@@ -179,7 +192,7 @@ function updateLiveVoices(name, property) {
     activeVoices.forEach(v => {
         if (v.locked || v.released || !v.sources[name]) return;
         if (property === "octave" || property === "tune") v.sources[name].oscillator.frequency.setTargetAtTime(tunedFrequency(v.baseFrequency, synthState[name]), audioCtx.currentTime, .008);
-        if (property === "phase") v.sources[name].oscillator.setPeriodicWave(createPhaseWave(name, synthState[name].phase));
+        if (property === "phase") v.sources[name].oscillator.setPeriodicWave(cachedPhaseWave(name, synthState[name].phase));
     });
 }
 
@@ -195,11 +208,20 @@ const knobConfigs = {
     decay: { min: 0, max: 2000, value: 100, reset: 0, step: 1, apply(v) { synthState.envelope.decay = v / 1000; savePersistentState(); } },
     sustain: { min: 0, max: 100, value: 75, reset: 0, step: 1, apply(v) { synthState.envelope.sustain = v / 100; savePersistentState(); } },
     release: { min: 0, max: 4000, value: 250, reset: 0, step: 1, apply(v) { synthState.envelope.release = v / 1000; savePersistentState(); } },
-    velocity: { min: 1, max: 127, value: 127, reset: 127, step: 1, apply(v) { synthState.velocity = v; savePersistentState(); } }
+    bpm: { min: 20, max: 400, value: 120, reset: 120, step: 1, apply(v) { setTempo(v, false); } }
 };
 function syncKnobs() {
     OSC_NAMES.forEach(n => { knobConfigs[n+"Level"].value=synthState[n].level*100; knobConfigs[n+"Octave"].value=synthState[n].octave; knobConfigs[n+"Tune"].value=synthState[n].tune; knobConfigs[n+"Phase"].value=synthState[n].phase; });
-    knobConfigs.attack.value=synthState.envelope.attack*1000; knobConfigs.decay.value=synthState.envelope.decay*1000; knobConfigs.sustain.value=synthState.envelope.sustain*100; knobConfigs.release.value=synthState.envelope.release*1000; knobConfigs.velocity.value=synthState.velocity;
+    knobConfigs.attack.value=synthState.envelope.attack*1000; knobConfigs.decay.value=synthState.envelope.decay*1000; knobConfigs.sustain.value=synthState.envelope.sustain*100; knobConfigs.release.value=synthState.envelope.release*1000; knobConfigs.bpm.value=sequencer.bpm;
+}
+function refreshTempoUI(source = sequencer.externalClock ? "MIDI CLOCK" : "TEMPO") {
+    const screen=document.querySelector('.knob[data-control="bpm"] .knobScreen');if(screen)screen.textContent=String(Math.round(sequencer.bpm));
+    const title=document.getElementById("tempoTitle");if(title)title.textContent=source;
+}
+function setTempo(value, fromMidi) {
+    sequencer.bpm=clamp(Number(value)||120,20,400);knobConfigs.bpm.value=sequencer.bpm;
+    if(!fromMidi)sequencer.externalClock=false;
+    refreshTempoUI(fromMidi?"MIDI CLOCK":"TEMPO");savePersistentState();
 }
 function formatKnob(c,v) { if(c.radians)return v.toFixed(2); const r=Math.round(v); return c.signed&&r>0?`+${r}`:String(r); }
 function setupKnobs() {
@@ -222,18 +244,31 @@ function setVisibleKey(midi,down){document.querySelectorAll(`.key[data-midi="${m
 function midiIsStillHeld(midi){for(const h of pointerNotes.values())if(h.midi===midi)return true;for(const k of computerHeld)if(computerKeyMap[k]===midi)return true;return false;}
 function refreshVisibleKey(midi){setVisibleKey(midi,midiIsStillHeld(midi));}
 function releasePointerNote(id){const h=pointerNotes.get(id);if(!h)return;pointerNotes.delete(id);noteOffByKey(h.voiceKey);refreshVisibleKey(h.midi);}
-function setupTouchKeyboard(){document.querySelectorAll("#keyboard .key[data-midi]").forEach(el=>{el.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;if(e.cancelable)e.preventDefault();e.stopPropagation();if(!ensureAudio())return;const midi=Number(el.dataset.midi);releasePointerNote(e.pointerId);const voiceKey=`touch:${e.pointerId}`;pointerNotes.set(e.pointerId,{midi,voiceKey,element:el});el.classList.add("down");recordNoteIfNeeded(midi,synthState.velocity);noteOn(midi,synthState.velocity,null,voiceKey);},{passive:false});});document.addEventListener("pointerup",e=>releasePointerNote(e.pointerId),true);document.addEventListener("pointercancel",e=>releasePointerNote(e.pointerId),true);}
+function setupTouchKeyboard(){document.querySelectorAll("#keyboard .key[data-midi]").forEach(el=>{el.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button!==0)return;if(e.cancelable)e.preventDefault();e.stopPropagation();if(!ensureAudio())return;const midi=Number(el.dataset.midi);releasePointerNote(e.pointerId);const voiceKey=`touch:${e.pointerId}`;pointerNotes.set(e.pointerId,{midi,voiceKey,element:el});el.classList.add("down");recordNoteIfNeeded(midi,TOUCH_VELOCITY);noteOn(midi,TOUCH_VELOCITY,null,voiceKey);},{passive:false});});document.addEventListener("pointerup",e=>releasePointerNote(e.pointerId),true);document.addEventListener("pointercancel",e=>releasePointerNote(e.pointerId),true);}
 
 const computerKeyMap={a:60,w:61,s:62,e:63,d:64,f:65,t:66,g:67,y:68,h:69,u:70,j:71,k:72,o:73,l:74,p:75};
-function setupComputerKeyboard(){window.addEventListener("keydown",e=>{const k=e.key.toLowerCase(),m=computerKeyMap[k];if(e.repeat||m===undefined||computerHeld.has(k))return;e.preventDefault();ensureAudio();computerHeld.add(k);recordNoteIfNeeded(m,synthState.velocity);noteOn(m,synthState.velocity,null,`pc:${k}`);setVisibleKey(m,true);});window.addEventListener("keyup",e=>{const k=e.key.toLowerCase(),m=computerKeyMap[k];if(m===undefined)return;computerHeld.delete(k);noteOffByKey(`pc:${k}`);refreshVisibleKey(m);});}
+function setupComputerKeyboard(){window.addEventListener("keydown",e=>{const k=e.key.toLowerCase(),m=computerKeyMap[k];if(e.repeat||m===undefined||computerHeld.has(k))return;e.preventDefault();ensureAudio();computerHeld.add(k);recordNoteIfNeeded(m,TOUCH_VELOCITY);noteOn(m,TOUCH_VELOCITY,null,`pc:${k}`);setVisibleKey(m,true);});window.addEventListener("keyup",e=>{const k=e.key.toLowerCase(),m=computerKeyMap[k];if(m===undefined)return;computerHeld.delete(k);noteOffByKey(`pc:${k}`);refreshVisibleKey(m);});}
 
 function updateSequencerUI(){stepButtons.forEach((b,i)=>{b.classList.toggle("recorded",sequencer.steps[i]!==null);b.classList.toggle("armed",sequencer.armedStep===i);b.classList.toggle("current",sequencer.currentStep===i);});if(playButton){playButton.textContent=sequencer.playing?"STOP":"PLAY";playButton.classList.toggle("active",sequencer.playing);}recordButton?.classList.toggle("active",sequencer.recording);lockButton?.classList.toggle("active",sequencer.lockMode);}
 function recordNoteIfNeeded(midi,velocity){if(!sequencer.recording||sequencer.armedStep===null)return;sequencer.steps[sequencer.armedStep]={midi,velocity,locked:sequencer.lockMode,snapshot:sequencer.lockMode?cloneState():null};sequencer.recording=false;updateSequencerUI();savePersistentState();}
 function previewStep(i){const s=sequencer.steps[i];if(!s)return;const k=`preview:${i}`;noteOn(s.midi,s.velocity,s.locked?s.snapshot:null,k);setTimeout(()=>noteOffByKey(k),180);}
 function setupSequencer(){stepButtons=[...document.querySelectorAll(".step")];playButton=document.getElementById("play");recordButton=document.getElementById("record");lockButton=document.getElementById("lock");clearButton=document.getElementById("clear");stepButtons.forEach((b,i)=>{let timer,long=false;b.onpointerdown=e=>{if(e.cancelable)e.preventDefault();long=false;timer=setTimeout(()=>{long=true;sequencer.armedStep=i;sequencer.steps[i]=null;sequencer.recording=true;updateSequencerUI();savePersistentState();},500);};b.onpointerup=e=>{if(e.cancelable)e.preventDefault();clearTimeout(timer);if(long)return;sequencer.armedStep=i;updateSequencerUI();savePersistentState();previewStep(i);};b.onpointercancel=()=>clearTimeout(timer);});recordButton.onclick=()=>{ensureAudio();sequencer.recording=!sequencer.recording;if(sequencer.recording&&sequencer.armedStep===null)sequencer.armedStep=0;updateSequencerUI();savePersistentState();};lockButton.onclick=()=>{sequencer.lockMode=!sequencer.lockMode;updateSequencerUI();savePersistentState();};clearButton.onclick=()=>{if(sequencer.armedStep===null)sequencer.steps.fill(null);else sequencer.steps[sequencer.armedStep]=null;sequencer.recording=false;updateSequencerUI();savePersistentState();};playButton.onclick=()=>sequencer.playing?stopSequencer():startSequencer();updateSequencerUI();}
-function sequencerTick(){if(!sequencer.playing)return;if(sequencer.soundingKey)noteOffByKey(sequencer.soundingKey);sequencer.currentStep=(sequencer.currentStep+1)%8;updateSequencerUI();const s=sequencer.steps[sequencer.currentStep];if(!s){sequencer.soundingKey=null;return;}const k=`seq:${performance.now()}`;noteOn(s.midi,s.velocity,s.locked?s.snapshot:null,k);sequencer.soundingKey=k;}
-function startSequencer(){if(sequencer.playing||!ensureAudio())return;sequencer.playing=true;sequencer.currentStep=-1;sequencerTick();sequencer.timer=setInterval(sequencerTick,60000/sequencer.bpm/2);updateSequencerUI();}
-function stopSequencer(){sequencer.playing=false;clearInterval(sequencer.timer);sequencer.timer=null;if(sequencer.soundingKey)noteOffByKey(sequencer.soundingKey);sequencer.soundingKey=null;sequencer.currentStep=-1;updateSequencerUI();}
+function scheduleSequencerStep(when){if(!sequencer.playing)return;const step=(sequencer.currentStep+1)%8;sequencer.currentStep=step;setTimeout(()=>{if(sequencer.playing){sequencer.currentStep=step;updateSequencerUI();}},Math.max(0,(when-audioCtx.currentTime)*1000));const s=sequencer.steps[step];if(!s)return;const k=`seq:${++sequencer.sequenceNumber}`;noteOn(s.midi,s.velocity,s.locked?s.snapshot:null,k,when);setTimeout(()=>noteOffByKey(k),Math.max(0,(when-audioCtx.currentTime+60/sequencer.bpm*.42)*1000));sequencer.soundingKey=k;}
+function schedulerLoop(){if(!sequencer.playing||sequencer.externalClock)return;while(sequencer.nextStepTime<audioCtx.currentTime+SCHEDULE_AHEAD_SECONDS){scheduleSequencerStep(sequencer.nextStepTime);sequencer.nextStepTime+=60/sequencer.bpm/2;}sequencer.timer=setTimeout(schedulerLoop,SCHEDULER_INTERVAL_MS);}
+function startSequencer(external=false){if(sequencer.playing||!ensureAudio())return;sequencer.playing=true;sequencer.externalClock=!!external;sequencer.currentStep=-1;sequencer.nextStepTime=audioCtx.currentTime+.01;if(!external)schedulerLoop();updateSequencerUI();refreshTempoUI();}
+function stopSequencer(){sequencer.playing=false;clearTimeout(sequencer.timer);sequencer.timer=null;if(sequencer.soundingKey)noteOffByKey(sequencer.soundingKey);sequencer.soundingKey=null;sequencer.currentStep=-1;updateSequencerUI();}
+
+function receiveMidiRealtime(status, receivedAt=performance.now()) {
+    if(status===0xfa){stopSequencer();sequencer.midiClockCount=0;startSequencer(true);return;}
+    if(status===0xfb){if(!sequencer.playing)startSequencer(true);return;}
+    if(status===0xfc){stopSequencer();return;}
+    if(status!==0xf8)return;
+    sequencer.externalClock=true;
+    if(sequencer.lastClockAt){const dt=receivedAt-sequencer.lastClockAt;if(dt>1&&dt<500){sequencer.clockIntervals.push(dt);if(sequencer.clockIntervals.length>24)sequencer.clockIntervals.shift();const avg=sequencer.clockIntervals.reduce((a,b)=>a+b,0)/sequencer.clockIntervals.length;setTempo(60000/(avg*24),true);}}
+    sequencer.lastClockAt=receivedAt;
+    if(!sequencer.playing)startSequencer(true);
+    if((sequencer.midiClockCount++%12)===0)scheduleSequencerStep(audioCtx.currentTime+.002);
+}
 
 function resizeScope(){if(!scopeCanvas||!scopeContext)return;const r=scopeCanvas.getBoundingClientRect(),d=window.devicePixelRatio||1;scopeCanvas.width=Math.max(1,Math.round(r.width*d));scopeCanvas.height=Math.max(1,Math.round(r.height*d));scopeContext.setTransform(d,0,0,d,0,0);}
 function drawTrace(w,h,l,color,glow){scopeContext.beginPath();for(let i=0;i<scopeData.length;i++){const x=i/(scopeData.length-1)*w,y=h/2+(scopeData[i]-128)/128*h*.43;i?scopeContext.lineTo(x,y):scopeContext.moveTo(x,y);}scopeContext.lineWidth=l;scopeContext.strokeStyle=color;scopeContext.shadowColor="#ffb000";scopeContext.shadowBlur=glow;scopeContext.stroke();}
@@ -245,5 +280,5 @@ window.addEventListener("blur",releaseAllInputNotes);window.addEventListener("pa
 document.addEventListener("visibilitychange",()=>{if(document.hidden){savePersistentState();releaseAllInputNotes();}});
 document.addEventListener("touchmove",e=>{const t=e.target instanceof Element?e.target:null;if((t?.closest(".knob")||t?.closest("#keyboard"))&&e.cancelable)e.preventDefault();},{passive:false});
 
-function bootQuadSynth(){loadPersistentState();syncKnobs();setupKnobs();setupSoloMute();setupSequencer();setupTouchKeyboard();setupComputerKeyboard();setupScope();window.addEventListener("resize",resizeScope);savePersistentState();console.log("QuadSynth ready: native Android MIDI bridge enabled.");}
+function bootQuadSynth(){loadPersistentState();syncKnobs();setupKnobs();setupSoloMute();setupSequencer();setupTouchKeyboard();setupComputerKeyboard();setupScope();ensureAudio();refreshTempoUI();window.addEventListener("resize",resizeScope);savePersistentState();console.log("QuadSynth ready: native Android MIDI bridge enabled.");}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bootQuadSynth,{once:true});else bootQuadSynth();

@@ -43,7 +43,10 @@
         let i = 0;
         while (i < bytes.length) {
             let status = bytes[i];
-            if (status >= 0xf8) { i++; continue; }
+            if (status >= 0xf8) {
+                if (typeof receiveMidiRealtime === "function") receiveMidiRealtime(status, performance.now());
+                i++; continue;
+            }
             if (status & 0x80) { runningStatus = status; i++; }
             else if (runningStatus !== null) status = runningStatus;
             else { i++; continue; }
