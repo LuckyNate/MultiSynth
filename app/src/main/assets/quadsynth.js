@@ -48,7 +48,8 @@ function loadPersistentState() {
         });
         const e = saved.synth?.envelope;
         if (e) {
-            synthState.envelope.attack = clamp(Number(e.attack) || 0, 0, 2);
+            const savedAttack = clamp(Number(e.attack) || 0, 0, 2);
+            synthState.envelope.attack = Math.abs(savedAttack - .02) < .000001 ? .001 : savedAttack;
             synthState.envelope.decay = clamp(Number(e.decay) || 0, 0, 2);
             synthState.envelope.sustain = clamp(Number(e.sustain) || 0, 0, 1);
             synthState.envelope.release = clamp(Number(e.release) || 0, 0, 4);
