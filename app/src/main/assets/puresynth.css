@@ -1,0 +1,219 @@
+:root {
+    --black: #030303;
+    --white: #f4f4f4;
+    --white-bright: #ffffff;
+    --white-dim: #676767;
+    --shadow: rgba(255,255,255,.55);
+    --scope-height: 150px;
+    --keyboard-height: 135px;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html, body {
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    background: #000;
+    color: var(--white);
+    font-family: "Courier New", monospace;
+}
+
+button, input { font: inherit; }
+button { touch-action: manipulation; }
+
+#synth {
+    min-height: 100vh;
+    padding-top: var(--scope-height);
+    padding-bottom: calc(var(--keyboard-height) + 10px);
+    background:
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.018) 0, rgba(255,255,255,.018) 1px, transparent 2px, transparent 4px),
+        radial-gradient(circle at 50% 0%, #161616, #030303 65%);
+}
+
+.scopePanel {
+    position: fixed;
+    z-index: 100;
+    inset: 0 0 auto;
+    height: var(--scope-height);
+    padding: 8px;
+    border-bottom: 1px solid var(--white-dim);
+    background: rgba(0,5,1,.985);
+    box-shadow: 0 8px 18px rgba(0,0,0,.9);
+}
+
+.scopeHeading {
+    height: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px var(--shadow);
+}
+
+#status { color: var(--white-bright); }
+
+#scope {
+    display: block;
+    width: 100%;
+    height: 110px;
+    border: 1px solid var(--white-dim);
+    border-radius: 4px;
+    background:
+        linear-gradient(rgba(122,101,0,.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(122,101,0,.13) 1px, transparent 1px),
+        #030303;
+    background-size: 25px 25px;
+    box-shadow: inset 0 0 25px #000, 0 0 10px rgba(255,255,255,.12);
+}
+
+.channelPanel {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(260px,1fr));
+    gap: 8px;
+    padding: 8px;
+}
+
+.channel, .globalPanel, .connectionPanel {
+    border: 1px solid var(--white-dim);
+    border-radius: 6px;
+    background: rgba(2,9,4,.9);
+    box-shadow: inset 0 0 20px rgba(0,0,0,.8);
+}
+
+.channel { min-width: 0; padding: 9px; }
+.channel h2 { margin: 0; color: var(--white-bright); font-size: 18px; letter-spacing: 3px; text-align: center; text-shadow: 0 0 10px var(--shadow); }
+.signalLabel { margin: 3px 0 11px; color: var(--white-dim); font-size: 9px; text-align: center; letter-spacing: 1px; }
+.controls { display: grid; grid-template-columns: repeat(5,minmax(45px,1fr)); gap: 4px; }
+.control { min-width: 0; display: flex; align-items: center; flex-direction: column; }
+.control label, .globalControl label { height: 22px; font-size: 9px; letter-spacing: .5px; text-align: center; }
+.control output { min-height: 16px; margin: 3px 0; font-size: 9px; white-space: nowrap; }
+
+.knob {
+    --rotation: 0deg;
+    position: relative;
+    width: 52px;
+    aspect-ratio: 1;
+    border: 2px solid var(--white-dim);
+    border-radius: 50%;
+    background: radial-gradient(circle at 42% 35%, #3a3a3a, #151515 47%, #030303 75%);
+    box-shadow: inset 0 0 9px #000, 0 0 7px rgba(255,255,255,.25);
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+.knob::before {
+    content: "";
+    position: absolute;
+    left: calc(50% - 1px);
+    top: 7%;
+    width: 2px;
+    height: 39%;
+    border-radius: 2px;
+    background: var(--white-bright);
+    box-shadow: 0 0 7px var(--white);
+    transform-origin: 50% 110%;
+    transform: rotate(var(--rotation));
+}
+
+.knob.active { border-color: var(--white-bright); box-shadow: inset 0 0 9px #000, 0 0 14px var(--shadow); }
+
+.stepButton, #panic, #connectionControls .btn {
+    border: 1px solid var(--white-dim);
+    border-radius: 3px;
+    background: #080808;
+    color: var(--white);
+}
+
+.stepButton { width: 27px; height: 22px; padding: 0; line-height: 18px; }
+.stepButton:active, #panic:active, #connectionControls .btn:active { color: #151515; background: var(--white); box-shadow: 0 0 12px var(--shadow); }
+.plus { margin-bottom: 4px; }
+.minus { margin-top: 1px; }
+
+.globalPanel {
+    display: grid;
+    grid-template-columns: repeat(5,minmax(100px,1fr)) 90px;
+    gap: 9px;
+    align-items: end;
+    margin: 0 8px 8px;
+    padding: 9px;
+}
+
+.globalControl { display: flex; align-items: center; flex-direction: column; }
+.globalControl input { width: 100%; accent-color: var(--white); }
+.globalControl output { min-height: 16px; font-size: 9px; }
+#panic { height: 40px; color: var(--white-bright); }
+
+.connectionPanel { margin: 0 8px 8px; }
+.panelTitle { padding: 5px 7px 4px; border-bottom: 1px solid var(--white-dim); color: var(--white-bright); font-size: 10px; font-weight: bold; letter-spacing: 2px; }
+#connectionControls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; padding: 7px; }
+#connectionControls:empty { display: none; }
+#connectionControls .btn { min-height: 34px; }
+
+#keyboard {
+    position: fixed;
+    z-index: 90;
+    inset: auto 0 0;
+    height: var(--keyboard-height);
+    overflow: hidden;
+    border-top: 2px solid var(--white);
+    background: #000;
+    box-shadow: 0 -7px 20px rgba(0,0,0,.9);
+    touch-action: none;
+}
+
+.key { position: absolute; top: 0; border-radius: 0 0 5px 5px; touch-action: none; }
+.key.white { z-index: 1; height: 100%; border: 1px solid #555555; background: linear-gradient(to bottom,#363636,#151515 75%,#292929); }
+.key.black { z-index: 2; height: 61%; border: 1px solid var(--white-dim); background: linear-gradient(to bottom,#030303,#202020 75%,#080808); box-shadow: 0 5px 8px #000; }
+.key.down { background: linear-gradient(to bottom,var(--white-bright),#d8d8d8 70%,#777777); box-shadow: inset 0 0 18px rgba(255,255,255,.45),0 0 15px var(--white); }
+
+@media (max-width:850px) {
+    .channelPanel { grid-template-columns: 1fr; }
+    .globalPanel { grid-template-columns: repeat(2,1fr); }
+}
+
+.instrumentPanel {
+    margin: 8px;
+    border: 1px solid var(--white-dim);
+    border-radius: 6px;
+    background: rgba(8,8,8,.92);
+    box-shadow: inset 0 0 22px #000;
+}
+.waveformGrid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(110px,1fr));
+    gap: 7px;
+    padding: 10px;
+}
+.waveButton {
+    min-height: 44px;
+    border: 1px solid var(--white-dim);
+    border-radius: 4px;
+    color: var(--white);
+    background: #090909;
+    letter-spacing: 1px;
+    font-size: 10px;
+}
+.waveButton.active {
+    color: #000;
+    background: var(--white-bright);
+    border-color: #fff;
+    box-shadow: 0 0 14px rgba(255,255,255,.65);
+}
+.toneControls {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(130px,1fr));
+    gap: 14px;
+    padding: 5px 10px 11px;
+}
+.disabled { opacity: .35; }
+@media (max-width:850px) {
+    .waveformGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
