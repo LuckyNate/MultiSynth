@@ -3,93 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>QuadSynth</title>
-<link rel="stylesheet" href="style.css">
+<title>Select Synth</title>
+<link rel="stylesheet" href="selector.css">
 </head>
 <body>
-<div id="app">
-    <header id="scopeWrap">
-        <div id="scope" class="crt">
-            <div id="scopeTitle">QUADSYNTH // MIX</div>
-            <canvas id="scopeCanvas"></canvas>
-        </div>
+<main id="selector">
+    <header class="selectorHeader">
+        <div class="eyebrow">SYNTH COLLECTION</div>
+        <h1>SELECT SYNTH</h1>
+        <p>Choose an instrument.</p>
     </header>
 
-    <main id="controls">
-        <section class="panel">
-            <div class="panelTitle">OSCILLATORS</div>
-            <div class="panelBody">
-                <div id="oscGrid">
-                    <div class="osc" data-osc="click">
-                        <div class="oscName">CLICK</div>
-                        <div class="knobGroup"><div class="knob" data-control="clickLevel"><div class="knobScreen">100</div></div><div class="knobLabel">LEVEL</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="clickOctave"><div class="knobScreen">0</div></div><div class="knobLabel">OCT</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="clickTune"><div class="knobScreen">0</div></div><div class="knobLabel">TUNE</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="clickPhase"><div class="knobScreen">0.00</div></div><div class="knobLabel">PHASE</div></div>
-                        <div class="buttonRow"><button class="btn solo">S</button><button class="btn mute">M</button></div>
-                    </div>
+    <section class="synthGrid" aria-label="Synthesizers">
+        <a class="synthCard quad" href="quadsynth.html">
+            <span class="cardStatus">READY</span>
+            <strong>QUADSYNTH</strong>
+            <span>CLICK · SINE · SAW · SQUARE</span>
+        </a>
 
-                    <div class="osc" data-osc="sine">
-                        <div class="oscName">SINE</div>
-                        <div class="knobGroup"><div class="knob" data-control="sineLevel"><div class="knobScreen">0</div></div><div class="knobLabel">LEVEL</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sineOctave"><div class="knobScreen">0</div></div><div class="knobLabel">OCT</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sineTune"><div class="knobScreen">0</div></div><div class="knobLabel">TUNE</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sinePhase"><div class="knobScreen">0.00</div></div><div class="knobLabel">PHASE</div></div>
-                        <div class="buttonRow"><button class="btn solo">S</button><button class="btn mute">M</button></div>
-                    </div>
-
-                    <div class="osc" data-osc="saw">
-                        <div class="oscName">SAW</div>
-                        <div class="knobGroup"><div class="knob" data-control="sawLevel"><div class="knobScreen">0</div></div><div class="knobLabel">LEVEL</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sawOctave"><div class="knobScreen">0</div></div><div class="knobLabel">OCT</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sawTune"><div class="knobScreen">0</div></div><div class="knobLabel">TUNE</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="sawPhase"><div class="knobScreen">0.00</div></div><div class="knobLabel">PHASE</div></div>
-                        <div class="buttonRow"><button class="btn solo">S</button><button class="btn mute">M</button></div>
-                    </div>
-
-                    <div class="osc" data-osc="square">
-                        <div class="oscName">SQUARE</div>
-                        <div class="knobGroup"><div class="knob" data-control="squareLevel"><div class="knobScreen">0</div></div><div class="knobLabel">LEVEL</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="squareOctave"><div class="knobScreen">0</div></div><div class="knobLabel">OCT</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="squareTune"><div class="knobScreen">0</div></div><div class="knobLabel">TUNE</div></div>
-                        <div class="knobGroup"><div class="knob" data-control="squarePhase"><div class="knobScreen">0.00</div></div><div class="knobLabel">PHASE</div></div>
-                        <div class="buttonRow"><button class="btn solo">S</button><button class="btn mute">M</button></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="panel">
-            <div class="panelTitle">ENVELOPE</div>
-            <div class="panelBody" id="adsr">
-                <div class="knobGroup"><div class="knob" data-control="attack"><div class="knobScreen">1</div></div><div class="knobLabel">A</div></div>
-                <div class="knobGroup"><div class="knob" data-control="decay"><div class="knobScreen">100</div></div><div class="knobLabel">D</div></div>
-                <div class="knobGroup"><div class="knob" data-control="sustain"><div class="knobScreen">75</div></div><div class="knobLabel">S</div></div>
-                <div class="knobGroup"><div class="knob" data-control="release"><div class="knobScreen">250</div></div><div class="knobLabel">R</div></div>
-            </div>
-        </section>
-
-        <section class="panel">
-            <div class="panelTitle">CONNECTION</div>
-            <div class="panelBody" id="connectionControls"></div>
-        </section>
-    </main>
-
-    <footer id="keyboardShell">
-        <div id="keyboard">
-            <div id="whiteKeys">
-                <div class="white key" data-midi="60"></div><div class="white key" data-midi="62"></div><div class="white key" data-midi="64"></div><div class="white key" data-midi="65"></div><div class="white key" data-midi="67"></div><div class="white key" data-midi="69"></div><div class="white key" data-midi="71"></div>
-                <div class="white key" data-midi="72"></div><div class="white key" data-midi="74"></div><div class="white key" data-midi="76"></div><div class="white key" data-midi="77"></div><div class="white key" data-midi="79"></div><div class="white key" data-midi="81"></div><div class="white key" data-midi="83"></div><div class="white key" data-midi="84"></div>
-            </div>
-            <div class="black key" data-midi="61" style="left:6.6667%"></div><div class="black key" data-midi="63" style="left:13.3333%"></div>
-            <div class="black key" data-midi="66" style="left:26.6667%"></div><div class="black key" data-midi="68" style="left:33.3333%"></div><div class="black key" data-midi="70" style="left:40%"></div>
-            <div class="black key" data-midi="73" style="left:53.3333%"></div><div class="black key" data-midi="75" style="left:60%"></div>
-            <div class="black key" data-midi="78" style="left:73.3333%"></div><div class="black key" data-midi="80" style="left:80%"></div><div class="black key" data-midi="82" style="left:86.6667%"></div>
+        <div class="synthCard pulse locked" aria-disabled="true">
+            <span class="cardStatus">COMING SOON</span>
+            <strong>PULSYNTH</strong>
+            <span>THREE-STAGE PWM LADDER</span>
         </div>
-    </footer>
-</div>
 
-<script src="quadsynth.js"></script>
-<script src="native-midi.js"></script>
+        <div class="synthCard sine locked" aria-disabled="true">
+            <span class="cardStatus">COMING SOON</span>
+            <strong>SIN LADDER</strong>
+            <span>CYAN SYNTHESIS ENGINE</span>
+        </div>
+
+        <div class="synthCard saw locked" aria-disabled="true">
+            <span class="cardStatus">COMING SOON</span>
+            <strong>SAW LADDER</strong>
+            <span>ADJUSTABLE RAMP ENGINE</span>
+        </div>
+
+        <div class="synthCard future yellow locked" aria-disabled="true">
+            <span class="cardStatus">AVAILABLE SLOT</span>
+            <strong>YELLOW</strong>
+            <span>FUTURE SYNTH</span>
+        </div>
+
+        <div class="synthCard future white locked" aria-disabled="true">
+            <span class="cardStatus">AVAILABLE SLOT</span>
+            <strong>WHITE</strong>
+            <span>FUTURE SYNTH</span>
+        </div>
+
+        <div class="synthCard future amiga locked" aria-disabled="true">
+            <span class="cardStatus">AVAILABLE SLOT</span>
+            <strong>AMIGA BLUE</strong>
+            <span>FUTURE SYNTH</span>
+        </div>
+    </section>
+</main>
 </body>
 </html>
