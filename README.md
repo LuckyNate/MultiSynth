@@ -17,6 +17,9 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `sinladder.html` — SinLadder three-stage sine harmonic ladder interface
 - `sinladder.css`
 - `sinladder.js`
+- `stinger.html` — Stinger three-stage overlapping cycloid click ladder
+- `stinger.css`
+- `stinger.js`
 
 `quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 
