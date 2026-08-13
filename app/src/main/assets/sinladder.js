@@ -125,8 +125,11 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    channelState.forEach(state => getSineWave(state.harmonic, state.phase));
 }
+
+const sineWaveCache = new Map();
 
 function makeSineWave(harmonic, phaseDegrees) {
     const partial = clamp(Math.round(harmonic), 1, 8);
@@ -136,6 +139,16 @@ function makeSineWave(harmonic, phaseDegrees) {
     real[partial] = Math.sin(phase);
     imag[partial] = Math.cos(phase);
     return audioCtx.createPeriodicWave(real, imag, { disableNormalization: true });
+}
+
+function getSineWave(harmonic, phaseDegrees) {
+    const key = Math.round(harmonic) + ":" + Math.round(phaseDegrees);
+    let wave = sineWaveCache.get(key);
+    if (!wave) {
+        wave = makeSineWave(harmonic, phaseDegrees);
+        sineWaveCache.set(key, wave);
+    }
+    return wave;
 }
 
 function makeSaturationCurve() {
@@ -207,7 +220,7 @@ class SinVoice {
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        modulator.setPeriodicWave(makeSineWave(state.harmonic, state.phase));
+        modulator.setPeriodicWave(getSineWave(state.harmonic, state.phase));
         amountGain.gain.value = state.amount / 100;
         outputShaper.curve = saturationCurve;
         outputShaper.oversample = "4x";
@@ -230,7 +243,7 @@ class SinVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.modulator.setPeriodicWave(makeSineWave(state.harmonic, state.phase));
+            stage.modulator.setPeriodicWave(getSineWave(state.harmonic, state.phase));
         });
     }
 
@@ -617,6 +630,7 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
+        sineWaveCache.clear();
         closing.close().catch(() => {});
     }
 }

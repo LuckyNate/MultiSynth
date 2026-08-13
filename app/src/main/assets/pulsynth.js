@@ -124,8 +124,11 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    channelState.forEach(state => getPulseCurve(state.duty, state.phase));
 }
+
+const pulseCurveCache = new Map();
 
 function makePulseCurve(dutyPercent, phaseDegrees) {
     const size = 2048;
@@ -135,6 +138,16 @@ function makePulseCurve(dutyPercent, phaseDegrees) {
     for (let index = 0; index < size; index++) {
         const phase = wrap01(index / (size - 1) + phaseOffset);
         curve[index] = phase < duty ? 1 : -1;
+    }
+    return curve;
+}
+
+function getPulseCurve(dutyPercent, phaseDegrees) {
+    const key = Math.round(dutyPercent) + ":" + Math.round(phaseDegrees);
+    let curve = pulseCurveCache.get(key);
+    if (!curve) {
+        curve = makePulseCurve(dutyPercent, phaseDegrees);
+        pulseCurveCache.set(key, curve);
     }
     return curve;
 }
@@ -209,7 +222,7 @@ class PulseVoice {
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        pulseShaper.curve = makePulseCurve(state.duty, state.phase);
+        pulseShaper.curve = getPulseCurve(state.duty, state.phase);
         pulseShaper.oversample = "4x";
         amountGain.gain.value = state.amount / 100;
         outputShaper.curve = saturationCurve;
@@ -234,7 +247,7 @@ class PulseVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.pulseShaper.curve = makePulseCurve(state.duty, state.phase);
+            stage.pulseShaper.curve = getPulseCurve(state.duty, state.phase);
         });
     }
 
@@ -620,6 +633,7 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
+        pulseCurveCache.clear();
         closing.close().catch(() => {});
     }
 }

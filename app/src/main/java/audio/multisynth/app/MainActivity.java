@@ -89,6 +89,10 @@ public final class MainActivity extends Activity {
     }
 
     private void configureWebView() {
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+        if (Build.VERSION.SDK_INT >= 26) {
+            webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
+        }
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setMediaPlaybackRequiresUserGesture(false);

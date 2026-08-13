@@ -42,6 +42,14 @@ The selector and known-working QuadSynth files are already installed in `app/src
 
 The browser-only `BT MIDI` / Web MIDI implementation has been removed; native MIDI replaces it.
 
+## Latency work
+
+MultiSynth requests Web Audio's interactive latency mode, holds the Android WebView renderer at high priority, uses hardware rendering, keeps the audio graph warm, and prebuilds each instrument's current waveform data before the first MIDI note. Bluetooth A2DP codec buffering remains controlled by Android and the receiving device.
+
+## Launcher icon
+
+The adaptive launcher icon uses seven signal bars representing the seven included instruments and falls back to a vector icon on pre-Android 8 devices.
+
 ## Build online from a phone
 
 Upload the complete project to a GitHub repository. Open **Actions**, choose **Build MultiSynth APK**, press **Run workflow**, then download the `MultiSynth-debug-apk` artifact. The workflow installs Java/Gradle and builds the APK in GitHub's cloud runner. Minimum Android version is 6.0 (API 23).

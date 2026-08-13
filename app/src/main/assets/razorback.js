@@ -125,7 +125,8 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    channelState.forEach(state => getRazorWave(state.peak, state.phase));
 }
 
 const razorWaveCache = new Map();

@@ -125,7 +125,9 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    getStingWave(94, 0);
+    channelState.forEach(state => getStingWave(state.acceleration, state.phase));
 }
 
 const stingWaveCache = new Map();

@@ -111,7 +111,8 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    getPureWave(pureState.waveform, pureState.pwm, pureState.peak);
 }
 
 function noiseSlope(type) {
