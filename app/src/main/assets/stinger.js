@@ -126,11 +126,11 @@ function ensureAudio() {
 
 function warmAudioEngine() {
     if (!ensureAudio()) return;
-    getStingWave(94, 0);
-    channelState.forEach(state => getStingWave(state.acceleration, state.phase));
+    getStingCurve(94, 0);
+    channelState.forEach(state => getStingCurve(state.acceleration, state.phase));
 }
 
-const stingWaveCache = new Map();
+const stingCurveCache = new Map();
 
 function cycloidBipolar(position, acceleration) {
     const target = clamp(position, 0, 1) * TAU;
@@ -144,41 +144,25 @@ function cycloidBipolar(position, acceleration) {
     return -Math.cos(theta);
 }
 
-function makeStingWave(acceleration, phaseDegrees) {
-    const samples = 512;
-    const harmonics = 96;
-    const wave = new Float32Array(samples);
+function makeStingCurve(acceleration, phaseDegrees) {
+    const size = 2048;
+    const curve = new Float32Array(size);
     const phase = wrap01(phaseDegrees / 360);
-    for (let index = 0; index < samples; index++) {
-        const triggerPhase = wrap01(index / samples + phase);
-        const currentClick = cycloidBipolar(triggerPhase * .5, acceleration);
-        const previousClick = cycloidBipolar((triggerPhase + 1) * .5, acceleration);
-        wave[index] = (currentClick + previousClick) * .5;
+    for (let index = 0; index < size; index++) {
+        const clickPhase = wrap01(index / (size - 1) + phase);
+        curve[index] = cycloidBipolar(clickPhase, acceleration);
     }
-    const real = new Float32Array(harmonics + 1);
-    const imag = new Float32Array(harmonics + 1);
-    for (let harmonic = 1; harmonic <= harmonics; harmonic++) {
-        let cosine = 0;
-        let sine = 0;
-        for (let index = 0; index < samples; index++) {
-            const angle = TAU * harmonic * index / samples;
-            cosine += wave[index] * Math.cos(angle);
-            sine += wave[index] * Math.sin(angle);
-        }
-        real[harmonic] = cosine * 2 / samples;
-        imag[harmonic] = sine * 2 / samples;
-    }
-    return audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
+    return curve;
 }
 
-function getStingWave(acceleration, phaseDegrees) {
+function getStingCurve(acceleration, phaseDegrees) {
     const key = Math.round(acceleration) + ":" + Math.round(phaseDegrees);
-    let wave = stingWaveCache.get(key);
-    if (!wave) {
-        wave = makeStingWave(acceleration, phaseDegrees);
-        stingWaveCache.set(key, wave);
+    let curve = stingCurveCache.get(key);
+    if (!curve) {
+        curve = makeStingCurve(acceleration, phaseDegrees);
+        stingCurveCache.set(key, curve);
     }
-    return wave;
+    return curve;
 }
 
 function makeSaturationCurve() {
@@ -204,12 +188,16 @@ class StingerVoice {
         this.modulators = [];
 
         this.carrier = audioCtx.createOscillator();
-        this.carrier.setPeriodicWave(getStingWave(94, 0));
+        this.carrier.type = "sawtooth";
         this.carrier.frequency.value = this.frequency;
+        this.carrierShaper = audioCtx.createWaveShaper();
+        this.carrierShaper.curve = getStingCurve(94, 0);
+        this.carrierShaper.oversample = "4x";
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
-        this.carrier.connect(this.carrierGain);
+        this.carrier.connect(this.carrierShaper);
+        this.carrierShaper.connect(this.carrierGain);
 
         let signal = this.carrierGain;
         for (let index = 0; index < 3; index++) {
@@ -244,24 +232,27 @@ class StingerVoice {
         const input = audioCtx.createGain();
         const mixer = audioCtx.createGain();
         const modulator = audioCtx.createOscillator();
+        const stingShaper = audioCtx.createWaveShaper();
         const amountGain = audioCtx.createGain();
         const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        modulator.setPeriodicWave(getStingWave(state.acceleration, state.phase));
+        stingShaper.curve = getStingCurve(state.acceleration, state.phase);
+        stingShaper.oversample = "4x";
         amountGain.gain.value = state.amount / 100;
         outputShaper.curve = saturationCurve;
         outputShaper.oversample = "4x";
 
         input.connect(mixer);
-        modulator.connect(amountGain);
+        modulator.connect(stingShaper);
+        stingShaper.connect(amountGain);
         amountGain.connect(mixer);
         mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: outputShaper, modulator, amountGain };
+        return { input, output: outputShaper, modulator, stingShaper, amountGain };
     }
 
     update() {
@@ -273,7 +264,7 @@ class StingerVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.modulator.setPeriodicWave(getStingWave(state.acceleration, state.phase));
+            stage.stingShaper.curve = getStingCurve(state.acceleration, state.phase);
         });
     }
 
@@ -659,7 +650,7 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
-        stingWaveCache.clear();
+        stingCurveCache.clear();
         closing.close().catch(() => {});
     }
 }
