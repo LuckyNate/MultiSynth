@@ -124,125 +124,49 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    ensureAudio();
+    if (!ensureAudio()) return;
+    channelState.forEach(state => getTriangleCurve(state.peak, state.phase));
 }
 
-class PureWaveSource {
-    constructor(waveType, frequency, shape, phaseDegrees) {
-        this.waveType = waveType;
-        this.frequencyValue = frequency;
-        this.shapeValue = shape;
-        this.phaseValue = wrap01(phaseDegrees / 360);
-        this.bufferLength = 2048;
-        this.output = audioCtx.createGain();
-        this.source = null;
-        this.started = false;
-        this.stopped = false;
+const triangleCurveCache = new Map();
 
-        this.frequency = {
-            setTargetAtTime: (value, when, timeConstant) =>
-                this.setFrequency(value, when, timeConstant)
-        };
-        this.shape = {
-            setTargetAtTime: value => this.setShape(value)
-        };
-        this.phase = {
-            setTargetAtTime: value => this.setPhase(value)
-        };
+function makeTriangleCurve(peakPercent, phaseDegrees) {
+    const size = 2048;
+    const curve = new Float32Array(size);
+    const peak = clamp(peakPercent / 100, 0, 1);
+    const phaseOffset = wrap01(phaseDegrees / 360);
+    for (let index = 0; index < size; index++) {
+        const position = wrap01(index / (size - 1) + phaseOffset);
+        if (peak <= 0) curve[index] = 1 - 2 * position;
+        else if (peak >= 1) curve[index] = -1 + 2 * position;
+        else curve[index] = position < peak
+            ? -1 + 2 * position / peak
+            : 1 - 2 * (position - peak) / (1 - peak);
     }
-
-    sample(position) {
-        if (this.waveType === "razor") {
-            const peak = clamp(this.shapeValue / 100, 0, 1);
-            if (peak <= 0) return 1 - 2 * position;
-            if (peak >= 1) return -1 + 2 * position;
-            return position < peak
-                ? -1 + 2 * position / peak
-                : 1 - 2 * (position - peak) / (1 - peak);
-        }
-        const distance = position < .5 ? position * 2 : (1 - position) * 2;
-        const drive = clamp(this.shapeValue / 100, 0, 1);
-        const exponent = 1 + Math.pow(drive, 1.35) * 7;
-        return -1 + 2 * Math.pow(distance, exponent);
-    }
-
-    makeBuffer() {
-        const buffer = audioCtx.createBuffer(1, this.bufferLength, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let index = 0; index < data.length; index++) {
-            const position = wrap01(index / data.length + this.phaseValue);
-            data[index] = this.sample(position);
-        }
-        return buffer;
-    }
-
-    createSource(when) {
-        const source = audioCtx.createBufferSource();
-        source.buffer = this.makeBuffer();
-        source.loop = true;
-        source.playbackRate.value =
-            this.frequencyValue * this.bufferLength / audioCtx.sampleRate;
-        source.connect(this.output);
-        source.start(when);
-        return source;
-    }
-
-    rebuild() {
-        if (!this.started || this.stopped) return;
-        const now = audioCtx.currentTime;
-        const previous = this.source;
-        this.source = this.createSource(now);
-        if (previous) {
-            try { previous.stop(now + .002); } catch (_) {}
-        }
-    }
-
-    setFrequency(value, when = audioCtx.currentTime, timeConstant = .005) {
-        this.frequencyValue = value;
-        if (this.source) {
-            this.source.playbackRate.setTargetAtTime(
-                value * this.bufferLength / audioCtx.sampleRate,
-                when,
-                timeConstant
-            );
-        }
-    }
-
-    setShape(value) {
-        if (value === this.shapeValue) return;
-        this.shapeValue = value;
-        this.rebuild();
-    }
-
-    setPhase(value) {
-        value = wrap01(value);
-        if (value === this.phaseValue) return;
-        this.phaseValue = value;
-        this.rebuild();
-    }
-
-    connect(destination) {
-        this.output.connect(destination);
-    }
-
-    start(when = audioCtx.currentTime) {
-        if (this.started || this.stopped) return;
-        this.started = true;
-        this.source = this.createSource(when);
-    }
-
-    stop(when = audioCtx.currentTime) {
-        if (this.stopped) return;
-        this.stopped = true;
-        if (this.source) {
-            try { this.source.stop(when); } catch (_) {}
-        }
-        const delay = Math.max(0, (when - audioCtx.currentTime) * 1000);
-        setTimeout(() => {
-            try { this.output.disconnect(); } catch (_) {}
-        }, delay + 10);
-    }
+    return curve;
 }
+
+function getTriangleCurve(peakPercent, phaseDegrees) {
+    const key = Math.round(peakPercent) + ":" + Math.round(phaseDegrees);
+    let curve = triangleCurveCache.get(key);
+    if (!curve) {
+        curve = makeTriangleCurve(peakPercent, phaseDegrees);
+        triangleCurveCache.set(key, curve);
+    }
+    return curve;
+}
+
+function makeSaturationCurve() {
+    const size = 2048;
+    const curve = new Float32Array(size);
+    for (let index = 0; index < size; index++) {
+        const input = index / (size - 1) * 2 - 1;
+        curve[index] = Math.tanh(input * 1.35);
+    }
+    return curve;
+}
+
+const saturationCurve = makeSaturationCurve();
 
 class RazorbackVoice {
     constructor(note, velocity, key) {
@@ -254,7 +178,9 @@ class RazorbackVoice {
         this.stages = [];
         this.modulators = [];
 
-        this.carrier = new PureWaveSource("razor", this.frequency, 50, 0);
+        this.carrier = audioCtx.createOscillator();
+        this.carrier.type = "triangle";
+        this.carrier.frequency.value = this.frequency;
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
@@ -292,23 +218,28 @@ class RazorbackVoice {
         const state = channelState[index];
         const input = audioCtx.createGain();
         const mixer = audioCtx.createGain();
-        const modulator = new PureWaveSource(
-            "razor",
-            stageFrequency(this.frequency, state.octave, state.detune),
-            state.peak,
-            state.phase
-        );
+        const modulator = audioCtx.createOscillator();
+        const triangleShaper = audioCtx.createWaveShaper();
         const amountGain = audioCtx.createGain();
+        const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
+        modulator.type = "sawtooth";
+        modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
+        triangleShaper.curve = getTriangleCurve(state.peak, state.phase);
+        triangleShaper.oversample = "4x";
         amountGain.gain.value = state.amount / 100;
+        outputShaper.curve = saturationCurve;
+        outputShaper.oversample = "4x";
 
         input.connect(mixer);
-        modulator.connect(amountGain);
+        modulator.connect(triangleShaper);
+        triangleShaper.connect(amountGain);
         amountGain.connect(mixer);
+        mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: mixer, modulator, amountGain };
+        return { input, output: outputShaper, modulator, triangleShaper, amountGain };
     }
 
     update() {
@@ -320,8 +251,7 @@ class RazorbackVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.modulator.shape.setTargetAtTime(state.peak, now, .005);
-            stage.modulator.phase.setTargetAtTime(wrap01(state.phase / 360), now, .005);
+            stage.triangleShaper.curve = getTriangleCurve(state.peak, state.phase);
         });
     }
 
@@ -707,6 +637,7 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
+        triangleCurveCache.clear();
         closing.close().catch(() => {});
     }
 }
