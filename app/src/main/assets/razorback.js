@@ -179,12 +179,17 @@ class RazorbackVoice {
         this.modulators = [];
 
         this.carrier = audioCtx.createOscillator();
-        this.carrier.type = "triangle";
+        this.carrier.type = "sawtooth";
         this.carrier.frequency.value = this.frequency;
+
+        this.carrierShaper = audioCtx.createWaveShaper();
+        this.carrierShaper.curve = getTriangleCurve(50, 0);
+        this.carrierShaper.oversample = "4x";
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
-        this.carrier.connect(this.carrierGain);
+        this.carrier.connect(this.carrierShaper);
+        this.carrierShaper.connect(this.carrierGain);
 
         let signal = this.carrierGain;
         for (let index = 0; index < 3; index++) {
