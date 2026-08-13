@@ -11,8 +11,8 @@
 
     <application
         android:allowBackup="true"
-        android:label="QuadSynth"
-        android:theme="@style/Theme.QuadSynth"
+        android:label="MultiSynth"
+        android:theme="@style/Theme.MultiSynth"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
