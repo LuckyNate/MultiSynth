@@ -37,8 +37,11 @@ let masterGain = null;
 let analyser = null;
 let keepAlive = null;
 let keepAliveGain = null;
+let pureWaveReady = false;
+let pureWavePromise = null;
 
 const voices = new Map();
+const pendingNotes = new Map();
 const touchNotes = new Map();
 const computerNotes = new Map();
 
@@ -109,6 +112,22 @@ function ensureAudio() {
         masterGain.connect(analyser);
         analyser.connect(audioCtx.destination);
 
+        if (!audioCtx.audioWorklet) {
+            document.getElementById("status").textContent = "PURE WAVE ENGINE UNAVAILABLE";
+            return false;
+        }
+        pureWavePromise = audioCtx.audioWorklet.addModule("pure-wave-processor.js")
+            .then(() => {
+                pureWaveReady = true;
+                document.getElementById("status").textContent =
+                    `PURE AUDIO ${Math.round(audioCtx.sampleRate / 1000)}K`;
+                flushPendingNotes();
+            })
+            .catch(error => {
+                console.error("Pure waveform engine failed", error);
+                document.getElementById("status").textContent = "PURE WAVE ENGINE FAILED";
+            });
+
         keepAlive = audioCtx.createOscillator();
         keepAliveGain = audioCtx.createGain();
         keepAlive.frequency.value = 20;
@@ -125,54 +144,42 @@ function ensureAudio() {
 }
 
 function warmAudioEngine() {
-    if (!ensureAudio()) return;
-    getRazorCurve(50, 0);
-    channelState.forEach(state => getRazorCurve(state.peak, state.phase));
+    ensureAudio();
 }
 
-const razorCurveCache = new Map();
-
-function rampBipolar(position, peakPercent) {
-    const x = wrap01(position);
-    const peak = clamp(peakPercent / 100, 0, 1);
-    if (peak <= 0) return 1 - 2 * x;
-    if (peak >= 1) return -1 + 2 * x;
-    return x < peak
-        ? -1 + 2 * x / peak
-        : 1 - 2 * (x - peak) / (1 - peak);
-}
-
-function makeRazorCurve(peakPercent, phaseDegrees) {
-    const size = 2048;
-    const curve = new Float32Array(size);
-    const phase = wrap01(phaseDegrees / 360);
-    for (let index = 0; index < size; index++) {
-        curve[index] = rampBipolar(index / (size - 1) + phase, peakPercent);
+class PureWaveSource {
+    constructor(waveType, frequency, shape, phaseDegrees) {
+        this.node = new AudioWorkletNode(audioCtx, "multisynth-pure-wave", {
+            numberOfInputs: 0,
+            numberOfOutputs: 1,
+            outputChannelCount: [1],
+            processorOptions: { waveType }
+        });
+        this.frequency = this.node.parameters.get("frequency");
+        this.shape = this.node.parameters.get("shape");
+        this.phase = this.node.parameters.get("phase");
+        this.frequency.value = frequency;
+        this.shape.value = shape;
+        this.phase.value = wrap01(phaseDegrees / 360);
+        this.stopped = false;
     }
-    return curve;
-}
 
-function getRazorCurve(peakPercent, phaseDegrees) {
-    const key = Math.round(peakPercent) + ":" + Math.round(phaseDegrees);
-    let curve = razorCurveCache.get(key);
-    if (!curve) {
-        curve = makeRazorCurve(peakPercent, phaseDegrees);
-        razorCurveCache.set(key, curve);
+    connect(destination) {
+        this.node.connect(destination);
     }
-    return curve;
-}
 
-function makeSaturationCurve() {
-    const size = 2048;
-    const curve = new Float32Array(size);
-    for (let index = 0; index < size; index++) {
-        const input = index / (size - 1) * 2 - 1;
-        curve[index] = Math.tanh(input * 1.35);
+    start() {}
+
+    stop(when = audioCtx.currentTime) {
+        if (this.stopped) return;
+        this.stopped = true;
+        const delay = Math.max(0, (when - audioCtx.currentTime) * 1000);
+        setTimeout(() => {
+            try { this.node.port.postMessage({ type: "stop" }); } catch (_) {}
+            try { this.node.disconnect(); } catch (_) {}
+        }, delay);
     }
-    return curve;
 }
-
-const saturationCurve = makeSaturationCurve();
 
 class RazorbackVoice {
     constructor(note, velocity, key) {
@@ -184,17 +191,11 @@ class RazorbackVoice {
         this.stages = [];
         this.modulators = [];
 
-        this.carrier = audioCtx.createOscillator();
-        this.carrier.type = "sawtooth";
-        this.carrier.frequency.value = this.frequency;
-        this.carrierShaper = audioCtx.createWaveShaper();
-        this.carrierShaper.curve = getRazorCurve(50, 0);
-        this.carrierShaper.oversample = "4x";
+        this.carrier = new PureWaveSource("razor", this.frequency, 50, 0);
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
-        this.carrier.connect(this.carrierShaper);
-        this.carrierShaper.connect(this.carrierGain);
+        this.carrier.connect(this.carrierGain);
 
         let signal = this.carrierGain;
         for (let index = 0; index < 3; index++) {
@@ -228,28 +229,23 @@ class RazorbackVoice {
         const state = channelState[index];
         const input = audioCtx.createGain();
         const mixer = audioCtx.createGain();
-        const modulator = audioCtx.createOscillator();
-        const rampShaper = audioCtx.createWaveShaper();
+        const modulator = new PureWaveSource(
+            "razor",
+            stageFrequency(this.frequency, state.octave, state.detune),
+            state.peak,
+            state.phase
+        );
         const amountGain = audioCtx.createGain();
-        const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
-        modulator.type = "sawtooth";
-        modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        rampShaper.curve = getRazorCurve(state.peak, state.phase);
-        rampShaper.oversample = "4x";
         amountGain.gain.value = state.amount / 100;
-        outputShaper.curve = saturationCurve;
-        outputShaper.oversample = "4x";
 
         input.connect(mixer);
-        modulator.connect(rampShaper);
-        rampShaper.connect(amountGain);
+        modulator.connect(amountGain);
         amountGain.connect(mixer);
-        mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: outputShaper, modulator, rampShaper, amountGain };
+        return { input, output: mixer, modulator, amountGain };
     }
 
     update() {
@@ -261,7 +257,8 @@ class RazorbackVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.rampShaper.curve = getRazorCurve(state.peak, state.phase);
+            stage.modulator.shape.setTargetAtTime(state.peak, now, .005);
+            stage.modulator.phase.setTargetAtTime(wrap01(state.phase / 360), now, .005);
         });
     }
 
@@ -302,9 +299,20 @@ class RazorbackVoice {
     }
 }
 
+function flushPendingNotes() {
+    if (!pureWaveReady) return;
+    const queued = Array.from(pendingNotes.values());
+    pendingNotes.clear();
+    queued.forEach(entry => noteOn(entry.note, entry.velocity, null, entry.key));
+}
+
 function noteOn(note, velocity = TOUCH_VELOCITY, _overrideState = null, voiceKey = null) {
     if (!ensureAudio() || !Number.isFinite(note = Number(note))) return;
     const key = voiceKey || `note:${note}`;
+    if (!pureWaveReady) {
+        pendingNotes.set(key, { note, velocity, key });
+        return;
+    }
     if (voices.has(key)) {
         voices.get(key).kill();
         voices.delete(key);
@@ -319,6 +327,7 @@ function noteOn(note, velocity = TOUCH_VELOCITY, _overrideState = null, voiceKey
 }
 
 function noteOffByKey(key) {
+    pendingNotes.delete(key);
     const voice = voices.get(key);
     if (!voice) return;
     voice.release();
@@ -329,6 +338,7 @@ function noteOffByKey(key) {
 function panicAll() {
     voices.forEach(voice => voice.kill());
     voices.clear();
+    pendingNotes.clear();
     touchNotes.clear();
     computerNotes.clear();
     document.querySelectorAll(".key.down").forEach(key => key.classList.remove("down"));
@@ -647,7 +657,9 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
-        razorCurveCache.clear();
+        pureWaveReady = false;
+        pureWavePromise = null;
+        pendingNotes.clear();
         closing.close().catch(() => {});
     }
 }
