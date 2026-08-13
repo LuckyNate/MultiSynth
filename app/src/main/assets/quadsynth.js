@@ -7,7 +7,7 @@ const TOUCH_VELOCITY = 127;
 const MAX_VOICES = 12;
 const MIN_ATTACK_SECONDS = .001;
 
-let audioCtx = null, driveGain = null, clipper = null, masterGain = null, analyser = null, scopeData = null;
+let audioCtx = null, driveGain = null, clipper = null, lowFilter = null, midFilter = null, highFilter = null, masterGain = null, analyser = null, scopeData = null;
 let meterSegments = [], meterClipHold = 0;
 let scopeCanvas = null, scopeContext = null;
 let keepAliveOscillator = null, keepAliveGain = null;
@@ -21,7 +21,8 @@ const synthState = {
     saw: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     square: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     envelope: { attack: .001, decay: .10, sustain: .75, release: .25 },
-    master: { level: 1, drive: 0, clip: 1 }
+    master: { level: 1, drive: 0, clip: 1 },
+    filter: { low: 0, mid: 0, high: 0 }
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -48,6 +49,12 @@ function loadPersistentState() {
             synthState[name].phase = clamp(Number(s.phase) || 0, 0, TAU);
             synthState[name].mute = !!s.mute; synthState[name].solo = !!s.solo;
         });
+        const f = saved.synth?.filter;
+        if (f) {
+            synthState.filter.low = clamp(Number(f.low) || 0, -18, 18);
+            synthState.filter.mid = clamp(Number(f.mid) || 0, -18, 18);
+            synthState.filter.high = clamp(Number(f.high) || 0, -18, 18);
+        }
         const m = saved.synth?.master;
         if (m) {
             synthState.master.level = clamp(Number(m.level) || 0, 0, 1);
@@ -72,10 +79,14 @@ function ensureAudio() {
         audioCtx = new AC({ latencyHint: "interactive" });
         driveGain = audioCtx.createGain();
         clipper = audioCtx.createWaveShaper();
+        lowFilter = audioCtx.createBiquadFilter(); lowFilter.type = "lowshelf"; lowFilter.frequency.value = 250;
+        midFilter = audioCtx.createBiquadFilter(); midFilter.type = "peaking"; midFilter.frequency.value = 1200; midFilter.Q.value = .8;
+        highFilter = audioCtx.createBiquadFilter(); highFilter.type = "highshelf"; highFilter.frequency.value = 4000;
         masterGain = audioCtx.createGain();
         analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .04;
-        driveGain.connect(clipper); clipper.connect(masterGain); masterGain.connect(analyser); analyser.connect(audioCtx.destination);
+        driveGain.connect(clipper); clipper.connect(lowFilter); lowFilter.connect(midFilter); midFilter.connect(highFilter); highFilter.connect(masterGain); masterGain.connect(analyser); analyser.connect(audioCtx.destination);
         updateMasterStage();
+        updateFilterStage();
         primeWaveCache();
         buildVoicePool();
         startAudioKeepAlive();
@@ -272,9 +283,19 @@ function updateMasterStage() {
     clipper.curve = makeClipCurve(synthState.master.clip);
     clipper.oversample = "4x";
 }
+function updateFilterStage() {
+    if (!audioCtx || !lowFilter || !midFilter || !highFilter) return;
+    const now = audioCtx.currentTime;
+    lowFilter.gain.setTargetAtTime(synthState.filter.low, now, .01);
+    midFilter.gain.setTargetAtTime(synthState.filter.mid, now, .01);
+    highFilter.gain.setTargetAtTime(synthState.filter.high, now, .01);
+}
 
 const knobConfigs = {
     ...oscConfigs("click"), ...oscConfigs("sine"), ...oscConfigs("saw"), ...oscConfigs("square"),
+    filterLow: { min: -18, max: 18, value: 0, reset: 0, step: 1, signed: true, apply(v) { synthState.filter.low = v; updateFilterStage(); savePersistentState(); } },
+    filterMid: { min: -18, max: 18, value: 0, reset: 0, step: 1, signed: true, apply(v) { synthState.filter.mid = v; updateFilterStage(); savePersistentState(); } },
+    filterHigh: { min: -18, max: 18, value: 0, reset: 0, step: 1, signed: true, apply(v) { synthState.filter.high = v; updateFilterStage(); savePersistentState(); } },
     masterLevel: { min: 0, max: 100, value: 100, reset: 100, step: 1, apply(v) { synthState.master.level = v / 100; updateMasterStage(); savePersistentState(); } },
     drive: { min: 0, max: 100, value: 0, reset: 0, step: 1, apply(v) { synthState.master.drive = v / 100; updateMasterStage(); savePersistentState(); } },
     clip: { min: 10, max: 100, value: 100, reset: 100, step: 1, apply(v) { synthState.master.clip = v / 100; updateMasterStage(); savePersistentState(); } },
@@ -285,6 +306,7 @@ const knobConfigs = {
 };
 function syncKnobs() {
     OSC_NAMES.forEach(n => { knobConfigs[n+"Level"].value=synthState[n].level*100; knobConfigs[n+"Octave"].value=synthState[n].octave; knobConfigs[n+"Tune"].value=synthState[n].tune; knobConfigs[n+"Phase"].value=synthState[n].phase; });
+    knobConfigs.filterLow.value=synthState.filter.low; knobConfigs.filterMid.value=synthState.filter.mid; knobConfigs.filterHigh.value=synthState.filter.high;
     knobConfigs.masterLevel.value=synthState.master.level*100; knobConfigs.drive.value=synthState.master.drive*100; knobConfigs.clip.value=synthState.master.clip*100;
     knobConfigs.attack.value=synthState.envelope.attack*1000; knobConfigs.decay.value=synthState.envelope.decay*1000; knobConfigs.sustain.value=synthState.envelope.sustain*100; knobConfigs.release.value=synthState.envelope.release*1000;
 }
@@ -332,7 +354,7 @@ function drawScope(){requestAnimationFrame(drawScope);if(!scopeCanvas||!scopeCon
 function setupScope(){scopeCanvas=document.getElementById("scopeCanvas");scopeContext=scopeCanvas.getContext("2d");meterSegments=[...document.querySelectorAll(".meterSegments span")];resizeScope();drawScope();}
 
 function releaseAllInputNotes(){[...pointerNotes.keys()].forEach(releasePointerNote);computerHeld.forEach(k=>noteOffByKey(`pc:${k}`));computerHeld.clear();midiHeld.forEach(noteOffByKey);midiHeld.clear();document.querySelectorAll(".key.down").forEach(e=>e.classList.remove("down"));}
-function shutdownAudioEngine(){releaseAllInputNotes();activeVoices.clear();voicePool.length=0;waveCache.clear();keepAliveOscillator=null;keepAliveGain=null;driveGain=null;clipper=null;masterGain=null;analyser=null;if(audioCtx){const closing=audioCtx;audioCtx=null;closing.close().catch(()=>{});}}
+function shutdownAudioEngine(){releaseAllInputNotes();activeVoices.clear();voicePool.length=0;waveCache.clear();keepAliveOscillator=null;keepAliveGain=null;driveGain=null;clipper=null;lowFilter=null;midFilter=null;highFilter=null;masterGain=null;analyser=null;if(audioCtx){const closing=audioCtx;audioCtx=null;closing.close().catch(()=>{});}}
 window.addEventListener("blur",releaseAllInputNotes);window.addEventListener("pagehide",()=>{savePersistentState();shutdownAudioEngine();});window.addEventListener("beforeunload",savePersistentState);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){savePersistentState();releaseAllInputNotes();}});
 document.addEventListener("touchmove",e=>{const t=e.target instanceof Element?e.target:null;if((t?.closest(".knob")||t?.closest("#keyboard"))&&e.cancelable)e.preventDefault();},{passive:false});
