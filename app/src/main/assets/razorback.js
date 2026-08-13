@@ -4,7 +4,6 @@ const MAX_VOICES = 12;
 const TOUCH_VELOCITY = 127;
 const STORAGE_KEY = "Razorback.PersistentState.v1";
 const TAU = Math.PI * 2;
-const PURE_WAVE_PROCESSOR_SOURCE = "\"use strict\";\n\nclass MultiSynthPureWaveProcessor extends AudioWorkletProcessor {\n    static get parameterDescriptors() {\n        return [\n            { name: \"frequency\", defaultValue: 440, minValue: 0, maxValue: 24000, automationRate: \"a-rate\" },\n            { name: \"shape\", defaultValue: 50, minValue: 0, maxValue: 100, automationRate: \"k-rate\" },\n            { name: \"phase\", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: \"k-rate\" }\n        ];\n    }\n\n    constructor(options) {\n        super();\n        this.waveType = options.processorOptions?.waveType || \"razor\";\n        this.position = 0;\n        this.active = true;\n        this.port.onmessage = event => {\n            if (event.data?.type === \"stop\") this.active = false;\n        };\n    }\n\n    razor(position, peakPercent) {\n        const peak = Math.max(0, Math.min(1, peakPercent / 100));\n        if (peak <= 0) return 1 - 2 * position;\n        if (peak >= 1) return -1 + 2 * position;\n        return position < peak\n            ? -1 + 2 * position / peak\n            : 1 - 2 * (position - peak) / (1 - peak);\n    }\n\n    spine(position, acceleration) {\n        const distance = position < .5 ? position * 2 : (1 - position) * 2;\n        const drive = Math.max(0, Math.min(1, acceleration / 100));\n        const exponent = 1 + Math.pow(drive, 1.35) * 7;\n        return -1 + 2 * Math.pow(distance, exponent);\n    }\n\n    process(_inputs, outputs, parameters) {\n        const output = outputs[0]?.[0];\n        if (!output) return this.active;\n        if (!this.active) {\n            output.fill(0);\n            return false;\n        }\n\n        const frequencies = parameters.frequency;\n        const shape = parameters.shape[0];\n        const phaseOffset = parameters.phase[0];\n\n        for (let index = 0; index < output.length; index++) {\n            let position = this.position + phaseOffset;\n            position -= Math.floor(position);\n            output[index] = this.waveType === \"spine\"\n                ? this.spine(position, shape)\n                : this.razor(position, shape);\n\n            const frequency = frequencies.length > 1 ? frequencies[index] : frequencies[0];\n            this.position += frequency / sampleRate;\n            this.position -= Math.floor(this.position);\n        }\n        return true;\n    }\n}\n\nregisterProcessor(\"multisynth-pure-wave\", MultiSynthPureWaveProcessor);\n";
 
 const channelState = [
     { octave: 0, detune: 0, peak: 25, amount: 35, phase: 0 },
@@ -38,11 +37,7 @@ let masterGain = null;
 let analyser = null;
 let keepAlive = null;
 let keepAliveGain = null;
-let pureWaveReady = false;
-let pureWavePromise = null;
-
 const voices = new Map();
-const pendingNotes = new Map();
 const touchNotes = new Map();
 const computerNotes = new Map();
 
@@ -113,27 +108,6 @@ function ensureAudio() {
         masterGain.connect(analyser);
         analyser.connect(audioCtx.destination);
 
-        if (!audioCtx.audioWorklet) {
-            document.getElementById("status").textContent = "PURE WAVE ENGINE UNAVAILABLE";
-            return false;
-        }
-        const moduleUrl = URL.createObjectURL(new Blob(
-            [PURE_WAVE_PROCESSOR_SOURCE],
-            { type: "application/javascript" }
-        ));
-        pureWavePromise = audioCtx.audioWorklet.addModule(moduleUrl)
-            .then(() => {
-                pureWaveReady = true;
-                document.getElementById("status").textContent =
-                    `PURE AUDIO ${Math.round(audioCtx.sampleRate / 1000)}K`;
-                flushPendingNotes();
-            })
-            .catch(error => {
-                console.error("Pure waveform engine failed", error);
-                document.getElementById("status").textContent = "PURE WAVE ENGINE FAILED";
-            })
-            .finally(() => URL.revokeObjectURL(moduleUrl));
-
         keepAlive = audioCtx.createOscillator();
         keepAliveGain = audioCtx.createGain();
         keepAlive.frequency.value = 20;
@@ -155,35 +129,118 @@ function warmAudioEngine() {
 
 class PureWaveSource {
     constructor(waveType, frequency, shape, phaseDegrees) {
-        this.node = new AudioWorkletNode(audioCtx, "multisynth-pure-wave", {
-            numberOfInputs: 0,
-            numberOfOutputs: 1,
-            outputChannelCount: [1],
-            processorOptions: { waveType }
-        });
-        this.frequency = this.node.parameters.get("frequency");
-        this.shape = this.node.parameters.get("shape");
-        this.phase = this.node.parameters.get("phase");
-        this.frequency.value = frequency;
-        this.shape.value = shape;
-        this.phase.value = wrap01(phaseDegrees / 360);
+        this.waveType = waveType;
+        this.frequencyValue = frequency;
+        this.shapeValue = shape;
+        this.phaseValue = wrap01(phaseDegrees / 360);
+        this.bufferLength = 2048;
+        this.output = audioCtx.createGain();
+        this.source = null;
+        this.started = false;
         this.stopped = false;
+
+        this.frequency = {
+            setTargetAtTime: (value, when, timeConstant) =>
+                this.setFrequency(value, when, timeConstant)
+        };
+        this.shape = {
+            setTargetAtTime: value => this.setShape(value)
+        };
+        this.phase = {
+            setTargetAtTime: value => this.setPhase(value)
+        };
+    }
+
+    sample(position) {
+        if (this.waveType === "razor") {
+            const peak = clamp(this.shapeValue / 100, 0, 1);
+            if (peak <= 0) return 1 - 2 * position;
+            if (peak >= 1) return -1 + 2 * position;
+            return position < peak
+                ? -1 + 2 * position / peak
+                : 1 - 2 * (position - peak) / (1 - peak);
+        }
+        const distance = position < .5 ? position * 2 : (1 - position) * 2;
+        const drive = clamp(this.shapeValue / 100, 0, 1);
+        const exponent = 1 + Math.pow(drive, 1.35) * 7;
+        return -1 + 2 * Math.pow(distance, exponent);
+    }
+
+    makeBuffer() {
+        const buffer = audioCtx.createBuffer(1, this.bufferLength, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let index = 0; index < data.length; index++) {
+            const position = wrap01(index / data.length + this.phaseValue);
+            data[index] = this.sample(position);
+        }
+        return buffer;
+    }
+
+    createSource(when) {
+        const source = audioCtx.createBufferSource();
+        source.buffer = this.makeBuffer();
+        source.loop = true;
+        source.playbackRate.value =
+            this.frequencyValue * this.bufferLength / audioCtx.sampleRate;
+        source.connect(this.output);
+        source.start(when);
+        return source;
+    }
+
+    rebuild() {
+        if (!this.started || this.stopped) return;
+        const now = audioCtx.currentTime;
+        const previous = this.source;
+        this.source = this.createSource(now);
+        if (previous) {
+            try { previous.stop(now + .002); } catch (_) {}
+        }
+    }
+
+    setFrequency(value, when = audioCtx.currentTime, timeConstant = .005) {
+        this.frequencyValue = value;
+        if (this.source) {
+            this.source.playbackRate.setTargetAtTime(
+                value * this.bufferLength / audioCtx.sampleRate,
+                when,
+                timeConstant
+            );
+        }
+    }
+
+    setShape(value) {
+        if (value === this.shapeValue) return;
+        this.shapeValue = value;
+        this.rebuild();
+    }
+
+    setPhase(value) {
+        value = wrap01(value);
+        if (value === this.phaseValue) return;
+        this.phaseValue = value;
+        this.rebuild();
     }
 
     connect(destination) {
-        this.node.connect(destination);
+        this.output.connect(destination);
     }
 
-    start() {}
+    start(when = audioCtx.currentTime) {
+        if (this.started || this.stopped) return;
+        this.started = true;
+        this.source = this.createSource(when);
+    }
 
     stop(when = audioCtx.currentTime) {
         if (this.stopped) return;
         this.stopped = true;
+        if (this.source) {
+            try { this.source.stop(when); } catch (_) {}
+        }
         const delay = Math.max(0, (when - audioCtx.currentTime) * 1000);
         setTimeout(() => {
-            try { this.node.port.postMessage({ type: "stop" }); } catch (_) {}
-            try { this.node.disconnect(); } catch (_) {}
-        }, delay);
+            try { this.output.disconnect(); } catch (_) {}
+        }, delay + 10);
     }
 }
 
@@ -305,20 +362,9 @@ class RazorbackVoice {
     }
 }
 
-function flushPendingNotes() {
-    if (!pureWaveReady) return;
-    const queued = Array.from(pendingNotes.values());
-    pendingNotes.clear();
-    queued.forEach(entry => noteOn(entry.note, entry.velocity, null, entry.key));
-}
-
 function noteOn(note, velocity = TOUCH_VELOCITY, _overrideState = null, voiceKey = null) {
     if (!ensureAudio() || !Number.isFinite(note = Number(note))) return;
     const key = voiceKey || `note:${note}`;
-    if (!pureWaveReady) {
-        pendingNotes.set(key, { note, velocity, key });
-        return;
-    }
     if (voices.has(key)) {
         voices.get(key).kill();
         voices.delete(key);
@@ -333,7 +379,6 @@ function noteOn(note, velocity = TOUCH_VELOCITY, _overrideState = null, voiceKey
 }
 
 function noteOffByKey(key) {
-    pendingNotes.delete(key);
     const voice = voices.get(key);
     if (!voice) return;
     voice.release();
@@ -344,7 +389,6 @@ function noteOffByKey(key) {
 function panicAll() {
     voices.forEach(voice => voice.kill());
     voices.clear();
-    pendingNotes.clear();
     touchNotes.clear();
     computerNotes.clear();
     document.querySelectorAll(".key.down").forEach(key => key.classList.remove("down"));
@@ -663,9 +707,6 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
-        pureWaveReady = false;
-        pureWavePromise = null;
-        pendingNotes.clear();
         closing.close().catch(() => {});
     }
 }
