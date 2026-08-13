@@ -60,6 +60,22 @@
         </section>
 
         <section class="panel">
+            <div class="panelTitle">MASTER</div>
+            <div class="panelBody" id="masterControls">
+                <div class="knobGroup"><div class="knob" data-control="masterLevel"><div class="knobScreen">100</div></div><div class="knobLabel">LEVEL</div></div>
+                <div class="knobGroup"><div class="knob" data-control="drive"><div class="knobScreen">0</div></div><div class="knobLabel">DRIVE</div></div>
+                <div class="knobGroup"><div class="knob" data-control="clip"><div class="knobScreen">100</div></div><div class="knobLabel">CLIP</div></div>
+                <div id="outputMeter" aria-label="Output level">
+                    <div class="meterLabel">OUTPUT</div>
+                    <div class="meterSegments">
+                        <span></span><span></span><span></span><span></span><span></span>
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
             <div class="panelTitle">ENVELOPE</div>
             <div class="panelBody" id="adsr">
                 <div class="knobGroup"><div class="knob" data-control="attack"><div class="knobScreen">1</div></div><div class="knobLabel">A</div></div>
