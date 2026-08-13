@@ -198,8 +198,10 @@ class RazorbackVoice {
         this.modulators = [];
 
         this.carrier = audioCtx.createOscillator();
-        this.carrier.type = "triangle";
         this.carrier.frequency.value = this.frequency;
+        // The carrier is the same movable-peak ramp at its natural,
+        // symmetric position: a mathematically exact triangle.
+        this.carrier.setPeriodicWave(getRazorWave(50, 0));
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
