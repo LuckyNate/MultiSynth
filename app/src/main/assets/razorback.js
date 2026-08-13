@@ -4,6 +4,7 @@ const MAX_VOICES = 12;
 const TOUCH_VELOCITY = 127;
 const STORAGE_KEY = "Razorback.PersistentState.v1";
 const TAU = Math.PI * 2;
+const PURE_WAVE_PROCESSOR_SOURCE = "\"use strict\";\n\nclass MultiSynthPureWaveProcessor extends AudioWorkletProcessor {\n    static get parameterDescriptors() {\n        return [\n            { name: \"frequency\", defaultValue: 440, minValue: 0, maxValue: 24000, automationRate: \"a-rate\" },\n            { name: \"shape\", defaultValue: 50, minValue: 0, maxValue: 100, automationRate: \"k-rate\" },\n            { name: \"phase\", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: \"k-rate\" }\n        ];\n    }\n\n    constructor(options) {\n        super();\n        this.waveType = options.processorOptions?.waveType || \"razor\";\n        this.position = 0;\n        this.active = true;\n        this.port.onmessage = event => {\n            if (event.data?.type === \"stop\") this.active = false;\n        };\n    }\n\n    razor(position, peakPercent) {\n        const peak = Math.max(0, Math.min(1, peakPercent / 100));\n        if (peak <= 0) return 1 - 2 * position;\n        if (peak >= 1) return -1 + 2 * position;\n        return position < peak\n            ? -1 + 2 * position / peak\n            : 1 - 2 * (position - peak) / (1 - peak);\n    }\n\n    spine(position, acceleration) {\n        const distance = position < .5 ? position * 2 : (1 - position) * 2;\n        const drive = Math.max(0, Math.min(1, acceleration / 100));\n        const exponent = 1 + Math.pow(drive, 1.35) * 7;\n        return -1 + 2 * Math.pow(distance, exponent);\n    }\n\n    process(_inputs, outputs, parameters) {\n        const output = outputs[0]?.[0];\n        if (!output) return this.active;\n        if (!this.active) {\n            output.fill(0);\n            return false;\n        }\n\n        const frequencies = parameters.frequency;\n        const shape = parameters.shape[0];\n        const phaseOffset = parameters.phase[0];\n\n        for (let index = 0; index < output.length; index++) {\n            let position = this.position + phaseOffset;\n            position -= Math.floor(position);\n            output[index] = this.waveType === \"spine\"\n                ? this.spine(position, shape)\n                : this.razor(position, shape);\n\n            const frequency = frequencies.length > 1 ? frequencies[index] : frequencies[0];\n            this.position += frequency / sampleRate;\n            this.position -= Math.floor(this.position);\n        }\n        return true;\n    }\n}\n\nregisterProcessor(\"multisynth-pure-wave\", MultiSynthPureWaveProcessor);\n";
 
 const channelState = [
     { octave: 0, detune: 0, peak: 25, amount: 35, phase: 0 },
@@ -116,7 +117,11 @@ function ensureAudio() {
             document.getElementById("status").textContent = "PURE WAVE ENGINE UNAVAILABLE";
             return false;
         }
-        pureWavePromise = audioCtx.audioWorklet.addModule("pure-wave-processor.js")
+        const moduleUrl = URL.createObjectURL(new Blob(
+            [PURE_WAVE_PROCESSOR_SOURCE],
+            { type: "application/javascript" }
+        ));
+        pureWavePromise = audioCtx.audioWorklet.addModule(moduleUrl)
             .then(() => {
                 pureWaveReady = true;
                 document.getElementById("status").textContent =
@@ -126,7 +131,8 @@ function ensureAudio() {
             .catch(error => {
                 console.error("Pure waveform engine failed", error);
                 document.getElementById("status").textContent = "PURE WAVE ENGINE FAILED";
-            });
+            })
+            .finally(() => URL.revokeObjectURL(moduleUrl));
 
         keepAlive = audioCtx.createOscillator();
         keepAliveGain = audioCtx.createGain();
