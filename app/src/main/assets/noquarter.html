@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>No Quarter</title><link rel="stylesheet" href="noquarter.css"></head>
+<body><main id="synth">
+<header class="scopePanel"><div class="scopeHeading"><span>NO QUARTER // ELECTRIC PIANO</span><span id="status">TOUCH TO START</span></div><canvas id="scope"></canvas></header>
+<section class="instrumentPanel"><div class="panelTitle">CHARACTER</div><div id="macros" class="macroGrid"></div></section>
+<section class="globalPanel">
+<div class="globalControl"><label for="attack">ATTACK</label><input id="attack" type="range" min="0.001" max="2" step="0.001" value="0.002"><output id="attack-value">2 ms</output></div>
+<div class="globalControl"><label for="decay">DECAY</label><input id="decay" type="range" min="0.001" max="2" step="0.001" value="1.4"><output id="decay-value">1.40 s</output></div>
+<div class="globalControl"><label for="sustain">SUSTAIN</label><input id="sustain" type="range" min="0" max="1" step="0.01" value="0.32"><output id="sustain-value">32%</output></div>
+<div class="globalControl"><label for="release">RELEASE</label><input id="release" type="range" min="0.001" max="3" step="0.001" value="0.85"><output id="release-value">850 ms</output></div>
+<div class="globalControl"><label for="master">MASTER</label><input id="master" type="range" min="0" max="1" step="0.01" value="0.35"><output id="master-value">35%</output></div>
+<button id="panic" type="button">PANIC</button></section>
+<section class="connectionPanel"><div class="panelTitle">CONNECTION</div><div id="connectionControls"></div></section>
+<section id="keyboard" aria-label="Touch keyboard"></section></main>
+<script src="noquarter.js"></script><script src="native-midi.js"></script></body></html>

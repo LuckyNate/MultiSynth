@@ -26,6 +26,9 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `puresynth.html` — PureSynth mathematically generated waveform instrument with movable triangle peak
 - `puresynth.css`
 - `puresynth.js`
+- `noquarter.html` — No Quarter velocity-responsive electric piano
+- `noquarter.css`
+- `noquarter.js`
 
 `quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 
