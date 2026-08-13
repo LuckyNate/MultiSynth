@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "audio.quadsynth.app"
+    namespace = "audio.multisynth.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "audio.quadsynth.app"
+        applicationId = "audio.multisynth.app"
         minSdk = 23
         targetSdk = 35
         versionCode = 1

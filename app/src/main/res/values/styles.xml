@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.QuadSynth" parent="android:style/Theme.Material.NoActionBar">
+    <style name="Theme.MultiSynth" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">monospace</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:navigationBarColor">#030302</item>

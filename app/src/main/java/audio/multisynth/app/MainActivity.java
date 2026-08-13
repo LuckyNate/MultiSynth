@@ -1,4 +1,4 @@
-package audio.quadsynth.app;
+package audio.multisynth.app;
 
 import android.Manifest;
 import android.app.Activity;
@@ -61,7 +61,7 @@ public final class MainActivity extends Activity {
         @Override public void onSend(byte[] data, int offset, int count, long timestamp) {
             JSONArray bytes = new JSONArray();
             for (int i = offset; i < offset + count; i++) bytes.put(data[i] & 0xff);
-            runJs("window.QuadSynthNativeMidi&&window.QuadSynthNativeMidi.receive(" + bytes + ");");
+            runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.receive(" + bytes + ");");
         }
     };
 
@@ -76,7 +76,7 @@ public final class MainActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
-        preferences = getSharedPreferences("quadsynth-midi", MODE_PRIVATE);
+        preferences = getSharedPreferences("multisynth-midi", MODE_PRIVATE);
         midiManager = (MidiManager) getSystemService(Context.MIDI_SERVICE);
         BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bm == null ? null : bm.getAdapter();
@@ -263,12 +263,12 @@ public final class MainActivity extends Activity {
         return result;
     }
 
-    private void publishDeviceChange() { runJs("window.QuadSynthNativeMidi&&window.QuadSynthNativeMidi.devicesChanged(" + midiChoicesJson() + ");"); }
-    private void status(String text, boolean connected) { runJs("window.QuadSynthNativeMidi&&window.QuadSynthNativeMidi.status(" + JSONObject.quote(text) + "," + connected + ");"); }
+    private void publishDeviceChange() { runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.devicesChanged(" + midiChoicesJson() + ");"); }
+    private void status(String text, boolean connected) { runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status(" + JSONObject.quote(text) + "," + connected + ");"); }
     private void runJs(String script) { main.post(() -> { if (webView != null) webView.evaluateJavascript(script, null); }); }
 
     @Override protected void onPause() {
-        runJs("window.QuadSynthNativeMidi&&window.QuadSynthNativeMidi.panic();");
+        runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");
         super.onPause();
     }
 
