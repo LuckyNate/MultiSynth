@@ -209,7 +209,7 @@ button { touch-action: manipulation; }
 }
 .toneControls {
     display: grid;
-    grid-template-columns: repeat(2,minmax(130px,1fr));
+    grid-template-columns: repeat(3,minmax(130px,1fr));
     gap: 14px;
     padding: 5px 10px 11px;
 }

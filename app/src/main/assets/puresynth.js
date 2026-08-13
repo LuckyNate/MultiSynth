@@ -8,8 +8,6 @@ const WAVEFORMS = [
     ["sine", "SINE"],
     ["square", "SQUARE"],
     ["triangle", "TRIANGLE"],
-    ["saw", "SAW"],
-    ["reverseSaw", "REVERSE SAW"],
     ["click", "TIME-MATCHED CLICK"],
     ["white", "WHITE NOISE"],
     ["pink", "PINK NOISE"],
@@ -18,7 +16,7 @@ const WAVEFORMS = [
     ["violet", "VIOLET NOISE"]
 ];
 
-const pureState = { waveform: "sine", level: .8, pwm: 50 };
+const pureState = { waveform: "sine", level: .8, pwm: 50, peak: 50 };
 const envelopeState = { attack: .001, decay: .10, sustain: .75, release: .25 };
 
 let audioCtx = null;
@@ -60,7 +58,16 @@ function loadState() {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
         if (!saved) return;
         if (saved.pure) {
-            if (WAVEFORMS.some(entry => entry[0] === saved.pure.waveform)) pureState.waveform = saved.pure.waveform;
+            if (saved.pure.waveform === "saw") {
+                pureState.waveform = "triangle";
+                pureState.peak = 100;
+            } else if (saved.pure.waveform === "reverseSaw") {
+                pureState.waveform = "triangle";
+                pureState.peak = 0;
+            } else if (WAVEFORMS.some(entry => entry[0] === saved.pure.waveform)) {
+                pureState.waveform = saved.pure.waveform;
+                pureState.peak = clamp(Number(saved.pure.peak) || 50, 0, 100);
+            }
             pureState.level = clamp(Number(saved.pure.level), 0, 1);
             if (!Number.isFinite(pureState.level)) pureState.level = .8;
             pureState.pwm = clamp(Number(saved.pure.pwm) || 50, 1, 99);
@@ -125,12 +132,17 @@ function seededRandom(seed) {
     };
 }
 
-function sampledShape(type, x, pwm) {
+function sampledShape(type, x, pwm, peakPercent) {
     if (type === "sine") return Math.sin(TAU * x);
     if (type === "square") return x < pwm / 100 ? 1 : -1;
-    if (type === "triangle") return 1 - 4 * Math.abs(x - .5);
-    if (type === "saw") return -1 + 2 * x;
-    if (type === "reverseSaw") return 1 - 2 * x;
+    if (type === "triangle") {
+        const peak = clamp(peakPercent / 100, 0, 1);
+        if (peak <= 0) return 1 - 2 * x;
+        if (peak >= 1) return -1 + 2 * x;
+        return x < peak
+            ? -1 + 2 * x / peak
+            : 1 - 2 * (x - peak) / (1 - peak);
+    }
     if (type === "click") {
         const width = .16;
         if (x >= width) return 0;
@@ -143,7 +155,7 @@ function sampledShape(type, x, pwm) {
     return 0;
 }
 
-function makePureWave(type, pwm) {
+function makePureWave(type, pwm, peak) {
     const harmonics = 96;
     const real = new Float32Array(harmonics + 1);
     const imag = new Float32Array(harmonics + 1);
@@ -162,7 +174,7 @@ function makePureWave(type, pwm) {
             let cosine = 0;
             let sine = 0;
             for (let index = 0; index < samples; index++) {
-                const sample = sampledShape(type, index / samples, pwm);
+                const sample = sampledShape(type, index / samples, pwm, peak);
                 const angle = TAU * harmonic * index / samples;
                 cosine += sample * Math.cos(angle);
                 sine += sample * Math.sin(angle);
@@ -174,11 +186,12 @@ function makePureWave(type, pwm) {
     return audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
 }
 
-function getPureWave(type, pwm) {
-    const key = type + ":" + (type === "square" ? Math.round(pwm) : 50);
+function getPureWave(type, pwm, peak) {
+    const shapeValue = type === "square" ? Math.round(pwm) : type === "triangle" ? Math.round(peak) : 50;
+    const key = type + ":" + shapeValue;
     let wave = pureWaveCache.get(key);
     if (!wave) {
-        wave = makePureWave(type, pwm);
+        wave = makePureWave(type, pwm, peak);
         pureWaveCache.set(key, wave);
     }
     return wave;
@@ -193,7 +206,7 @@ class PureVoice {
         this.stopped = false;
         this.oscillator = audioCtx.createOscillator();
         this.oscillator.frequency.value = this.frequency;
-        this.oscillator.setPeriodicWave(getPureWave(pureState.waveform, pureState.pwm));
+        this.oscillator.setPeriodicWave(getPureWave(pureState.waveform, pureState.pwm, pureState.peak));
         this.sourceGain = audioCtx.createGain();
         this.sourceGain.gain.value = pureState.level;
         this.voiceGain = audioCtx.createGain();
@@ -219,7 +232,7 @@ class PureVoice {
         if (!audioCtx || this.stopped) return;
         const now = audioCtx.currentTime;
         this.sourceGain.gain.setTargetAtTime(pureState.level, now, .005);
-        this.oscillator.setPeriodicWave(getPureWave(pureState.waveform, pureState.pwm));
+        this.oscillator.setPeriodicWave(getPureWave(pureState.waveform, pureState.pwm, pureState.peak));
     }
 
     release() {
@@ -307,6 +320,7 @@ function initializePureControls() {
     });
     document.getElementById("level").value = String(pureState.level);
     document.getElementById("pwm").value = String(pureState.pwm);
+    document.getElementById("peak").value = String(pureState.peak);
     bindSlider("level", value => {
         pureState.level = value;
         updateAllVoices();
@@ -317,6 +331,11 @@ function initializePureControls() {
         if (pureState.waveform === "square") updateAllVoices();
         return Math.round(value) + "%";
     });
+    bindSlider("peak", value => {
+        pureState.peak = value;
+        if (pureState.waveform === "triangle") updateAllVoices();
+        return Math.round(value) + "%";
+    });
     refreshPureControls();
 }
 
@@ -325,9 +344,13 @@ function refreshPureControls() {
         button.classList.toggle("active", button.dataset.waveform === pureState.waveform);
     });
     const pwm = document.getElementById("pwm");
+    const peak = document.getElementById("peak");
     const square = pureState.waveform === "square";
+    const triangle = pureState.waveform === "triangle";
     pwm.disabled = !square;
+    peak.disabled = !triangle;
     document.getElementById("pwmControl").classList.toggle("disabled", !square);
+    document.getElementById("peakControl").classList.toggle("disabled", !triangle);
 }
 
 function initializeGlobalControls() {

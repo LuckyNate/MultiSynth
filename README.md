@@ -23,7 +23,7 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `razorback.html` — Razorback three-stage movable-peak ramp ladder
 - `razorback.css`
 - `razorback.js`
-- `puresynth.html` — PureSynth mathematically generated waveform instrument
+- `puresynth.html` — PureSynth mathematically generated waveform instrument with movable triangle peak
 - `puresynth.css`
 - `puresynth.js`
 
