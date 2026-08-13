@@ -43,6 +43,15 @@ button { font-family: inherit; }
 .btn { min-width: 30px; height: 25px; padding: 0 6px; border: 1px solid #60471c; border-radius: 3px; background: linear-gradient(#21190c, #080603); color: var(--amber); font-size: 9px; font-weight: bold; text-shadow: 0 0 4px rgba(255,176,0,.5); }
 .btn.active { border-color: var(--amber-bright); color: var(--amber-bright); background: radial-gradient(circle, #543500, #100a02); box-shadow: inset 0 0 8px rgba(255,176,0,.35), 0 0 5px rgba(255,176,0,.25); }
 
+#masterControls { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)) minmax(64px,.8fr); align-items: center; gap: 5px; }
+#outputMeter { align-self: stretch; min-height: 78px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; border: 1px solid #382b16; border-radius: 4px; background: #080603; }
+.meterLabel { margin-bottom: 5px; font-size: 7px; letter-spacing: 1px; color: var(--amber); }
+.meterSegments { width: 100%; display: flex; flex-direction: column-reverse; gap: 2px; }
+.meterSegments span { display: block; width: 100%; height: 4px; border-radius: 1px; background: #241a09; box-shadow: inset 0 0 2px #000; }
+.meterSegments span.on { background: var(--amber); box-shadow: 0 0 4px rgba(255,176,0,.65); }
+.meterSegments span.hot.on { background: #ff5a24; box-shadow: 0 0 6px rgba(255,70,20,.85); }
+.meterSegments span.clip.on { background: #ff1f0f; box-shadow: 0 0 8px #ff321d; }
+
 #adsr { display: flex; justify-content: space-around; align-items: center; }
 #connectionControls { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
 #connectionControls:empty { display: none; }
