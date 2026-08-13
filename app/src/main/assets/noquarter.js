@@ -215,13 +215,26 @@ function initializeScope() {
             context.moveTo(0, height / 2);
             context.lineTo(width, height / 2);
         } else {
-            if (!data || data.length !== analyser.fftSize) data = new Uint8Array(analyser.fftSize);
-            analyser.getByteTimeDomainData(data);
-            data.forEach((sample, index) => {
-                const x = index / (data.length - 1) * width;
-                const y = sample / 255 * height;
+            if (!data || data.length !== analyser.fftSize) data = new Float32Array(analyser.fftSize);
+            analyser.getFloatTimeDomainData(data);
+            const visibleSamples = Math.min(512, data.length);
+            let start = 0;
+            for (let index = 1; index < data.length - visibleSamples; index++) {
+                if (data[index - 1] <= 0 && data[index] > 0) {
+                    start = index;
+                    break;
+                }
+            }
+            let peak = .0001;
+            for (let index = 0; index < visibleSamples; index++) {
+                peak = Math.max(peak, Math.abs(data[start + index]));
+            }
+            const displayGain = clamp(.42 / peak, 1, 14);
+            for (let index = 0; index < visibleSamples; index++) {
+                const x = index / (visibleSamples - 1) * width;
+                const y = height / 2 - data[start + index] * displayGain * height / 2;
                 index ? context.lineTo(x, y) : context.moveTo(x, y);
-            });
+            }
         }
         context.stroke();
         context.shadowBlur = 0;

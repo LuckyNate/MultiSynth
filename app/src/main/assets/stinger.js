@@ -623,9 +623,9 @@ function initializeScope() {
         const height = canvas.clientHeight;
         context.clearRect(0, 0, width, height);
         context.beginPath();
-        context.strokeStyle = analyser ? "#76ff91" : "#174d24";
+        context.strokeStyle = analyser ? "#fff2a1" : "#7a6500";
         context.lineWidth = analyser ? 1.6 : 1;
-        context.shadowColor = "#42ff68";
+        context.shadowColor = "#ffd400";
         context.shadowBlur = analyser ? 8 : 0;
         if (!analyser) {
             context.moveTo(0, height / 2);
