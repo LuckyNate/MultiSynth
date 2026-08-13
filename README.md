@@ -4,13 +4,15 @@ Native Android wrapper for QuadSynth. One plain-Java Activity contains a WebView
 
 ## Put the existing QuadSynth UI in the app
 
-The known-working files are already installed in `app/src/main/assets/`:
+The selector and known-working QuadSynth files are already installed in `app/src/main/assets/`:
 
-- `index.html`
+- `index.html` — synth selector and app entry point
+- `selector.css` — selector theme and future synth slots
+- `quadsynth.html` — QuadSynth instrument interface
 - `style.css`
 - `quadsynth.js`
 
-`index.html` already loads the native bridge immediately after `quadsynth.js`:
+`quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 
 ```html
 <script src="native-midi.js"></script>
