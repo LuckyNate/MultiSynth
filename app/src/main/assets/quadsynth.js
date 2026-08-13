@@ -288,7 +288,8 @@ function drawScope(){requestAnimationFrame(drawScope);if(!scopeCanvas||!scopeCon
 function setupScope(){scopeCanvas=document.getElementById("scopeCanvas");scopeContext=scopeCanvas.getContext("2d");resizeScope();drawScope();}
 
 function releaseAllInputNotes(){[...pointerNotes.keys()].forEach(releasePointerNote);computerHeld.forEach(k=>noteOffByKey(`pc:${k}`));computerHeld.clear();midiHeld.forEach(noteOffByKey);midiHeld.clear();document.querySelectorAll(".key.down").forEach(e=>e.classList.remove("down"));}
-window.addEventListener("blur",releaseAllInputNotes);window.addEventListener("pagehide",savePersistentState);window.addEventListener("beforeunload",savePersistentState);
+function shutdownAudioEngine(){releaseAllInputNotes();activeVoices.clear();voicePool.length=0;waveCache.clear();keepAliveOscillator=null;keepAliveGain=null;masterGain=null;analyser=null;if(audioCtx){const closing=audioCtx;audioCtx=null;closing.close().catch(()=>{});}}
+window.addEventListener("blur",releaseAllInputNotes);window.addEventListener("pagehide",()=>{savePersistentState();shutdownAudioEngine();});window.addEventListener("beforeunload",savePersistentState);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){savePersistentState();releaseAllInputNotes();}});
 document.addEventListener("touchmove",e=>{const t=e.target instanceof Element?e.target:null;if((t?.closest(".knob")||t?.closest("#keyboard"))&&e.cancelable)e.preventDefault();},{passive:false});
 
