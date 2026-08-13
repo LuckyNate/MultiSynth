@@ -4,7 +4,7 @@ Native Android wrapper for the MultiSynth instrument collection. One plain-Java 
 
 ## Interface contract
 
-Every instrument keeps its oscilloscope fixed at the top and its playable keyboard fixed at the bottom while the controls scroll independently between them. PureSynth also ships static keyboard markup as a visible fallback before JavaScript initializes.
+Every instrument keeps its oscilloscope fixed at the top and its playable keyboard fixed at the bottom while the controls scroll independently between them. PureSynth and No Quarter also ship static keyboard markup as a visible fallback before JavaScript initializes.
 
 ## Included instruments
 
