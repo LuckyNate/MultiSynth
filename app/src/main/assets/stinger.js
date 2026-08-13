@@ -6,9 +6,9 @@ const STORAGE_KEY = "Stinger.PersistentState.v1";
 const TAU = Math.PI * 2;
 
 const channelState = [
-    { octave: 0, detune: 0, acceleration: 88, amount: 35, phase: 0 },
-    { octave: 0, detune: 0, acceleration: 92, amount: 25, phase: 120 },
-    { octave: 0, detune: 0, acceleration: 96, amount: 20, phase: 240 }
+    { octave: 0, detune: 0, acceleration: 88, amount: 35, phase: 0, direction: "up" },
+    { octave: 0, detune: 0, acceleration: 92, amount: 25, phase: 120, direction: "up" },
+    { octave: 0, detune: 0, acceleration: 96, amount: 20, phase: 240, direction: "up" }
 ];
 
 const channelDescriptions = [
@@ -79,6 +79,7 @@ function loadState() {
             channelState[index].detune = Math.round(clamp(Number(channel.detune) || 0, -100, 100));
             channelState[index].amount = Math.round(clamp(Number(channel.amount) || 0, 0, 100));
             channelState[index].phase = Math.round(clamp(Number(channel.phase) || 0, 0, 359));
+            channelState[index].direction = channel.direction === "down" ? "down" : "up";
         });
         if (saved.envelope) {
             envelopeState.attack = clamp(Number(saved.envelope.attack) || .001, .001, 2);
@@ -128,11 +129,12 @@ function warmAudioEngine() {
 }
 
 class PureWaveSource {
-    constructor(waveType, frequency, shape, phaseDegrees) {
+    constructor(waveType, frequency, shape, phaseDegrees, direction = "up") {
         this.waveType = waveType;
         this.frequencyValue = frequency;
         this.shapeValue = shape;
         this.phaseValue = wrap01(phaseDegrees / 360);
+        this.directionValue = direction === "down" ? 1 : -1;
         this.bufferLength = 2048;
         this.output = audioCtx.createGain();
         this.source = null;
@@ -149,6 +151,9 @@ class PureWaveSource {
         this.phase = {
             setTargetAtTime: value => this.setPhase(value)
         };
+        this.direction = {
+            setTargetAtTime: value => this.setDirection(value)
+        };
     }
 
     sample(position) {
@@ -163,7 +168,8 @@ class PureWaveSource {
         const distance = position < .5 ? position * 2 : (1 - position) * 2;
         const drive = clamp(this.shapeValue / 100, 0, 1);
         const exponent = 1 + Math.pow(drive, 1.35) * 7;
-        return -1 + 2 * Math.pow(distance, exponent);
+        const spine = -1 + 2 * Math.pow(distance, exponent);
+        return this.directionValue * spine;
     }
 
     makeBuffer() {
@@ -221,6 +227,13 @@ class PureWaveSource {
         this.rebuild();
     }
 
+    setDirection(value) {
+        const direction = value === "down" || value === 1 ? 1 : -1;
+        if (direction === this.directionValue) return;
+        this.directionValue = direction;
+        this.rebuild();
+    }
+
     connect(destination) {
         this.output.connect(destination);
     }
@@ -254,7 +267,7 @@ class StingerVoice {
         this.stages = [];
         this.modulators = [];
 
-        this.carrier = new PureWaveSource("spine", this.frequency, 94, 0);
+        this.carrier = new PureWaveSource("spine", this.frequency, 94, 0, "up");
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
@@ -296,7 +309,8 @@ class StingerVoice {
             "spine",
             stageFrequency(this.frequency, state.octave, state.detune),
             state.acceleration,
-            state.phase
+            state.phase,
+            state.direction
         );
         const amountGain = audioCtx.createGain();
 
@@ -322,6 +336,7 @@ class StingerVoice {
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
             stage.modulator.shape.setTargetAtTime(state.acceleration, now, .005);
             stage.modulator.phase.setTargetAtTime(wrap01(state.phase / 360), now, .005);
+            stage.modulator.direction.setTargetAtTime(state.direction, now, .005);
         });
     }
 
@@ -415,9 +430,41 @@ function buildChannels() {
         parameterDefinitions.forEach(definition => {
             controls.appendChild(createControl(channelIndex, definition, state[definition.name]));
         });
+        controls.appendChild(createDirectionControl(channelIndex));
         channel.append(title, description, controls);
         container.appendChild(channel);
     });
+}
+
+function createDirectionControl(channelIndex) {
+    const control = document.createElement("div");
+    control.className = "control directionControl";
+    const label = document.createElement("label");
+    label.textContent = "DIRECTION";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "directionToggle";
+
+    function refresh() {
+        const direction = channelState[channelIndex].direction;
+        button.textContent = direction.toUpperCase();
+        button.classList.toggle("down", direction === "down");
+        button.setAttribute("aria-pressed", String(direction === "down"));
+        button.setAttribute("aria-label", `Sting ${channelIndex + 1} direction ${direction}`);
+    }
+
+    button.addEventListener("click", () => {
+        ensureAudio();
+        channelState[channelIndex].direction =
+            channelState[channelIndex].direction === "up" ? "down" : "up";
+        refresh();
+        updateAllVoices();
+        saveState();
+    });
+
+    refresh();
+    control.append(label, button);
+    return control;
 }
 
 function createControl(channelIndex, definition, initialValue) {
