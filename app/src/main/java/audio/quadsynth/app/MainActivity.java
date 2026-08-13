@@ -277,6 +277,11 @@ public final class MainActivity extends Activity {
         runJs("window.warmAudioEngine&&window.warmAudioEngine();");
     }
 
+    @Override public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
+    }
+
     @Override protected void onDestroy() {
         closeOpenMidi(false);
         midiManager.unregisterDeviceCallback(deviceCallback);
