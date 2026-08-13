@@ -139,7 +139,7 @@ button { touch-action: manipulation; }
 
 .globalPanel {
     display: grid;
-    grid-template-columns: repeat(5,minmax(100px,1fr)) 90px;
+    grid-template-columns: repeat(6,minmax(90px,1fr)) 90px;
     gap: 9px;
     align-items: end;
     margin: 0 8px 8px;

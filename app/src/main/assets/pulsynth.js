@@ -63,6 +63,7 @@ function saveState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             channels: channelState,
             envelope: envelopeState,
+            carrier: Number(document.getElementById("carrier")?.value || 1),
             master: Number(document.getElementById("master")?.value || .35)
         }));
     } catch (_) {}
@@ -84,6 +85,9 @@ function loadState() {
             envelopeState.decay = clamp(Number(saved.envelope.decay) || .001, .001, 2);
             envelopeState.sustain = clamp(Number(saved.envelope.sustain) || 0, 0, 1);
             envelopeState.release = clamp(Number(saved.envelope.release) || .001, .001, 3);
+        }
+        if (Number.isFinite(Number(saved.carrier))) {
+            document.getElementById("carrier").value = String(clamp(Number(saved.carrier), 0, 1));
         }
         if (Number.isFinite(Number(saved.master))) {
             document.getElementById("master").value = String(clamp(Number(saved.master), 0, 1));
@@ -161,7 +165,11 @@ class PulseVoice {
         this.carrier.type = "square";
         this.carrier.frequency.value = this.frequency;
 
-        let signal = this.carrier;
+        this.carrierGain = audioCtx.createGain();
+        this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
+        this.carrier.connect(this.carrierGain);
+
+        let signal = this.carrierGain;
         for (let index = 0; index < 3; index++) {
             const stage = this.createStage(index);
             signal.connect(stage.input);
@@ -441,6 +449,13 @@ function initializeGlobalControls() {
     bindSlider("decay", value => { envelopeState.decay = value; return timeLabel(value); });
     bindSlider("sustain", value => { envelopeState.sustain = value; return `${Math.round(value * 100)}%`; });
     bindSlider("release", value => { envelopeState.release = value; return timeLabel(value); });
+    bindSlider("carrier", value => {
+        if (audioCtx) {
+            const now = audioCtx.currentTime;
+            voices.forEach(voice => voice.carrierGain.gain.setTargetAtTime(value, now, .005));
+        }
+        return `${Math.round(value * 100)}%`;
+    });
     bindSlider("master", value => {
         if (masterGain && audioCtx) masterGain.gain.setTargetAtTime(value, audioCtx.currentTime, .01);
         return `${Math.round(value * 100)}%`;
