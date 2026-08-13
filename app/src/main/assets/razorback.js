@@ -156,18 +156,6 @@ function getTriangleCurve(peakPercent, phaseDegrees) {
     return curve;
 }
 
-function makeSaturationCurve() {
-    const size = 2048;
-    const curve = new Float32Array(size);
-    for (let index = 0; index < size; index++) {
-        const input = index / (size - 1) * 2 - 1;
-        curve[index] = Math.tanh(input * 1.35);
-    }
-    return curve;
-}
-
-const saturationCurve = makeSaturationCurve();
-
 class RazorbackVoice {
     constructor(note, velocity, key) {
         this.note = note;
@@ -184,7 +172,7 @@ class RazorbackVoice {
 
         this.carrierShaper = audioCtx.createWaveShaper();
         this.carrierShaper.curve = getTriangleCurve(50, 0);
-        this.carrierShaper.oversample = "4x";
+        this.carrierShaper.oversample = "none";
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
@@ -226,25 +214,21 @@ class RazorbackVoice {
         const modulator = audioCtx.createOscillator();
         const triangleShaper = audioCtx.createWaveShaper();
         const amountGain = audioCtx.createGain();
-        const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
         triangleShaper.curve = getTriangleCurve(state.peak, state.phase);
-        triangleShaper.oversample = "4x";
+        triangleShaper.oversample = "none";
         amountGain.gain.value = state.amount / 100;
-        outputShaper.curve = saturationCurve;
-        outputShaper.oversample = "4x";
 
         input.connect(mixer);
         modulator.connect(triangleShaper);
         triangleShaper.connect(amountGain);
         amountGain.connect(mixer);
-        mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: outputShaper, modulator, triangleShaper, amountGain };
+        return { input, output: mixer, modulator, triangleShaper, amountGain };
     }
 
     update() {
