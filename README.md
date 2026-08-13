@@ -1,8 +1,8 @@
-# QuadSynth Android — Minimal Java Shell
+# MultiSynth Android — Minimal Java Shell
 
-Native Android wrapper for QuadSynth. One plain-Java Activity contains a WebView for the existing interface and Android `MidiManager` for USB/Bluetooth MIDI. It has no AndroidX, Kotlin, Web MIDI, or Web Bluetooth dependency.
+Native Android wrapper for the MultiSynth instrument collection. One plain-Java Activity contains a WebView for the selector and instruments, while Android `MidiManager` handles USB/Bluetooth MIDI. It has no AndroidX, Kotlin, Web MIDI, or Web Bluetooth dependency.
 
-## Put the existing QuadSynth UI in the app
+## Included instruments
 
 The selector and known-working QuadSynth files are already installed in `app/src/main/assets/`:
 
@@ -25,15 +25,15 @@ The browser-only `BT MIDI` / Web MIDI implementation has been removed; native MI
 
 ## Build online from a phone
 
-Upload the complete project to a GitHub repository. Open **Actions**, choose **Build QuadSynth APK**, press **Run workflow**, then download the `QuadSynth-debug-apk` artifact. The workflow installs Java/Gradle and builds the APK in GitHub's cloud runner. Minimum Android version is 6.0 (API 23).
+Upload the complete project to a GitHub repository. Open **Actions**, choose **Build MultiSynth APK**, press **Run workflow**, then download the `MultiSynth-debug-apk` artifact. The workflow installs Java/Gradle and builds the APK in GitHub's cloud runner. Minimum Android version is 6.0 (API 23).
 
 The same project also opens normally in Android Studio if a computer is available.
 
 ## GO:88 connection
 
 1. Pair the GO:88 as a Bluetooth audio device in Android so normal app audio plays from the piano speakers.
-2. Pair its Bluetooth MIDI connection in Android. QuadSynth can explicitly open a paired Bluetooth device through Android's native `openBluetoothDevice()` API, so Roland Piano App does not need to remain open. USB MIDI is also supported directly.
-3. Open QuadSynth and tap **MIDI INPUT**.
+2. Pair its Bluetooth MIDI connection in Android. MultiSynth can explicitly open a paired Bluetooth device through Android's native `openBluetoothDevice()` API, so Roland Piano App does not need to remain open. USB MIDI is also supported directly.
+3. Open MultiSynth, choose an instrument, and tap **MIDI INPUT**.
 4. Select the GO:88 output port.
 5. Tap **AUDIO OUT** if you need to change Android's Bluetooth output.
 
