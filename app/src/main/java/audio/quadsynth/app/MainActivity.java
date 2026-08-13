@@ -102,6 +102,7 @@ public final class MainActivity extends Activity {
                 return !("file".equals(uri.getScheme()) && "/android_asset/".equals(uri.getPathSegments().isEmpty() ? "" : "/" + uri.getPathSegments().get(0) + "/"));
             }
             @Override public void onPageFinished(WebView view, String url) {
+                runJs("window.warmAudioEngine&&window.warmAudioEngine();");
                 publishDeviceChange();
                 reconnectRememberedMidi();
             }
@@ -269,6 +270,16 @@ public final class MainActivity extends Activity {
     @Override protected void onPause() {
         runJs("window.QuadSynthNativeMidi&&window.QuadSynthNativeMidi.panic();");
         super.onPause();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        runJs("window.warmAudioEngine&&window.warmAudioEngine();");
+    }
+
+    @Override public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 
     @Override protected void onDestroy() {

@@ -12,7 +12,6 @@
         const id = "native-midi:" + key(channel, note);
         held.set(key(channel, note), id);
         sustained.delete(key(channel, note));
-        if (typeof recordNoteIfNeeded === "function") recordNoteIfNeeded(note, velocity);
         if (typeof noteOn === "function") noteOn(note, velocity, null, id);
         if (typeof setVisibleKey === "function") setVisibleKey(note, true);
     }
@@ -43,10 +42,7 @@
         let i = 0;
         while (i < bytes.length) {
             let status = bytes[i];
-            if (status >= 0xf8) {
-                if (typeof receiveMidiRealtime === "function") receiveMidiRealtime(status, performance.now());
-                i++; continue;
-            }
+            if (status >= 0xf8) { i++; continue; }
             if (status & 0x80) { runningStatus = status; i++; }
             else if (runningStatus !== null) status = runningStatus;
             else { i++; continue; }
@@ -82,8 +78,8 @@
 
     function installButton() {
         if (!window.AndroidMidi || document.getElementById("nativeMidiInput")) return;
-        const transport = document.getElementById("transport");
-        if (!transport) return;
+        const controls = document.getElementById("connectionControls");
+        if (!controls) return;
         const button = document.createElement("button");
         button.id = "nativeMidiInput";
         button.className = "btn";
@@ -92,12 +88,12 @@
             if (typeof ensureAudio === "function") ensureAudio();
             AndroidMidi.chooseInput();
         });
-        transport.appendChild(button);
+        controls.appendChild(button);
         const audio = document.createElement("button");
         audio.className = "btn";
         audio.textContent = "AUDIO OUT";
         audio.addEventListener("click", () => AndroidMidi.openAudioSettings());
-        transport.appendChild(audio);
+        controls.appendChild(audio);
     }
 
     window.QuadSynthNativeMidi = {
