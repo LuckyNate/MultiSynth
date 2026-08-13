@@ -20,6 +20,9 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `stinger.html` — Stinger three-stage overlapping cycloid click ladder
 - `stinger.css`
 - `stinger.js`
+- `razorback.html` — Razorback three-stage movable-peak ramp ladder
+- `razorback.css`
+- `razorback.js`
 
 `quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 
