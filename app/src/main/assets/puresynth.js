@@ -393,6 +393,7 @@ function timeLabel(seconds) {
 
 function buildKeyboard() {
     const keyboard = document.getElementById("keyboard");
+    keyboard.innerHTML = "";
     const startNote = 48;
     const endNote = 72;
     const blackClasses = new Set([1, 3, 6, 8, 10]);
@@ -539,10 +540,10 @@ function shutdownAudioEngine() {
 }
 
 function bootPureSynth() {
+    buildKeyboard();
     loadState();
     initializePureControls();
     initializeGlobalControls();
-    buildKeyboard();
     setupComputerKeyboard();
     initializeScope();
     warmAudioEngine();
