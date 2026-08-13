@@ -124,16 +124,14 @@ function warmAudioEngine() {
     ensureAudio();
 }
 
-function makeSineCurve(harmonic, phaseDegrees) {
-    const size = 2048;
-    const curve = new Float32Array(size);
-    const cycles = clamp(Math.round(harmonic), 1, 8);
-    const phaseOffset = phaseDegrees / 360;
-    for (let index = 0; index < size; index++) {
-        const phase = index / (size - 1);
-        curve[index] = Math.sin(TAU * (phase * cycles + phaseOffset));
-    }
-    return curve;
+function makeSineWave(harmonic, phaseDegrees) {
+    const partial = clamp(Math.round(harmonic), 1, 8);
+    const real = new Float32Array(partial + 1);
+    const imag = new Float32Array(partial + 1);
+    const phase = phaseDegrees / 360 * TAU;
+    real[partial] = Math.sin(phase);
+    imag[partial] = Math.cos(phase);
+    return audioCtx.createPeriodicWave(real, imag, { disableNormalization: true });
 }
 
 function makeSaturationCurve() {
@@ -195,27 +193,24 @@ class SinVoice {
         const input = audioCtx.createGain();
         const mixer = audioCtx.createGain();
         const modulator = audioCtx.createOscillator();
-        const sineShaper = audioCtx.createWaveShaper();
         const amountGain = audioCtx.createGain();
         const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        sineShaper.curve = makeSineCurve(state.harmonic, state.phase);
-        sineShaper.oversample = "4x";
+        modulator.setPeriodicWave(makeSineWave(state.harmonic, state.phase));
         amountGain.gain.value = state.amount / 100;
         outputShaper.curve = saturationCurve;
         outputShaper.oversample = "4x";
 
         input.connect(mixer);
-        modulator.connect(sineShaper);
-        sineShaper.connect(amountGain);
+        modulator.connect(amountGain);
         amountGain.connect(mixer);
         mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: outputShaper, modulator, sineShaper, amountGain };
+        return { input, output: outputShaper, modulator, amountGain };
     }
 
     update() {
@@ -227,7 +222,7 @@ class SinVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.sineShaper.curve = makeSineCurve(state.harmonic, state.phase);
+            stage.modulator.setPeriodicWave(makeSineWave(state.harmonic, state.phase));
         });
     }
 
