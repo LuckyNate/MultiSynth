@@ -91,7 +91,7 @@ button { touch-action: manipulation; }
 .channel { min-width: 0; padding: 9px; }
 .channel h2 { margin: 0; color: var(--yellow-bright); font-size: 18px; letter-spacing: 3px; text-align: center; text-shadow: 0 0 10px var(--shadow); }
 .signalLabel { margin: 3px 0 11px; color: var(--yellow-dim); font-size: 9px; text-align: center; letter-spacing: 1px; }
-.controls { display: grid; grid-template-columns: repeat(5,minmax(45px,1fr)); gap: 4px; }
+.controls { display: grid; grid-template-columns: repeat(6,minmax(42px,1fr)); gap: 4px; }
 .control { min-width: 0; display: flex; align-items: center; flex-direction: column; }
 .control label, .globalControl label { height: 22px; font-size: 9px; letter-spacing: .5px; text-align: center; }
 .control output { min-height: 16px; margin: 3px 0; font-size: 9px; white-space: nowrap; }
@@ -136,6 +136,26 @@ button { touch-action: manipulation; }
 .stepButton:active, #panic:active, #connectionControls .btn:active { color: #171300; background: var(--yellow); box-shadow: 0 0 12px var(--shadow); }
 .plus { margin-bottom: 4px; }
 .minus { margin-top: 1px; }
+
+.directionToggle {
+    width: 100%;
+    max-width: 54px;
+    height: 42px;
+    margin-top: 26px;
+    border: 1px solid var(--yellow-dim);
+    border-radius: 4px;
+    background: #080700;
+    color: var(--yellow-bright);
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: inset 0 0 8px #000, 0 0 8px rgba(255,212,0,.18);
+}
+.directionToggle.down {
+    background: var(--yellow);
+    color: #171300;
+    box-shadow: 0 0 12px var(--shadow);
+}
+.directionToggle:active { transform: translateY(1px); }
 
 .globalPanel {
     display: grid;
