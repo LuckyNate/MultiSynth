@@ -4,18 +4,22 @@ const TAU = Math.PI * 2;
 const OSC_NAMES = ["click", "sine", "saw", "square"];
 const STORAGE_KEY = "QuadSynth.PersistentState.v1";
 const TOUCH_VELOCITY = 127;
+const MAX_VOICES = 12;
+const MIN_ATTACK_SECONDS = .001;
 
 let audioCtx = null, masterGain = null, analyser = null, scopeData = null;
 let scopeCanvas = null, scopeContext = null;
+let keepAliveOscillator = null, keepAliveGain = null;
 const waveCache = new Map();
 const activeVoices = new Map(), pointerNotes = new Map(), computerHeld = new Set(), midiHeld = new Map();
+const voicePool = [];
 
 const synthState = {
     click: { level: 1, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     sine: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     saw: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     square: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
-    envelope: { attack: .02, decay: .10, sustain: .75, release: .25 }
+    envelope: { attack: .001, decay: .10, sustain: .75, release: .25 }
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -61,9 +65,17 @@ function ensureAudio() {
         analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .04;
         masterGain.connect(analyser); analyser.connect(audioCtx.destination);
         primeWaveCache();
+        buildVoicePool();
+        startAudioKeepAlive();
     }
-    if (audioCtx.state === "suspended") audioCtx.resume().catch(console.error);
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
     return true;
+}
+
+function warmAudioEngine() {
+    if (!ensureAudio()) return;
+    primeWaveCache();
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
 }
 
 function waveKey(type, phase) { return `${type}:${wrap(Number(phase) || 0, 0, TAU).toFixed(2)}`; }
@@ -118,13 +130,59 @@ function createStandardWave(type, phase) {
 }
 function createPhaseWave(type, phase) { return type === "click" ? createClickWave(phase) : createStandardWave(type, phase); }
 
-function createVoiceSource(name, voice, settings, when = audioCtx.currentTime) {
-    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), s = settings[name];
-    osc.frequency.setValueAtTime(tunedFrequency(voice.baseFrequency, s), when);
-    osc.setPeriodicWave(cachedPhaseWave(name, s.phase));
-    gain.gain.setValueAtTime(oscillatorGain(settings, name), when);
-    osc.connect(gain); gain.connect(voice.envelopeNode); osc.start(when);
-    voice.sources[name] = { oscillator: osc, gain };
+function startAudioKeepAlive() {
+    keepAliveOscillator = audioCtx.createOscillator();
+    keepAliveGain = audioCtx.createGain();
+    keepAliveOscillator.frequency.value = 20;
+    keepAliveGain.gain.value = .0000001;
+    keepAliveOscillator.connect(keepAliveGain);
+    keepAliveGain.connect(masterGain);
+    keepAliveOscillator.start();
+}
+
+function createPooledVoice() {
+    const envelopeNode = audioCtx.createGain();
+    envelopeNode.gain.value = 0;
+    envelopeNode.connect(masterGain);
+    const voice = {
+        key: null, midi: 69, baseFrequency: 440, envelopeNode,
+        sources: {}, locked: false, released: false, release: .25, generation: 0
+    };
+    OSC_NAMES.forEach(name => {
+        const oscillator = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        oscillator.frequency.value = 440;
+        oscillator.setPeriodicWave(cachedPhaseWave(name, synthState[name].phase));
+        gain.gain.value = 0;
+        oscillator.connect(gain); gain.connect(envelopeNode); oscillator.start();
+        voice.sources[name] = { oscillator, gain };
+    });
+    return voice;
+}
+
+function buildVoicePool() {
+    while (voicePool.length < MAX_VOICES) voicePool.push(createPooledVoice());
+}
+
+function acquireVoice() {
+    const free = voicePool.find(voice => voice.key === null);
+    if (free) return free;
+    const oldestKey = activeVoices.keys().next().value;
+    if (oldestKey !== undefined) {
+        killVoice(oldestKey);
+        return voicePool.find(voice => voice.key === null);
+    }
+    return null;
+}
+
+function configurePooledVoice(voice, settings, when) {
+    OSC_NAMES.forEach(name => {
+        const source = voice.sources[name], s = settings[name];
+        source.oscillator.frequency.cancelScheduledValues(when);
+        source.oscillator.frequency.setValueAtTime(tunedFrequency(voice.baseFrequency, s), when);
+        source.oscillator.setPeriodicWave(cachedPhaseWave(name, s.phase));
+        source.gain.gain.cancelScheduledValues(when);
+        source.gain.gain.setValueAtTime(oscillatorGain(settings, name), when);
+    });
 }
 
 function noteOn(midi, velocity = TOUCH_VELOCITY, overrideState = null, voiceKey = null, when = null) {
@@ -132,15 +190,16 @@ function noteOn(midi, velocity = TOUCH_VELOCITY, overrideState = null, voiceKey 
     const key = voiceKey || `note:${midi}`; if (activeVoices.has(key)) killVoice(key);
     const settings = overrideState ? JSON.parse(JSON.stringify(overrideState)) : synthState;
     const now = Math.max(audioCtx.currentTime, Number.isFinite(when) ? when : audioCtx.currentTime), vg = clamp(Number(velocity) / 127, .001, 1);
-    const a = Math.max(.002, settings.envelope.attack), d = Math.max(.002, settings.envelope.decay);
-    const env = audioCtx.createGain(); env.gain.setValueAtTime(.0001, now);
+    const a = Math.max(MIN_ATTACK_SECONDS, settings.envelope.attack), d = Math.max(.001, settings.envelope.decay);
+    const voice = acquireVoice(); if (!voice) return;
+    voice.generation++; voice.key = key; voice.midi = midi; voice.baseFrequency = midiToFrequency(midi);
+    voice.locked = !!overrideState; voice.released = false; voice.release = Math.max(.01, settings.envelope.release);
+    configurePooledVoice(voice, settings, now);
+    const env = voice.envelopeNode;
+    env.gain.cancelScheduledValues(now); env.gain.setValueAtTime(0, now);
     env.gain.linearRampToValueAtTime(vg, now + a);
     env.gain.linearRampToValueAtTime(Math.max(.0001, vg * settings.envelope.sustain), now + a + d);
-    env.connect(masterGain);
-    const voice = { key, midi, baseFrequency: midiToFrequency(midi), envelopeNode: env, sources: {}, locked: !!overrideState, released: false, release: Math.max(.01, settings.envelope.release) };
     activeVoices.set(key, voice);
-    try { OSC_NAMES.forEach(name => createVoiceSource(name, voice, settings, now)); }
-    catch (e) { console.error(e); killVoice(key); }
 }
 
 function noteOffByKey(key) {
@@ -149,12 +208,20 @@ function noteOffByKey(key) {
     if (gain.cancelAndHoldAtTime) gain.cancelAndHoldAtTime(now);
     else { gain.cancelScheduledValues(now); gain.setValueAtTime(Math.max(.0001, gain.value), now); }
     gain.exponentialRampToValueAtTime(.0001, now + voice.release);
-    setTimeout(() => { if (activeVoices.get(key) === voice) killVoice(key); }, voice.release * 1000 + 100);
+    const generation = voice.generation;
+    setTimeout(() => { if (activeVoices.get(key) === voice && voice.generation === generation) killVoice(key); }, voice.release * 1000 + 100);
 }
 function killVoice(key) {
     const voice = activeVoices.get(key); if (!voice) return;
-    Object.values(voice.sources).forEach(s => { try { s.oscillator.stop(); } catch (_) {} try { s.oscillator.disconnect(); s.gain.disconnect(); } catch (_) {} });
-    try { voice.envelopeNode.disconnect(); } catch (_) {} activeVoices.delete(key);
+    const now = audioCtx ? audioCtx.currentTime : 0;
+    voice.envelopeNode.gain.cancelScheduledValues(now);
+    voice.envelopeNode.gain.setValueAtTime(0, now);
+    Object.values(voice.sources).forEach(source => {
+        source.gain.gain.cancelScheduledValues(now);
+        source.gain.gain.setValueAtTime(0, now);
+    });
+    activeVoices.delete(key);
+    voice.key = null; voice.released = false; voice.locked = false;
 }
 
 function updateAllLiveGains() {
@@ -179,7 +246,7 @@ function oscConfigs(name) { return {
 }; }
 const knobConfigs = {
     ...oscConfigs("click"), ...oscConfigs("sine"), ...oscConfigs("saw"), ...oscConfigs("square"),
-    attack: { min: 0, max: 2000, value: 20, reset: 0, step: 1, apply(v) { synthState.envelope.attack = v / 1000; savePersistentState(); } },
+    attack: { min: 0, max: 2000, value: 1, reset: 0, step: 1, apply(v) { synthState.envelope.attack = v / 1000; savePersistentState(); } },
     decay: { min: 0, max: 2000, value: 100, reset: 0, step: 1, apply(v) { synthState.envelope.decay = v / 1000; savePersistentState(); } },
     sustain: { min: 0, max: 100, value: 75, reset: 0, step: 1, apply(v) { synthState.envelope.sustain = v / 100; savePersistentState(); } },
     release: { min: 0, max: 4000, value: 250, reset: 0, step: 1, apply(v) { synthState.envelope.release = v / 1000; savePersistentState(); } }
