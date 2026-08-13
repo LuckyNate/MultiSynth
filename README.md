@@ -2,6 +2,10 @@
 
 Native Android wrapper for the MultiSynth instrument collection. One plain-Java Activity contains a WebView for the selector and instruments, while Android `MidiManager` handles USB/Bluetooth MIDI. It has no AndroidX, Kotlin, Web MIDI, or Web Bluetooth dependency.
 
+## Interface contract
+
+Every instrument keeps its oscilloscope fixed at the top and its playable keyboard fixed at the bottom while the controls scroll independently between them.
+
 ## Included instruments
 
 The selector and known-working QuadSynth files are already installed in `app/src/main/assets/`:
