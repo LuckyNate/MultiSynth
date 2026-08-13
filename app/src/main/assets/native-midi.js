@@ -96,7 +96,7 @@
         controls.appendChild(audio);
     }
 
-    window.QuadSynthNativeMidi = {
+    window.MultiSynthNativeMidi = {
         receive: process,
         devicesChanged: function () {},
         permissionResult: function () {},
