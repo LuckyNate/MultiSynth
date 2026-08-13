@@ -1,0 +1,61 @@
+:root {
+    --amber: #ffb000;
+    --amber-bright: #ffd76a;
+    --amber-dim: #755000;
+    --black: #030302;
+    --panel: #0b0905;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+html, body { width: 100%; height: 100%; margin: 0; background: var(--black); }
+body { min-height: 100vh; overflow: hidden; background: radial-gradient(circle at 50% 30%, #181006 0%, #030302 70%); color: var(--amber); font-family: "Courier New", monospace; }
+button { font-family: inherit; }
+#app { width: 100%; height: 100%; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+.crt { position: relative; overflow: hidden; background: radial-gradient(ellipse at center, #171005 0%, #040302 75%); border: 1px solid #654817; border-radius: 8px; color: var(--amber-bright); text-shadow: 0 0 3px var(--amber), 0 0 7px rgba(255,176,0,.45); box-shadow: inset 0 0 14px #000, inset 0 0 6px rgba(255,176,0,.13); }
+.crt::after { content: ""; position: absolute; inset: 0; z-index: 20; pointer-events: none; background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,.23) 3px, rgba(0,0,0,.23) 4px); }
+
+#scopeWrap { flex: 0 0 94px; width: 100%; height: 94px; min-height: 94px; padding: 6px 7px 4px; background: linear-gradient(#15110a, #070603); border-bottom: 1px solid #493415; }
+#scope { position: relative; width: 100%; height: 83px; }
+#scopeCanvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+#scopeTitle { position: absolute; z-index: 5; left: 8px; top: 5px; font-size: 9px; font-weight: bold; letter-spacing: 2px; color: var(--amber-bright); pointer-events: none; }
+
+#controls { flex: 1 1 auto; width: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 5px 5px 150px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#controls::-webkit-scrollbar { display: none; }
+
+.panel { width: 100%; margin-bottom: 6px; border: 1px solid #46351a; border-radius: 5px; background: linear-gradient(#151109, #080603); }
+.panelTitle { padding: 5px 7px 4px; border-bottom: 1px solid #3e2d14; font-size: 10px; font-weight: bold; letter-spacing: 2px; color: var(--amber-bright); text-shadow: 0 0 4px rgba(255,176,0,.45); }
+.panelBody { padding: 6px; }
+
+#oscGrid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; }
+.osc { min-width: 0; padding: 5px 2px; border: 1px solid #382b16; border-radius: 4px; background: #080603; text-align: center; }
+.oscName { margin-bottom: 4px; font-size: 9px; font-weight: bold; letter-spacing: 1px; color: var(--amber-bright); }
+
+.knobGroup { display: flex; flex-direction: column; align-items: center; margin: 3px 0 5px; }
+.knob { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; border: 2px solid #443a2a; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #30281a 0%, #12100a 46%, #020202 78%); box-shadow: inset 0 0 8px #000, 0 2px 4px #000; touch-action: none; }
+.knobScreen { position: relative; overflow: hidden; width: 40px; height: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid #654715; border-radius: 50%; background: radial-gradient(ellipse, #201405, #030201 80%); color: var(--amber-bright); font-size: 10px; font-weight: bold; text-shadow: 0 0 3px var(--amber), 0 0 7px var(--amber); box-shadow: inset 0 0 5px #000; }
+.knobScreen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,.25) 3px); }
+.knobLabel { margin-top: 2px; font-size: 7px; letter-spacing: 1px; color: var(--amber); }
+
+.buttonRow { display: flex; justify-content: center; gap: 4px; }
+.btn { min-width: 30px; height: 25px; padding: 0 6px; border: 1px solid #60471c; border-radius: 3px; background: linear-gradient(#21190c, #080603); color: var(--amber); font-size: 9px; font-weight: bold; text-shadow: 0 0 4px rgba(255,176,0,.5); }
+.btn.active { border-color: var(--amber-bright); color: var(--amber-bright); background: radial-gradient(circle, #543500, #100a02); box-shadow: inset 0 0 8px rgba(255,176,0,.35), 0 0 5px rgba(255,176,0,.25); }
+
+#adsr { display: flex; justify-content: space-around; align-items: center; }
+#connectionControls { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
+#connectionControls:empty { display: none; }
+
+#keyboardShell { position: fixed; z-index: 100; left: 0; right: 0; bottom: 0; width: 100%; height: 135px; padding: 5px; border-top: 2px solid #4a3718; background: linear-gradient(#151008, #030302); box-shadow: 0 -5px 14px rgba(0,0,0,.8); }
+#keyboard { position: relative; width: 100%; height: 125px; }
+#whiteKeys { position: absolute; inset: 0; display: flex; }
+.key { touch-action: none; }
+.white { flex: 1; height: 100%; border: 1px solid #4c3917; border-radius: 0 0 3px 3px; background: linear-gradient(#d7aa51, #a77423 60%, #62420f); box-shadow: inset 0 -7px 9px rgba(0,0,0,.28); }
+.white.down { background: linear-gradient(#ffd978, #aa6c10); box-shadow: inset 0 0 13px rgba(255,176,0,.75); }
+.black { position: absolute; z-index: 5; top: 0; width: 4.4%; height: 62%; transform: translateX(-50%); border: 1px solid #75531b; border-radius: 0 0 3px 3px; background: linear-gradient(#251b0b, #050403 75%); box-shadow: 0 4px 5px rgba(0,0,0,.8); }
+.black.down { background: linear-gradient(#6b4609, #100a02); box-shadow: inset 0 0 9px rgba(255,176,0,.5); }
+
+@media (max-width:600px) {
+    .knob { width: 52px; height: 52px; }
+    .knobScreen { width: 38px; height: 24px; font-size: 9px; }
+    .osc { padding-left: 1px; padding-right: 1px; }
+}
