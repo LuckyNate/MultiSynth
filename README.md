@@ -14,6 +14,9 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `pulsynth.html` — Pulsynth three-stage PWM ladder interface
 - `pulsynth.css`
 - `pulsynth.js`
+- `sinladder.html` — SinLadder three-stage sine harmonic ladder interface
+- `sinladder.css`
+- `sinladder.js`
 
 `quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 

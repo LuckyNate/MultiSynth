@@ -1,0 +1,180 @@
+:root {
+    --black: #020405;
+    --cyan: #36eaff;
+    --cyan-bright: #b3f8ff;
+    --cyan-dim: #126875;
+    --shadow: rgba(54,234,255,.55);
+    --scope-height: 150px;
+    --keyboard-height: 135px;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html, body {
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    background: #000;
+    color: var(--cyan);
+    font-family: "Courier New", monospace;
+}
+
+button, input { font: inherit; }
+button { touch-action: manipulation; }
+
+#synth {
+    min-height: 100vh;
+    padding-top: var(--scope-height);
+    padding-bottom: calc(var(--keyboard-height) + 10px);
+    background:
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.018) 0, rgba(255,255,255,.018) 1px, transparent 2px, transparent 4px),
+        radial-gradient(circle at 50% 0%, #072126, #010405 65%);
+}
+
+.scopePanel {
+    position: fixed;
+    z-index: 100;
+    inset: 0 0 auto;
+    height: var(--scope-height);
+    padding: 8px;
+    border-bottom: 1px solid var(--cyan-dim);
+    background: rgba(0,5,1,.985);
+    box-shadow: 0 8px 18px rgba(0,0,0,.9);
+}
+
+.scopeHeading {
+    height: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px var(--shadow);
+}
+
+#status { color: var(--cyan-bright); }
+
+#scope {
+    display: block;
+    width: 100%;
+    height: 110px;
+    border: 1px solid var(--cyan-dim);
+    border-radius: 4px;
+    background:
+        linear-gradient(rgba(18,104,117,.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(18,104,117,.13) 1px, transparent 1px),
+        #010502;
+    background-size: 25px 25px;
+    box-shadow: inset 0 0 25px #000, 0 0 10px rgba(54,234,255,.12);
+}
+
+.channelPanel {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(260px,1fr));
+    gap: 8px;
+    padding: 8px;
+}
+
+.channel, .globalPanel, .connectionPanel {
+    border: 1px solid var(--cyan-dim);
+    border-radius: 6px;
+    background: rgba(2,9,4,.9);
+    box-shadow: inset 0 0 20px rgba(0,0,0,.8);
+}
+
+.channel { min-width: 0; padding: 9px; }
+.channel h2 { margin: 0; color: var(--cyan-bright); font-size: 18px; letter-spacing: 3px; text-align: center; text-shadow: 0 0 10px var(--shadow); }
+.signalLabel { margin: 3px 0 11px; color: var(--cyan-dim); font-size: 9px; text-align: center; letter-spacing: 1px; }
+.controls { display: grid; grid-template-columns: repeat(5,minmax(45px,1fr)); gap: 4px; }
+.control { min-width: 0; display: flex; align-items: center; flex-direction: column; }
+.control label, .globalControl label { height: 22px; font-size: 9px; letter-spacing: .5px; text-align: center; }
+.control output { min-height: 16px; margin: 3px 0; font-size: 9px; white-space: nowrap; }
+
+.knob {
+    --rotation: 0deg;
+    position: relative;
+    width: 52px;
+    aspect-ratio: 1;
+    border: 2px solid var(--cyan-dim);
+    border-radius: 50%;
+    background: radial-gradient(circle at 42% 35%, #123b40, #061417 47%, #010405 75%);
+    box-shadow: inset 0 0 9px #000, 0 0 7px rgba(54,234,255,.25);
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+.knob::before {
+    content: "";
+    position: absolute;
+    left: calc(50% - 1px);
+    top: 7%;
+    width: 2px;
+    height: 39%;
+    border-radius: 2px;
+    background: var(--cyan-bright);
+    box-shadow: 0 0 7px var(--cyan);
+    transform-origin: 50% 110%;
+    transform: rotate(var(--rotation));
+}
+
+.knob.active { border-color: var(--cyan-bright); box-shadow: inset 0 0 9px #000, 0 0 14px var(--shadow); }
+
+.stepButton, #panic, #connectionControls .btn {
+    border: 1px solid var(--cyan-dim);
+    border-radius: 3px;
+    background: #020607;
+    color: var(--cyan);
+}
+
+.stepButton { width: 27px; height: 22px; padding: 0; line-height: 18px; }
+.stepButton:active, #panic:active, #connectionControls .btn:active { color: #001316; background: var(--cyan); box-shadow: 0 0 12px var(--shadow); }
+.plus { margin-bottom: 4px; }
+.minus { margin-top: 1px; }
+
+.globalPanel {
+    display: grid;
+    grid-template-columns: repeat(5,minmax(100px,1fr)) 90px;
+    gap: 9px;
+    align-items: end;
+    margin: 0 8px 8px;
+    padding: 9px;
+}
+
+.globalControl { display: flex; align-items: center; flex-direction: column; }
+.globalControl input { width: 100%; accent-color: var(--cyan); }
+.globalControl output { min-height: 16px; font-size: 9px; }
+#panic { height: 40px; color: var(--cyan-bright); }
+
+.connectionPanel { margin: 0 8px 8px; }
+.panelTitle { padding: 5px 7px 4px; border-bottom: 1px solid var(--cyan-dim); color: var(--cyan-bright); font-size: 10px; font-weight: bold; letter-spacing: 2px; }
+#connectionControls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; padding: 7px; }
+#connectionControls:empty { display: none; }
+#connectionControls .btn { min-height: 34px; }
+
+#keyboard {
+    position: fixed;
+    z-index: 90;
+    inset: auto 0 0;
+    height: var(--keyboard-height);
+    overflow: hidden;
+    border-top: 2px solid var(--cyan);
+    background: #000;
+    box-shadow: 0 -7px 20px rgba(0,0,0,.9);
+    touch-action: none;
+}
+
+.key { position: absolute; top: 0; border-radius: 0 0 5px 5px; touch-action: none; }
+.key.white { z-index: 1; height: 100%; border: 1px solid #123740; background: linear-gradient(to bottom,#12333a,#06161a 75%,#0a252a); }
+.key.black { z-index: 2; height: 61%; border: 1px solid var(--cyan-dim); background: linear-gradient(to bottom,#010405,#082126 75%,#020607); box-shadow: 0 5px 8px #000; }
+.key.down { background: linear-gradient(to bottom,var(--cyan-bright),#25bfd0 70%,#147a86); box-shadow: inset 0 0 18px rgba(255,255,255,.45),0 0 15px var(--cyan); }
+
+@media (max-width:850px) {
+    .channelPanel { grid-template-columns: 1fr; }
+    .globalPanel { grid-template-columns: repeat(2,1fr); }
+}
