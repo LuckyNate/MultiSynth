@@ -126,10 +126,11 @@ function ensureAudio() {
 
 function warmAudioEngine() {
     if (!ensureAudio()) return;
-    channelState.forEach(state => getRazorWave(state.peak, state.phase));
+    getRazorCurve(50, 0);
+    channelState.forEach(state => getRazorCurve(state.peak, state.phase));
 }
 
-const razorWaveCache = new Map();
+const razorCurveCache = new Map();
 
 function rampBipolar(position, peakPercent) {
     const x = wrap01(position);
@@ -141,38 +142,24 @@ function rampBipolar(position, peakPercent) {
         : 1 - 2 * (x - peak) / (1 - peak);
 }
 
-function makeRazorWave(peakPercent, phaseDegrees) {
-    const samples = 512;
-    const harmonics = 96;
-    const wave = new Float32Array(samples);
+function makeRazorCurve(peakPercent, phaseDegrees) {
+    const size = 2048;
+    const curve = new Float32Array(size);
     const phase = wrap01(phaseDegrees / 360);
-    for (let index = 0; index < samples; index++) {
-        wave[index] = rampBipolar(index / samples + phase, peakPercent);
+    for (let index = 0; index < size; index++) {
+        curve[index] = rampBipolar(index / (size - 1) + phase, peakPercent);
     }
-    const real = new Float32Array(harmonics + 1);
-    const imag = new Float32Array(harmonics + 1);
-    for (let harmonic = 1; harmonic <= harmonics; harmonic++) {
-        let cosine = 0;
-        let sine = 0;
-        for (let index = 0; index < samples; index++) {
-            const angle = TAU * harmonic * index / samples;
-            cosine += wave[index] * Math.cos(angle);
-            sine += wave[index] * Math.sin(angle);
-        }
-        real[harmonic] = cosine * 2 / samples;
-        imag[harmonic] = sine * 2 / samples;
-    }
-    return audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
+    return curve;
 }
 
-function getRazorWave(peakPercent, phaseDegrees) {
+function getRazorCurve(peakPercent, phaseDegrees) {
     const key = Math.round(peakPercent) + ":" + Math.round(phaseDegrees);
-    let wave = razorWaveCache.get(key);
-    if (!wave) {
-        wave = makeRazorWave(peakPercent, phaseDegrees);
-        razorWaveCache.set(key, wave);
+    let curve = razorCurveCache.get(key);
+    if (!curve) {
+        curve = makeRazorCurve(peakPercent, phaseDegrees);
+        razorCurveCache.set(key, curve);
     }
-    return wave;
+    return curve;
 }
 
 function makeSaturationCurve() {
@@ -198,14 +185,16 @@ class RazorbackVoice {
         this.modulators = [];
 
         this.carrier = audioCtx.createOscillator();
+        this.carrier.type = "sawtooth";
         this.carrier.frequency.value = this.frequency;
-        // The carrier is the same movable-peak ramp at its natural,
-        // symmetric position: a mathematically exact triangle.
-        this.carrier.setPeriodicWave(getRazorWave(50, 0));
+        this.carrierShaper = audioCtx.createWaveShaper();
+        this.carrierShaper.curve = getRazorCurve(50, 0);
+        this.carrierShaper.oversample = "4x";
 
         this.carrierGain = audioCtx.createGain();
         this.carrierGain.gain.value = Number(document.getElementById("carrier")?.value || 1);
-        this.carrier.connect(this.carrierGain);
+        this.carrier.connect(this.carrierShaper);
+        this.carrierShaper.connect(this.carrierGain);
 
         let signal = this.carrierGain;
         for (let index = 0; index < 3; index++) {
@@ -240,24 +229,27 @@ class RazorbackVoice {
         const input = audioCtx.createGain();
         const mixer = audioCtx.createGain();
         const modulator = audioCtx.createOscillator();
+        const rampShaper = audioCtx.createWaveShaper();
         const amountGain = audioCtx.createGain();
         const outputShaper = audioCtx.createWaveShaper();
 
         input.gain.value = 1;
         modulator.type = "sawtooth";
         modulator.frequency.value = stageFrequency(this.frequency, state.octave, state.detune);
-        modulator.setPeriodicWave(getRazorWave(state.peak, state.phase));
+        rampShaper.curve = getRazorCurve(state.peak, state.phase);
+        rampShaper.oversample = "4x";
         amountGain.gain.value = state.amount / 100;
         outputShaper.curve = saturationCurve;
         outputShaper.oversample = "4x";
 
         input.connect(mixer);
-        modulator.connect(amountGain);
+        modulator.connect(rampShaper);
+        rampShaper.connect(amountGain);
         amountGain.connect(mixer);
         mixer.connect(outputShaper);
         this.modulators.push(modulator);
 
-        return { input, output: outputShaper, modulator, amountGain };
+        return { input, output: outputShaper, modulator, rampShaper, amountGain };
     }
 
     update() {
@@ -269,7 +261,7 @@ class RazorbackVoice {
                 stageFrequency(this.frequency, state.octave, state.detune), now, .005
             );
             stage.amountGain.gain.setTargetAtTime(state.amount / 100, now, .005);
-            stage.modulator.setPeriodicWave(getRazorWave(state.peak, state.phase));
+            stage.rampShaper.curve = getRazorCurve(state.peak, state.phase);
         });
     }
 
@@ -655,7 +647,7 @@ function shutdownAudioEngine() {
         analyser = null;
         keepAlive = null;
         keepAliveGain = null;
-        razorWaveCache.clear();
+        razorCurveCache.clear();
         closing.close().catch(() => {});
     }
 }
