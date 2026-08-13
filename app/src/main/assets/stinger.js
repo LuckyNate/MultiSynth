@@ -132,16 +132,12 @@ function warmAudioEngine() {
 
 const stingCurveCache = new Map();
 
-function cycloidBipolar(position, acceleration) {
-    const target = clamp(position, 0, 1) * TAU;
-    const cusp = clamp(acceleration / 100, 0, .995);
-    let theta = target;
-    for (let pass = 0; pass < 7; pass++) {
-        const error = theta - cusp * Math.sin(theta) - target;
-        const slope = Math.max(.005, 1 - cusp * Math.cos(theta));
-        theta = clamp(theta - error / slope, 0, TAU);
-    }
-    return -Math.cos(theta);
+function spineBipolar(position, acceleration) {
+    const x = wrap01(position);
+    const distanceToPeak = x < .5 ? x * 2 : (1 - x) * 2;
+    const drive = clamp(acceleration / 100, 0, 1);
+    const exponent = 1 + Math.pow(drive, 1.35) * 7;
+    return -1 + 2 * Math.pow(distanceToPeak, exponent);
 }
 
 function makeStingCurve(acceleration, phaseDegrees) {
@@ -150,7 +146,7 @@ function makeStingCurve(acceleration, phaseDegrees) {
     const phase = wrap01(phaseDegrees / 360);
     for (let index = 0; index < size; index++) {
         const clickPhase = wrap01(index / (size - 1) + phase);
-        curve[index] = cycloidBipolar(clickPhase, acceleration);
+        curve[index] = spineBipolar(clickPhase, acceleration);
     }
     return curve;
 }
@@ -663,7 +659,7 @@ function bootStinger() {
     setupComputerKeyboard();
     initializeScope();
     warmAudioEngine();
-    console.log("Stinger ready: three-stage overlapping cycloid click ladder enabled.");
+    console.log("Stinger ready: three-stage pointed spine-click ladder enabled.");
 }
 
 window.addEventListener("blur", panicAll);
