@@ -362,13 +362,6 @@ function initializeGlobalControls() {
     bindSlider("decay", value => { envelopeState.decay = value; return timeLabel(value); });
     bindSlider("sustain", value => { envelopeState.sustain = value; return `${Math.round(value * 100)}%`; });
     bindSlider("release", value => { envelopeState.release = value; return timeLabel(value); });
-    bindSlider("carrier", value => {
-        if (audioCtx) {
-            const now = audioCtx.currentTime;
-            voices.forEach(voice => voice.carrierGain.gain.setTargetAtTime(value, now, .005));
-        }
-        return `${Math.round(value * 100)}%`;
-    });
     bindSlider("master", value => {
         if (masterGain && audioCtx) masterGain.gain.setTargetAtTime(value, audioCtx.currentTime, .01);
         return `${Math.round(value * 100)}%`;
