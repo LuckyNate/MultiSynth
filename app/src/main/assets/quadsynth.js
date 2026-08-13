@@ -7,7 +7,8 @@ const TOUCH_VELOCITY = 127;
 const MAX_VOICES = 12;
 const MIN_ATTACK_SECONDS = .001;
 
-let audioCtx = null, masterGain = null, analyser = null, scopeData = null;
+let audioCtx = null, driveGain = null, clipper = null, masterGain = null, analyser = null, scopeData = null;
+let meterSegments = [], meterClipHold = 0;
 let scopeCanvas = null, scopeContext = null;
 let keepAliveOscillator = null, keepAliveGain = null;
 const waveCache = new Map();
@@ -19,7 +20,8 @@ const synthState = {
     sine: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     saw: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
     square: { level: 0, octave: 0, tune: 0, phase: 0, mute: false, solo: false },
-    envelope: { attack: .001, decay: .10, sustain: .75, release: .25 }
+    envelope: { attack: .001, decay: .10, sustain: .75, release: .25 },
+    master: { level: 1, drive: 0, clip: 1 }
 };
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -46,6 +48,12 @@ function loadPersistentState() {
             synthState[name].phase = clamp(Number(s.phase) || 0, 0, TAU);
             synthState[name].mute = !!s.mute; synthState[name].solo = !!s.solo;
         });
+        const m = saved.synth?.master;
+        if (m) {
+            synthState.master.level = clamp(Number(m.level) || 0, 0, 1);
+            synthState.master.drive = clamp(Number(m.drive) || 0, 0, 1);
+            synthState.master.clip = clamp(Number(m.clip) || 0, .1, 1);
+        }
         const e = saved.synth?.envelope;
         if (e) {
             const savedAttack = clamp(Number(e.attack) || 0, 0, 2);
@@ -62,9 +70,12 @@ function ensureAudio() {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) { alert("Web Audio is unavailable."); return false; }
         audioCtx = new AC({ latencyHint: "interactive" });
-        masterGain = audioCtx.createGain(); masterGain.gain.value = .22;
+        driveGain = audioCtx.createGain();
+        clipper = audioCtx.createWaveShaper();
+        masterGain = audioCtx.createGain();
         analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .04;
-        masterGain.connect(analyser); analyser.connect(audioCtx.destination);
+        driveGain.connect(clipper); clipper.connect(masterGain); masterGain.connect(analyser); analyser.connect(audioCtx.destination);
+        updateMasterStage();
         primeWaveCache();
         buildVoicePool();
         startAudioKeepAlive();
@@ -137,14 +148,14 @@ function startAudioKeepAlive() {
     keepAliveOscillator.frequency.value = 20;
     keepAliveGain.gain.value = .0000001;
     keepAliveOscillator.connect(keepAliveGain);
-    keepAliveGain.connect(masterGain);
+    keepAliveGain.connect(driveGain);
     keepAliveOscillator.start();
 }
 
 function createPooledVoice() {
     const envelopeNode = audioCtx.createGain();
     envelopeNode.gain.value = 0;
-    envelopeNode.connect(masterGain);
+    envelopeNode.connect(driveGain);
     const voice = {
         key: null, midi: 69, baseFrequency: 440, envelopeNode,
         sources: {}, locked: false, released: false, release: .25, generation: 0
@@ -245,8 +256,28 @@ function oscConfigs(name) { return {
     [`${name}Tune`]: { min: -100, max: 100, value: 0, reset: 0, step: 1, signed: true, apply(v) { synthState[name].tune = v; updateLiveVoices(name, "tune"); savePersistentState(); } },
     [`${name}Phase`]: { min: 0, max: TAU, value: 0, reset: 0, step: .01, wrap: true, radians: true, apply(v) { synthState[name].phase = v; updateLiveVoices(name, "phase"); savePersistentState(); } }
 }; }
+function makeClipCurve(threshold) {
+    const size = 2048, curve = new Float32Array(size), t = clamp(threshold, .1, 1);
+    for (let i = 0; i < size; i++) {
+        const x = i * 2 / (size - 1) - 1;
+        curve[i] = clamp(x, -t, t) / t;
+    }
+    return curve;
+}
+function updateMasterStage() {
+    if (!audioCtx || !driveGain || !clipper || !masterGain) return;
+    const now = audioCtx.currentTime;
+    driveGain.gain.setTargetAtTime(1 + synthState.master.drive * 7, now, .01);
+    masterGain.gain.setTargetAtTime(.22 * synthState.master.level, now, .01);
+    clipper.curve = makeClipCurve(synthState.master.clip);
+    clipper.oversample = "4x";
+}
+
 const knobConfigs = {
     ...oscConfigs("click"), ...oscConfigs("sine"), ...oscConfigs("saw"), ...oscConfigs("square"),
+    masterLevel: { min: 0, max: 100, value: 100, reset: 100, step: 1, apply(v) { synthState.master.level = v / 100; updateMasterStage(); savePersistentState(); } },
+    drive: { min: 0, max: 100, value: 0, reset: 0, step: 1, apply(v) { synthState.master.drive = v / 100; updateMasterStage(); savePersistentState(); } },
+    clip: { min: 10, max: 100, value: 100, reset: 100, step: 1, apply(v) { synthState.master.clip = v / 100; updateMasterStage(); savePersistentState(); } },
     attack: { min: 0, max: 2000, value: 1, reset: 0, step: 1, apply(v) { synthState.envelope.attack = v / 1000; savePersistentState(); } },
     decay: { min: 0, max: 2000, value: 100, reset: 0, step: 1, apply(v) { synthState.envelope.decay = v / 1000; savePersistentState(); } },
     sustain: { min: 0, max: 100, value: 75, reset: 0, step: 1, apply(v) { synthState.envelope.sustain = v / 100; savePersistentState(); } },
@@ -254,6 +285,7 @@ const knobConfigs = {
 };
 function syncKnobs() {
     OSC_NAMES.forEach(n => { knobConfigs[n+"Level"].value=synthState[n].level*100; knobConfigs[n+"Octave"].value=synthState[n].octave; knobConfigs[n+"Tune"].value=synthState[n].tune; knobConfigs[n+"Phase"].value=synthState[n].phase; });
+    knobConfigs.masterLevel.value=synthState.master.level*100; knobConfigs.drive.value=synthState.master.drive*100; knobConfigs.clip.value=synthState.master.clip*100;
     knobConfigs.attack.value=synthState.envelope.attack*1000; knobConfigs.decay.value=synthState.envelope.decay*1000; knobConfigs.sustain.value=synthState.envelope.sustain*100; knobConfigs.release.value=synthState.envelope.release*1000;
 }
 function formatKnob(c,v) { if(c.radians)return v.toFixed(2); const r=Math.round(v); return c.signed&&r>0?`+${r}`:String(r); }
@@ -284,11 +316,23 @@ function setupComputerKeyboard(){window.addEventListener("keydown",e=>{const k=e
 
 function resizeScope(){if(!scopeCanvas||!scopeContext)return;const r=scopeCanvas.getBoundingClientRect(),d=window.devicePixelRatio||1;scopeCanvas.width=Math.max(1,Math.round(r.width*d));scopeCanvas.height=Math.max(1,Math.round(r.height*d));scopeContext.setTransform(d,0,0,d,0,0);}
 function drawTrace(w,h,l,color,glow){scopeContext.beginPath();for(let i=0;i<scopeData.length;i++){const x=i/(scopeData.length-1)*w,y=h/2+(scopeData[i]-128)/128*h*.43;i?scopeContext.lineTo(x,y):scopeContext.moveTo(x,y);}scopeContext.lineWidth=l;scopeContext.strokeStyle=color;scopeContext.shadowColor="#ffb000";scopeContext.shadowBlur=glow;scopeContext.stroke();}
-function drawScope(){requestAnimationFrame(drawScope);if(!scopeCanvas||!scopeContext)return;const w=scopeCanvas.clientWidth,h=scopeCanvas.clientHeight;scopeContext.clearRect(0,0,w,h);if(!analyser){scopeContext.beginPath();scopeContext.moveTo(0,h/2);scopeContext.lineTo(w,h/2);scopeContext.strokeStyle="#ffb000";scopeContext.shadowColor="#ffb000";scopeContext.shadowBlur=7;scopeContext.stroke();scopeContext.shadowBlur=0;return;}if(!scopeData||scopeData.length!==analyser.fftSize)scopeData=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(scopeData);drawTrace(w,h,5,"rgba(255,176,0,.18)",10);drawTrace(w,h,1.4,"#ffd76a",4);scopeContext.shadowBlur=0;}
-function setupScope(){scopeCanvas=document.getElementById("scopeCanvas");scopeContext=scopeCanvas.getContext("2d");resizeScope();drawScope();}
+function updateOutputMeter() {
+    if (!analyser || !scopeData || !meterSegments.length) return;
+    let peak = 0;
+    for (let i = 0; i < scopeData.length; i++) peak = Math.max(peak, Math.abs(scopeData[i] - 128) / 128);
+    if (peak >= .985) meterClipHold = 8; else meterClipHold = Math.max(0, meterClipHold - 1);
+    const lit = Math.ceil(clamp(peak, 0, 1) * meterSegments.length);
+    meterSegments.forEach((segment, i) => {
+        segment.classList.toggle("on", i < lit || (i === meterSegments.length - 1 && meterClipHold > 0));
+        segment.classList.toggle("hot", i >= meterSegments.length - 3);
+        segment.classList.toggle("clip", i === meterSegments.length - 1);
+    });
+}
+function drawScope(){requestAnimationFrame(drawScope);if(!scopeCanvas||!scopeContext)return;const w=scopeCanvas.clientWidth,h=scopeCanvas.clientHeight;scopeContext.clearRect(0,0,w,h);if(!analyser){scopeContext.beginPath();scopeContext.moveTo(0,h/2);scopeContext.lineTo(w,h/2);scopeContext.strokeStyle="#ffb000";scopeContext.shadowColor="#ffb000";scopeContext.shadowBlur=7;scopeContext.stroke();scopeContext.shadowBlur=0;return;}if(!scopeData||scopeData.length!==analyser.fftSize)scopeData=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(scopeData);updateOutputMeter();drawTrace(w,h,5,"rgba(255,176,0,.18)",10);drawTrace(w,h,1.4,"#ffd76a",4);scopeContext.shadowBlur=0;}
+function setupScope(){scopeCanvas=document.getElementById("scopeCanvas");scopeContext=scopeCanvas.getContext("2d");meterSegments=[...document.querySelectorAll(".meterSegments span")];resizeScope();drawScope();}
 
 function releaseAllInputNotes(){[...pointerNotes.keys()].forEach(releasePointerNote);computerHeld.forEach(k=>noteOffByKey(`pc:${k}`));computerHeld.clear();midiHeld.forEach(noteOffByKey);midiHeld.clear();document.querySelectorAll(".key.down").forEach(e=>e.classList.remove("down"));}
-function shutdownAudioEngine(){releaseAllInputNotes();activeVoices.clear();voicePool.length=0;waveCache.clear();keepAliveOscillator=null;keepAliveGain=null;masterGain=null;analyser=null;if(audioCtx){const closing=audioCtx;audioCtx=null;closing.close().catch(()=>{});}}
+function shutdownAudioEngine(){releaseAllInputNotes();activeVoices.clear();voicePool.length=0;waveCache.clear();keepAliveOscillator=null;keepAliveGain=null;driveGain=null;clipper=null;masterGain=null;analyser=null;if(audioCtx){const closing=audioCtx;audioCtx=null;closing.close().catch(()=>{});}}
 window.addEventListener("blur",releaseAllInputNotes);window.addEventListener("pagehide",()=>{savePersistentState();shutdownAudioEngine();});window.addEventListener("beforeunload",savePersistentState);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){savePersistentState();releaseAllInputNotes();}});
 document.addEventListener("touchmove",e=>{const t=e.target instanceof Element?e.target:null;if((t?.closest(".knob")||t?.closest("#keyboard"))&&e.cancelable)e.preventDefault();},{passive:false});
