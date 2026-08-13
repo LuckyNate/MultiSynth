@@ -9,8 +9,11 @@ The selector and known-working QuadSynth files are already installed in `app/src
 - `index.html` — synth selector and app entry point
 - `selector.css` — selector theme and future synth slots
 - `quadsynth.html` — QuadSynth instrument interface
-- `style.css`
+- `quadsynth.css`
 - `quadsynth.js`
+- `pulsynth.html` — Pulsynth three-stage PWM ladder interface
+- `pulsynth.css`
+- `pulsynth.js`
 
 `quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
 
