@@ -15,14 +15,14 @@
       <label class="knobControl"><span>INPUT</span><input id="inputLevel" type="range" min="0" max="1.25" step="0.01" value="1"><output id="inputValue">100%</output></label>
       <label class="knobControl hero"><span>TAPE SPEED</span><input id="tapeSpeed" type="range" min="0.5" max="2" step="0.01" value="1"><output id="speedValue">1.00×</output></label>
       <label class="knobControl"><span>FEEDBACK</span><input id="feedback" type="range" min="0" max="0.62" step="0.01" value="0.18"><output id="feedbackValue">18%</output></label>
-      <label class="knobControl"><span>DRY</span><input id="dryLevel" type="range" min="0" max="1" step="0.01" value="1"><output id="dryValue">100%</output></label>
+      <label class="knobControl"><span>DRY</span><input id="dryLevel" type="range" min="0" max="1" step="0.01" value="0"><output id="dryValue">0%</output></label>
       <label class="knobControl"><span>ECHO</span><input id="echoLevel" type="range" min="0" max="0.65" step="0.01" value="0.24"><output id="echoValue">24%</output></label>
       <label class="knobControl"><span>WOW</span><input id="wow" type="range" min="0" max="0.3" step="0.005" value="0.025"><output id="wowValue">3%</output></label>
       <label class="knobControl"><span>FLUTTER</span><input id="flutter" type="range" min="0" max="0.2" step="0.005" value="0.02"><output id="flutterValue">2%</output></label>
       <label class="knobControl"><span>WEAR</span><input id="wear" type="range" min="0" max="0.55" step="0.01" value="0.08"><output id="wearValue">8%</output></label>
       <label class="knobControl"><span>OUTPUT</span><input id="outputLevel" type="range" min="0" max="1" step="0.01" value="0.9"><output id="outputValue">90%</output></label>
     </section>
-    <section class="panel infoPanel"><strong>ONE LOOP. ONE JOB.</strong><p>SPEED changes physical loop time. Moving it while echoes circulate bends pitch. FEEDBACK recirculates only the tape return. WOW and FLUTTER vary tape motion. WEAR affects only the circulating tape path.</p></section>
+    <section class="panel infoPanel"><strong>ONE LOOP. ONE JOB.</strong><p>SPEED changes physical loop time. Moving it while echoes circulate bends pitch. FEEDBACK recirculates only the tape return. WOW and FLUTTER vary tape motion. WEAR affects only the circulating tape path. DRY is direct mic monitoring and defaults off to prevent speaker-to-mic feedback.</p></section>
   </main>
 </div>
 <script src="native-mic.js"></script>
