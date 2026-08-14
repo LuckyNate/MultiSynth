@@ -10,34 +10,44 @@
 <div id="app">
   <header class="scopeWrap">
     <div class="scopePanel">
-      <div class="scopeTop"><strong>TAPEWORM // CONTINUOUS TAPE LOOP</strong><span id="status">STOPPED</span></div>
+      <div class="scopeTop"><strong>TAPEWORM // SEGMENTED LIVE LOOP</strong><span id="status">STOPPED</span></div>
       <canvas id="scope"></canvas>
-      <div class="scopeBottom"><span id="speedReadout">1.00× // 4.00 s LOOP</span><span id="falloffReadout">FALLOFF 0%</span></div>
+      <div class="scopeBottom"><span id="speedReadout">1.000× // 4.00 s LOOP</span><span id="segmentReadout">SEGMENT 80 ms</span></div>
     </div>
   </header>
 
   <main class="controls">
     <section class="panel transportPanel">
-      <button id="runButton" class="runButton" type="button">START TAPE</button>
-      <p>The microphone records continuously into one repeating tape loop. There is no direct mic monitor and no tape effects.</p>
+      <button id="runButton" class="runButton" type="button">START WORM</button>
+      <p>Live microphone audio is cut into PCM segments. Each segment plays before falloff is applied, then fresh mic audio is written at full captured level.</p>
     </section>
 
     <section class="panel knobGrid">
       <label class="knobControl hero">
-        <span>TAPE SPEED</span>
+        <span>SPEED</span>
         <input id="tapeSpeed" type="range" min="0.125" max="8" step="0.005" value="1">
-        <output id="speedValue">1.00×</output>
+        <output id="speedValue">1.000×</output>
+      </label>
+      <label class="knobControl hero">
+        <span>SEGMENT</span>
+        <input id="segmentLength" type="range" min="10" max="500" step="1" value="80">
+        <output id="segmentValue">80 ms</output>
       </label>
       <label class="knobControl hero">
         <span>FALLOFF</span>
         <input id="falloff" type="range" min="0" max="1" step="0.01" value="0">
         <output id="falloffValue">0%</output>
       </label>
+      <label class="knobControl hero">
+        <span>MIC THRESHOLD</span>
+        <input id="micThreshold" type="range" min="0.02" max="0.40" step="0.005" value="0.14">
+        <output id="thresholdValue">14%</output>
+      </label>
     </section>
 
     <section class="panel infoPanel">
-      <strong>ONE LOOP. TWO CONTROLS.</strong>
-      <p>At 1.00× the loop is 4 seconds. TAPE SPEED ranges from 0.125× to 8.00×. FALLOFF at 0% preserves each pass indefinitely; increasing it makes older passes quieter every time they come around.</p>
+      <strong>PLAY → FALLOFF → RECORD → STORE.</strong>
+      <p>The loop is 4 seconds at 1×. New grains always enter at their captured mic level and get one full playback. FALLOFF affects only what survives after that playback: 0% keeps old grains; 100% gives each grain one pass before fresh audio replaces that segment.</p>
     </section>
   </main>
 </div>
