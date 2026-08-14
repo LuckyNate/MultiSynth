@@ -1,21 +1,23 @@
 "use strict";
 
 /* TAPEWORM
-   A literal circular tape loop.
+   Literal circular tape loop.
    Head order is PLAY -> RECORD -> advance tape.
 
    - 10 seconds of tape at 1.00x
    - tape speed 0.25x to 4.00x
    - no direct mic monitor
    - no effects
-   - FALLOFF is overwrite retention only:
-       0%   = keep all old tape and add new recording
-       100% = erase old tape as the record head writes new audio
+   - FALLOFF controls old-tape retention at the RECORD head
+   - scope shows the exact signal written by the RECORD head
+   - transparent peak limiting prevents runaway acoustic/overdub buildup
 */
 
 const BASE_LOOP_SECONDS=10;
-const STATE_KEY="tapeworm-basic-v3";
+const STATE_KEY="tapeworm-basic-v4";
 const PROCESS_FRAMES=1024;
+const WRITE_CEILING=0.92;
+const OUTPUT_CEILING=0.92;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
 let ctx=null;
@@ -25,7 +27,6 @@ let processor=null;
 let silentKeepAlive=null;
 let micStream=null;
 let micSource=null;
-let inputAnalyser=null;
 let nativeUnsubscribe=null;
 let nativeMode=false;
 
@@ -34,6 +35,8 @@ let tapeLength=0;
 let head=0;
 let nativeQueue=[];
 let nativeQueueOffset=0;
+let recordScope=new Float32Array(PROCESS_FRAMES);
+let recordScopeWrite=0;
 
 const tapeSpeed=document.getElementById("tapeSpeed");
 const falloff=document.getElementById("falloff");
@@ -50,6 +53,12 @@ function speed(){return Math.max(.25,Math.min(4,Number(tapeSpeed.value)||1))}
 function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)||0))}
 function retention(){return 1-falloffAmount()}
 function loopSeconds(){return BASE_LOOP_SECONDS/speed()}
+function clampSample(x,ceiling){
+  if(!Number.isFinite(x))return 0;
+  if(x>ceiling)return ceiling;
+  if(x<-ceiling)return -ceiling;
+  return x;
+}
 
 function updateReadouts(){
   const s=speed(),f=falloffAmount(),seconds=loopSeconds();
@@ -83,34 +92,43 @@ function pullNativeSample(){
 }
 
 function readTape(pos){
-  const i0=Math.floor(pos)%tapeLength;
+  const base=Math.floor(pos);
+  const i0=((base%tapeLength)+tapeLength)%tapeLength;
   const i1=(i0+1)%tapeLength;
-  const f=pos-Math.floor(pos);
+  const f=pos-base;
   return tape[i0]*(1-f)+tape[i1]*f;
 }
 
-function writeTape(pos,value,keep){
+function writeTape(pos,fresh,keep){
   const base=Math.floor(pos);
   const i0=((base%tapeLength)+tapeLength)%tapeLength;
   const i1=(i0+1)%tapeLength;
   const f=pos-base;
 
-  // PLAY has already happened for this tape position. RECORD happens now.
-  // At 100% falloff, keep=0, so old tape is replaced rather than regenerated.
-  const target0=tape[i0]*keep+value;
-  const target1=tape[i1]*keep+value;
-  tape[i0]=tape[i0]*(f)+target0*(1-f);
-  tape[i1]=tape[i1]*(1-f)+target1*f;
+  /* PLAY has already happened. RECORD now combines retained tape with fresh mic.
+     The combined write is peak-limited before it reaches the tape, so repeated
+     overdubs or speaker-to-mic leakage cannot numerically run away into clipping. */
+  const oldAtHead=tape[i0]*(1-f)+tape[i1]*f;
+  const mixed=oldAtHead*keep+fresh;
+  const written=clampSample(mixed,WRITE_CEILING);
 
-  // Prevent additive overdub from numerically running away at 0% falloff.
-  tape[i0]=Math.max(-1,Math.min(1,tape[i0]));
-  tape[i1]=Math.max(-1,Math.min(1,tape[i1]));
+  // Write the same head value into the two neighboring samples using interpolation.
+  tape[i0]=tape[i0]*f+written*(1-f);
+  tape[i1]=tape[i1]*(1-f)+written*f;
+  tape[i0]=clampSample(tape[i0],WRITE_CEILING);
+  tape[i1]=clampSample(tape[i1],WRITE_CEILING);
+
+  // Scope is the RECORD head, not raw mic and not playback.
+  recordScope[recordScopeWrite++%recordScope.length]=written;
+  return written;
 }
 
 function buildTapeEngine(){
   tapeLength=Math.max(1,Math.round(ctx.sampleRate*BASE_LOOP_SECONDS));
   tape=new Float32Array(tapeLength);
   head=0;
+  recordScope.fill(0);
+  recordScopeWrite=0;
   clearNativeQueue();
 
   processor=ctx.createScriptProcessor(PROCESS_FRAMES,1,1);
@@ -122,23 +140,20 @@ function buildTapeEngine(){
     const keep=retention();
 
     for(let i=0;i<output.length;i++){
-      // HEAD 1: PLAY. Hear what was on this tape position before recording.
+      // HEAD 1 — PLAY: hear the tape before this position is rewritten.
       const old=readTape(head);
-      output[i]=old;
+      output[i]=clampSample(old,OUTPUT_CEILING);
 
-      // HEAD 2: RECORD. Overwrite/mix fresh mic only after playback.
-      const fresh=nativeMode?pullNativeSample():(input?input[i]:0);
+      // HEAD 2 — RECORD: old tape retention + fresh mic, then bounded write.
+      const fresh=clampSample(nativeMode?pullNativeSample():(input?input[i]:0),WRITE_CEILING);
       writeTape(head,fresh,keep);
 
-      // Move the physical tape past both heads.
+      // Physical tape advances past PLAY then RECORD.
       head+=step;
       while(head>=tapeLength)head-=tapeLength;
     }
   };
 
-  // Keep processor alive and send only its tape playback to the speaker.
-  silentKeepAlive=ctx.createGain();
-  silentKeepAlive.gain.value=1;
   processor.connect(ctx.destination);
 }
 
@@ -148,8 +163,6 @@ async function startInput(){
     try{
       micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       micSource=ctx.createMediaStreamSource(micStream);
-      inputAnalyser=ctx.createAnalyser();inputAnalyser.fftSize=1024;inputAnalyser.smoothingTimeConstant=0;
-      micSource.connect(inputAnalyser);
       micSource.connect(processor);
       statusEl.textContent="TAPE RUNNING // DIRECT MIC";
       return;
@@ -158,10 +171,8 @@ async function startInput(){
 
   if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){
     nativeMode=true;
-    inputAnalyser=null;
     nativeUnsubscribe=MultiSynthNativeMic.subscribe(pcm=>pushNative(pcm));
     if(!MultiSynthNativeMic.start())throw new Error("Microphone unavailable");
-    // ScriptProcessor needs an input connection even though native samples come through JS.
     const zero=ctx.createConstantSource();zero.offset.value=0;zero.connect(processor);zero.start();
     silentKeepAlive=zero;
     statusEl.textContent="TAPE RUNNING // NATIVE MIC";
@@ -182,7 +193,6 @@ async function startTape(){
     await startInput();
     runButton.textContent="STOP TAPE";
     runButton.classList.add("active");
-    statusEl.textContent=statusEl.textContent||"TAPE RUNNING";
     drawScope();
   }catch(e){
     console.error(e);
@@ -207,7 +217,7 @@ async function stopTape(preserveError=false){
   try{silentKeepAlive&&silentKeepAlive.disconnect&&silentKeepAlive.disconnect()}catch(_){}
   silentKeepAlive=null;
   if(ctx&&ctx.state!=="closed")try{await ctx.close()}catch(_){}
-  ctx=null;inputAnalyser=null;tape=null;tapeLength=0;head=0;
+  ctx=null;tape=null;tapeLength=0;head=0;recordScope.fill(0);recordScopeWrite=0;
   runButton.textContent="START TAPE";
   runButton.classList.remove("active");
   if(!preserveError)statusEl.textContent="STOPPED";
@@ -229,11 +239,14 @@ function clearScope(){
 function drawScope(){
   const w=scope.clientWidth,h=scope.clientHeight;
   scopeCtx.fillStyle="#fff4ef";scopeCtx.fillRect(0,0,w,h);
-  if(running&&inputAnalyser){
-    const data=new Uint8Array(inputAnalyser.fftSize);inputAnalyser.getByteTimeDomainData(data);
+  if(running){
     scopeCtx.strokeStyle="#ffd84a";scopeCtx.lineWidth=3;scopeCtx.beginPath();
-    for(let i=0;i<data.length;i++){
-      const x=i/(data.length-1)*w,y=data[i]/255*h;
+    const n=recordScope.length;
+    for(let i=0;i<n;i++){
+      const idx=(recordScopeWrite+i)%n;
+      const sample=recordScope[idx];
+      const x=i/(n-1)*w;
+      const y=h*.5-sample*(h*.45/WRITE_CEILING);
       i?scopeCtx.lineTo(x,y):scopeCtx.moveTo(x,y);
     }
     scopeCtx.stroke();
