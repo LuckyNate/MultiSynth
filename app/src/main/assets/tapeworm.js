@@ -6,8 +6,9 @@
    At 1x, playback is the natural recorded speed.
    Each record tooth write: old tooth * retention + fresh gated mic at captured level.
 */
-const SEGMENTS=32, MIN_SEGMENT_MS=50, MAX_SEGMENT_MS=500;
-const STATE_KEY="tapeworm-granular-v4", PROCESS_FRAMES=1024, CEILING=.92;
+const SEGMENTS=32, MIN_SEGMENT_MS=50, MAX_SEGMENT_MS=125;
+const MIN_PLAY_SPEED=.4, MAX_PLAY_SPEED=8;
+const STATE_KEY="tapeworm-granular-v5", PROCESS_FRAMES=1024, CEILING=.92;
 const GATE_HOLD_SECONDS=.10,GATE_ATTACK_SECONDS=.003,GATE_RELEASE_SECONDS=.035;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
@@ -20,7 +21,7 @@ let gateEnv=0,gateGain=0,gateHold=0,recordScope=new Float32Array(PROCESS_FRAMES)
 
 const tapeSpeed=document.getElementById("tapeSpeed"),segmentLength=document.getElementById("segmentLength"),falloff=document.getElementById("falloff"),micThreshold=document.getElementById("micThreshold"),speedValue=document.getElementById("speedValue"),segmentValue=document.getElementById("segmentValue"),falloffValue=document.getElementById("falloffValue"),thresholdValue=document.getElementById("thresholdValue"),speedReadout=document.getElementById("speedReadout"),segmentReadout=document.getElementById("segmentReadout"),runButton=document.getElementById("runButton"),statusEl=document.getElementById("status"),scope=document.getElementById("scope"),scopeCtx=scope.getContext("2d");
 
-function speed(){return Math.max(.125,Math.min(8,Number(tapeSpeed.value)||1))}
+function speed(){return Math.max(MIN_PLAY_SPEED,Math.min(MAX_PLAY_SPEED,Number(tapeSpeed.value)||1))}
 function segmentMs(){return Math.max(MIN_SEGMENT_MS,Math.min(MAX_SEGMENT_MS,Number(segmentLength.value)||80))}
 function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)||0))}
 function threshold(){return Math.max(.02,Math.min(.40,Number(micThreshold.value)||.14))}
@@ -29,7 +30,7 @@ function desiredSamples(){return ctx?Math.max(1,Math.round(ctx.sampleRate*segmen
 function loopSeconds(){return SEGMENTS*segmentMs()/1000/speed()}
 function updateReadouts(){const s=speed(),ms=segmentMs(),f=falloffAmount(),t=threshold(),sec=loopSeconds();speedValue.textContent=`${s.toFixed(3)}×`;segmentValue.textContent=`${Math.round(ms)} ms`;falloffValue.textContent=`${Math.round(f*100)}%`;thresholdValue.textContent=`${Math.round(t*100)}%`;speedReadout.textContent=`PLAY ${s.toFixed(3)}× // ${sec>=10?sec.toFixed(1):sec.toFixed(2)} s LOOP`;segmentReadout.textContent=`REC 1.000× // ${SEGMENTS} × ${Math.round(ms)} ms`}
 function saveState(){try{localStorage.setItem(STATE_KEY,JSON.stringify({speed:tapeSpeed.value,segment:segmentLength.value,falloff:falloff.value,threshold:micThreshold.value}))}catch(_){}}
-function loadState(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(!s)return;if(s.speed!==undefined)tapeSpeed.value=s.speed;if(s.segment!==undefined)segmentLength.value=Math.max(MIN_SEGMENT_MS,Number(s.segment));if(s.falloff!==undefined)falloff.value=s.falloff;if(s.threshold!==undefined)micThreshold.value=s.threshold}catch(_){}}
+function loadState(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(!s)return;if(s.speed!==undefined)tapeSpeed.value=Math.max(MIN_PLAY_SPEED,Math.min(MAX_PLAY_SPEED,Number(s.speed)));if(s.segment!==undefined)segmentLength.value=Math.max(MIN_SEGMENT_MS,Math.min(MAX_SEGMENT_MS,Number(s.segment)));if(s.falloff!==undefined)falloff.value=s.falloff;if(s.threshold!==undefined)micThreshold.value=s.threshold}catch(_){}}
 function clearNativeQueue(){nativeQueue=[];nativeQueueOffset=0}function pushNative(p){if(p&&p.length)nativeQueue.push(p)}function pullNativeSample(){while(nativeQueue.length){const a=nativeQueue[0];if(nativeQueueOffset<a.length)return a[nativeQueueOffset++];nativeQueue.shift();nativeQueueOffset=0}return 0}
 
 function gateMic(x){const sr=ctx?ctx.sampleRate:48000,open=threshold(),close=open*.62,mag=Math.abs(x),ec=mag>gateEnv?Math.exp(-1/(sr*.002)):Math.exp(-1/(sr*.025));gateEnv=ec*gateEnv+(1-ec)*mag;if(gateEnv>=open)gateHold=Math.round(GATE_HOLD_SECONDS*sr);else if(gateHold>0)gateHold--;const on=gateEnv>=open||(gateGain>0&&(gateEnv>=close||gateHold>0)),target=on?1:0,time=target>gateGain?GATE_ATTACK_SECONDS:GATE_RELEASE_SECONDS,c=Math.exp(-1/(sr*time));gateGain=c*gateGain+(1-c)*target;if(gateGain<1e-4)gateGain=0;return clamp(x*gateGain)}
@@ -45,23 +46,19 @@ function allocateChain(){
 
 function finishRecordTooth(){
   const old=grains[recordTooth],keep=1-falloffAmount(),n=recordSamples;
-  // Record head is real-time only. New mic PCM is never speed-scaled.
   for(let i=0;i<n;i++){
     const stored=clamp(old[i]*keep+recordBuffer[i]);
     old[i]=stored;
     recordScope[recordScopeWrite++%recordScope.length]=stored;
   }
-  // Prevent stale tails resurfacing if segment length was shortened.
   for(let i=n;i<maxSamples;i++)old[i]=0;
   recordBuffer.fill(0,0,n);
   recordPos=0;
   recordTooth=(recordTooth+1)%SEGMENTS;
-  // Segment changes are picked up only at a clean record boundary.
   recordSamples=desiredSamples();
 }
 
 function captureRecordSample(x){
-  // Exactly one captured sample per real audio frame: RECORD is permanently 1x.
   recordBuffer[recordPos++]=x;
   if(recordPos>=recordSamples)finishRecordTooth();
 }
@@ -73,12 +70,10 @@ function readPlaySample(){
 }
 
 function advancePlayHead(){
-  // SPEED is relative only to the rate at which these samples were recorded.
   playPhase+=speed();
   while(playPhase>=playSamples){
     playPhase-=playSamples;
     playTooth=(playTooth+1)%SEGMENTS;
-    // Segment changes are picked up at a clean playback tooth boundary.
     playSamples=desiredSamples();
   }
 }
@@ -90,11 +85,8 @@ function buildEngine(){
     if(!running)return;
     const input=e.inputBuffer.numberOfChannels?e.inputBuffer.getChannelData(0):null,out=e.outputBuffer.getChannelData(0);
     for(let i=0;i<out.length;i++){
-      // Independent PLAY head.
       out[i]=readPlaySample();
       advancePlayHead();
-
-      // Independent RECORD head: always real-time 1x.
       const raw=clamp(nativeMode?pullNativeSample():(input?input[i]:0));
       captureRecordSample(gateMic(raw));
     }
