@@ -1,12 +1,14 @@
 "use strict";
 /* TAPEWORM — shedding segment echo with independent spacing and pitch.
    Mic captures immutable PCM segments at real-time 1x.
-   SPEED controls launch spacing between repeats.
-   PITCH controls sample read rate inside each launched repeat.
+   SPEED controls the time between decay-loop boundaries.
+   When SPEED is slower than native, extra instances of the current segment tile the
+   stretched interval so there is no silence before the next loop/pass arrives.
+   PITCH controls sample read rate inside every instance independently.
    No playback is ever rerecorded internally.
 */
 const MIN_SEGMENT_MS=50,MAX_SEGMENT_MS=500,MIN_SPEED=.4,MAX_SPEED=8;
-const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v2";
+const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v3";
 const GATE_HOLD=.10,GATE_ATTACK=.003,GATE_RELEASE=.035;
 let ctx=null,running=false,processor=null,micStream=null,micSource=null,silentKeepAlive=null,nativeUnsubscribe=null,nativeMode=false,nativeQueue=[],nativeQueueOffset=0;
 let capture=null,capturePos=0,captureSamples=0,sequences=[];
@@ -19,10 +21,28 @@ function clearNative(){nativeQueue=[];nativeQueueOffset=0}function pushNative(p)
 function gateMic(x){const sr=ctx?ctx.sampleRate:48000,o=threshold(),c=o*.62,m=Math.abs(x),ec=m>gateEnv?Math.exp(-1/(sr*.002)):Math.exp(-1/(sr*.025));gateEnv=ec*gateEnv+(1-ec)*m;if(gateEnv>=o)gateHold=Math.round(GATE_HOLD*sr);else if(gateHold>0)gateHold--;const on=gateEnv>=o||(gateGain>0&&(gateEnv>=c||gateHold>0)),target=on?1:0,time=target>gateGain?GATE_ATTACK:GATE_RELEASE,k=Math.exp(-1/(sr*time));gateGain=k*gateGain+(1-k)*target;if(gateGain<1e-4)gateGain=0;return clamp(x*gateGain)}
 function desiredCaptureSamples(){return Math.max(1,Math.round(ctx.sampleRate*segmentMs()/1000))}
 function beginCapture(){captureSamples=desiredCaptureSamples();capture=new Float32Array(captureSamples);capturePos=0}
-function shedSegment(){let peak=0;for(let i=0;i<capture.length;i++)peak=Math.max(peak,Math.abs(capture[i]));if(peak>.0005){sequences.push({pcm:capture,total:loopCount(),launched:0,clock:0,instances:[]});if(sequences.length>128)sequences.splice(0,sequences.length-128)}beginCapture()}
+function shedSegment(){let peak=0;for(let i=0;i<capture.length;i++)peak=Math.max(peak,Math.abs(capture[i]));if(peak>.0005){sequences.push({pcm:capture,total:loopCount(),pass:0,passClock:0,fillerClock:0,started:false,instances:[]});if(sequences.length>128)sequences.splice(0,sequences.length-128)}beginCapture()}
 function captureMic(x){capture[capturePos++]=x;if(capturePos>=captureSamples)shedSegment()}
-function spawnRepeat(q){const pass=q.launched,gain=(q.total-pass)/q.total;q.instances.push({pos:0,gain});q.launched++}
-function playSequences(){let sum=0,spacing=speed(),pr=pitchRate();for(let qx=sequences.length-1;qx>=0;qx--){const q=sequences[qx],n=q.pcm.length;if(q.launched===0)spawnRepeat(q);q.clock+=spacing;while(q.launched<q.total&&q.clock>=n){q.clock-=n;spawnRepeat(q)}for(let ix=q.instances.length-1;ix>=0;ix--){const inst=q.instances[ix],p=Math.max(0,Math.min(n-1,inst.pos)),i0=Math.floor(p),i1=Math.min(n-1,i0+1),f=p-i0;sum+=(q.pcm[i0]+(q.pcm[i1]-q.pcm[i0])*f)*inst.gain;inst.pos+=pr;if(inst.pos>=n)q.instances.splice(ix,1)}if(q.launched>=q.total&&q.instances.length===0)sequences.splice(qx,1)}return clamp(sum)}
+function passGain(q){return Math.max(0,(q.total-q.pass)/q.total)}
+function spawnInstance(q){if(q.pass>=q.total)return;q.instances.push({pos:0,gain:passGain(q)})}
+function playSequences(){let sum=0,s=speed(),pr=pitchRate();for(let qx=sequences.length-1;qx>=0;qx--){const q=sequences[qx],n=q.pcm.length;
+    // One decay pass lasts native segment duration / SPEED. Slowing SPEED stretches
+    // this interval; speeding it up squeezes successive pass boundaries together.
+    const passInterval=Math.max(1,n/s);
+    // One pitched instance lasts native segment duration / pitch-rate.
+    const instanceDuration=Math.max(1,n/pr);
+    if(!q.started){spawnInstance(q);q.started=true;q.passClock=0;q.fillerClock=0}
+    q.passClock++;
+    q.fillerClock++;
+    // If the current pass is stretched longer than one instance, tile additional
+    // copies of the SAME segment at the SAME pass gain so the interval stays filled.
+    // Do not count these fillers as extra decay loops.
+    while(q.pass<q.total&&q.fillerClock>=instanceDuration&&q.passClock<passInterval){q.fillerClock-=instanceDuration;spawnInstance(q)}
+    // Crossing the pass boundary advances the proportional falloff exactly once.
+    while(q.pass<q.total&&q.passClock>=passInterval){q.passClock-=passInterval;q.pass++;q.fillerClock=0;if(q.pass<q.total)spawnInstance(q)}
+    for(let ix=q.instances.length-1;ix>=0;ix--){const inst=q.instances[ix],p=Math.max(0,Math.min(n-1,inst.pos)),i0=Math.floor(p),i1=Math.min(n-1,i0+1),f=p-i0;sum+=(q.pcm[i0]+(q.pcm[i1]-q.pcm[i0])*f)*inst.gain;inst.pos+=pr;if(inst.pos>=n)q.instances.splice(ix,1)}
+    if(q.pass>=q.total&&q.instances.length===0)sequences.splice(qx,1)
+  }return clamp(sum)}
 function buildEngine(){beginCapture();sequences=[];clearNative();gateEnv=gateGain=gateHold=0;scopeData.fill(0);scopeWrite=0;processor=ctx.createScriptProcessor(PROCESS_FRAMES,1,1);processor.onaudioprocess=e=>{if(!running)return;const input=e.inputBuffer.numberOfChannels?e.inputBuffer.getChannelData(0):null,out=e.outputBuffer.getChannelData(0);for(let i=0;i<out.length;i++){const y=playSequences();out[i]=y;scopeData[scopeWrite++%scopeData.length]=y;const raw=clamp(nativeMode?pullNative():(input?input[i]:0));captureMic(gateMic(raw))}};processor.connect(ctx.destination)}
 async function startInput(){nativeMode=false;if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){try{micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:false,autoGainControl:false}});micSource=ctx.createMediaStreamSource(micStream);micSource.connect(processor);statusEl.textContent="WORM RUNNING // SHEDDING";return}catch(e){console.warn(e)}}if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){nativeMode=true;nativeUnsubscribe=MultiSynthNativeMic.subscribe(pushNative);if(!MultiSynthNativeMic.start())throw new Error("Microphone unavailable");const z=ctx.createConstantSource();z.offset.value=0;z.connect(processor);z.start();silentKeepAlive=z;statusEl.textContent="WORM RUNNING // SHEDDING // NATIVE MIC";return}throw new Error("Microphone unavailable")}
 async function startWorm(){if(running){await stopWorm();return}try{const A=window.AudioContext||window.webkitAudioContext;if(!A)throw new Error("Web Audio unavailable");ctx=new A({latencyHint:"interactive"});await ctx.resume();running=true;buildEngine();await startInput();runButton.textContent="STOP WORM";runButton.classList.add("active");drawScope()}catch(e){console.error(e);statusEl.textContent="INPUT ERROR";await stopWorm(true)}}
