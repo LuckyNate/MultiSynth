@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Drone</title><link rel="stylesheet" href="drone.css"></head>
+<body><header><canvas id="scope"></canvas><div><b>DRONE</b><small>ENDLESS GENERATIVE SOUND</small></div></header>
+<main>
+<section class="controls">
+<label>ACTIVITY <input id="activity" type="range" min="0" max="100" value="45"><output></output></label>
+<label>DENSITY <input id="density" type="range" min="1" max="8" value="4"><output></output></label>
+<label>LENGTH <input id="length" type="range" min="0" max="100" value="55"><output></output></label>
+<label>PITCH RANGE <input id="pitch" type="range" min="0" max="100" value="55"><output></output></label>
+<label>BRIGHTNESS <input id="bright" type="range" min="0" max="100" value="50"><output></output></label>
+<label>NOISE <input id="noise" type="range" min="0" max="100" value="20"><output></output></label>
+<label>DRIFT <input id="drift" type="range" min="0" max="100" value="35"><output></output></label>
+<label>CHAOS <input id="chaos" type="range" min="0" max="100" value="55"><output></output></label>
+<label>OUTPUT <input id="level" type="range" min="0" max="100" value="70"><output></output></label>
+</section>
+<section class="memory"><div class="history"><span id="historyFill"></span><b id="historyText">ROLLING MEMORY 30s</b></div><label>GRAB LENGTH <select id="grabLength"><option value="5">5 SEC</option><option value="10">10 SEC</option><option value="30" selected>30 SEC</option><option value="60">60 SEC</option></select></label><button id="hold">HOLD PERSONALITY</button><button id="grab">GRAB LAST 30 SEC</button><button id="start">START DRONE</button><p id="status">Ready. The rolling PCM memory starts with the drone.</p></section>
+</main><script src="drone.js"></script></body></html>
