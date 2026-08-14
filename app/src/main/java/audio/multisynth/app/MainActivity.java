@@ -33,6 +33,7 @@ import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -40,6 +41,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +52,9 @@ public final class MainActivity extends Activity {
     private static final int MIC_PERMISSION_REQUEST = 45;
     private static final int FILE_CHOOSER_REQUEST = 46;
     private static final String BLE_MIDI_SERVICE = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
+    private static final String APP_HOST = "appassets.androidplatform.net";
+    private static final String APP_PREFIX = "/assets/";
+    private static final String APP_START = "https://" + APP_HOST + APP_PREFIX + "index.html";
 
     private WebView webView;
     private MidiManager midiManager;
@@ -90,7 +95,7 @@ public final class MainActivity extends Activity {
         setContentView(webView);
         configureWebView();
         midiManager.registerDeviceCallback(deviceCallback, main);
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl(APP_START);
     }
 
     private void configureWebView() {
@@ -101,7 +106,7 @@ public final class MainActivity extends Activity {
         webView.getSettings().setDatabaseEnabled(true);
         webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
         webView.getSettings().setOffscreenPreRaster(true);
-        webView.getSettings().setAllowFileAccess(true);
+        webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowContentAccess(true);
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -133,10 +138,16 @@ public final class MainActivity extends Activity {
         });
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                WebResourceResponse local = localAssetResponse(request.getUrl());
+                return local != null ? local : super.shouldInterceptRequest(view, request);
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                return !("file".equals(uri.getScheme()) && "/android_asset/".equals(uri.getPathSegments().isEmpty() ? "" : "/" + uri.getPathSegments().get(0) + "/"));
+                return !("https".equals(uri.getScheme()) && APP_HOST.equals(uri.getHost()) && uri.getPath() != null && uri.getPath().startsWith(APP_PREFIX));
             }
+
             @Override public void onPageFinished(WebView view, String url) {
                 runJs("window.warmAudioEngine&&window.warmAudioEngine();");
                 installAutoPersistence();
@@ -145,6 +156,35 @@ public final class MainActivity extends Activity {
             }
         });
         webView.addJavascriptInterface(new Bridge(), "AndroidMidi");
+    }
+
+    private WebResourceResponse localAssetResponse(Uri uri) {
+        if (uri == null || !"https".equals(uri.getScheme()) || !APP_HOST.equals(uri.getHost())) return null;
+        String path = uri.getPath();
+        if (path == null || !path.startsWith(APP_PREFIX)) return null;
+        String assetPath = path.substring(APP_PREFIX.length());
+        if (assetPath.isEmpty() || assetPath.contains("..")) return null;
+        try {
+            InputStream stream = getAssets().open(assetPath);
+            return new WebResourceResponse(mimeType(assetPath), "UTF-8", stream);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private String mimeType(String path) {
+        String p = path.toLowerCase();
+        if (p.endsWith(".html") || p.endsWith(".htm")) return "text/html";
+        if (p.endsWith(".css")) return "text/css";
+        if (p.endsWith(".js")) return "application/javascript";
+        if (p.endsWith(".json")) return "application/json";
+        if (p.endsWith(".svg")) return "image/svg+xml";
+        if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+        if (p.endsWith(".webp")) return "image/webp";
+        if (p.endsWith(".mp3")) return "audio/mpeg";
+        if (p.endsWith(".mp4")) return "video/mp4";
+        return "application/octet-stream";
     }
 
     private void installAutoPersistence() {
