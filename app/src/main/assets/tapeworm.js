@@ -3,12 +3,12 @@
    Mic captures immutable PCM segments at real-time 1x.
    SEGMENT controls capture length only, 50–500 ms.
    PITCH controls sample read rate inside each repeat.
-   LOOP LENGTH is an absolute repeat-start interval, 500 ms–30 seconds.
+   LOOP LENGTH is an absolute repeat-start interval, 500 ms–20 seconds.
    No captured segment can exceed the minimum loop interval.
    No playback is ever rerecorded internally.
 */
-const MIN_SEGMENT_MS=50,MAX_SEGMENT_MS=500,MIN_LOOP_MS=500,MAX_LOOP_MS=30000;
-const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v7";
+const MIN_SEGMENT_MS=50,MAX_SEGMENT_MS=500,MIN_LOOP_MS=500,MAX_LOOP_MS=20000;
+const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v8";
 const GATE_HOLD=.10,GATE_ATTACK=.003,GATE_RELEASE=.035;
 let ctx=null,running=false,processor=null,micStream=null,micSource=null,silentKeepAlive=null,nativeUnsubscribe=null,nativeMode=false,nativeQueue=[],nativeQueueOffset=0;
 let capture=null,capturePos=0,captureSamples=0,sequences=[];
