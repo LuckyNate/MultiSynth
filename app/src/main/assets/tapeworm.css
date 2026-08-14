@@ -1,0 +1,40 @@
+:root {
+  --pepto-pink:#f58ab3;
+  --pepto-deep:#c83f78;
+  --pepto-dark:#6e183c;
+  --pepto-cream:#fff4ef;
+  --pepto-yellow:#ffd84a;
+  --pepto-yellow-dark:#8f6a00;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--pepto-dark);color:var(--pepto-dark);font-family:"Courier New",monospace}
+body{overscroll-behavior:none}
+button,input{font:inherit}
+#app{min-height:100vh;background:linear-gradient(180deg,var(--pepto-pink),#ef79aa)}
+
+.scopeWrap{position:sticky;top:0;z-index:20;padding:10px;background:var(--pepto-deep);border-bottom:3px solid var(--pepto-yellow)}
+.scopePanel{background:var(--pepto-cream);border:4px solid var(--pepto-yellow);box-shadow:inset 0 0 0 2px var(--pepto-dark);padding:8px}
+.scopeTop,.scopeBottom{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:900;color:var(--pepto-dark)}
+#scope{display:block;width:100%;height:110px;margin:7px 0;background:var(--pepto-cream);border-top:2px solid var(--pepto-deep);border-bottom:2px solid var(--pepto-deep)}
+#status{background:var(--pepto-yellow);color:var(--pepto-dark);padding:1px 5px}
+
+.controls{padding:10px 10px 36px}
+.panel{background:var(--pepto-cream);border:3px solid var(--pepto-deep);box-shadow:0 4px 0 var(--pepto-yellow-dark);margin-bottom:12px;padding:10px}
+.transportPanel{text-align:center}
+.transportPanel p,.infoPanel p{margin:8px 0 0;font-size:11px;line-height:1.45}
+.runButton{min-height:50px;width:100%;border:3px solid var(--pepto-dark);background:var(--pepto-yellow);color:var(--pepto-dark);font-weight:900;letter-spacing:1px}
+.runButton.active{background:var(--pepto-deep);color:var(--pepto-cream);border-color:var(--pepto-yellow)}
+
+.knobGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.knobControl{display:grid;gap:6px;text-align:center;font-size:11px;font-weight:900;padding:8px 6px;background:var(--pepto-pink);border:2px solid var(--pepto-deep)}
+.knobControl.hero{background:var(--pepto-yellow);border-color:var(--pepto-dark)}
+.knobControl input[type="range"]{width:100%;accent-color:var(--pepto-deep)}
+.knobControl output{display:block;background:var(--pepto-cream);border:1px solid var(--pepto-dark);padding:3px 4px;color:var(--pepto-dark)}
+.infoPanel strong{display:block;background:var(--pepto-yellow);padding:5px;border:2px solid var(--pepto-dark);text-align:center}
+
+@media(max-width:420px){
+  .knobGrid{grid-template-columns:repeat(2,1fr)}
+  .knobControl.hero{grid-column:1/-1}
+  .scopeTop,.scopeBottom{font-size:10px}
+}
