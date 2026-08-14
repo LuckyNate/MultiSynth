@@ -28,4 +28,5 @@ p { margin:0;color:#888;font-size:11px; }
 .white { --color:#d8d8d8;--bright:#fff;--dark:#666; }
 .amiga { --color:#3969e8;--bright:#8cabff;--dark:#182f78; }
 .tapeworm { --color:#f58ab3;--bright:#fff4ef;--dark:#6e183c; }
+.whitman { --color:#cdbb94;--bright:#f1dfb8;--dark:#5a3425; }
 @media(max-width:600px){#selector{padding:10px 8px 20px}.selectorHeader{padding:13px;margin-bottom:9px}.synthGrid{grid-template-columns:1fr;gap:7px}.synthCard{min-height:102px}}
