@@ -1,35 +1,39 @@
 "use strict";
 
 /* TAPEWORM
-   True continuous overwrite loop.
-   - 10 second loop at 1.00x
-   - speed range 0.25x to 4.00x
+   A literal circular tape loop.
+   Head order is PLAY -> RECORD -> advance tape.
+
+   - 10 seconds of tape at 1.00x
+   - tape speed 0.25x to 4.00x
    - no direct mic monitor
-   - no wow/flutter/wear/hiss/saturation
-   - falloff determines how much old tape remains when new audio overwrites it
+   - no effects
+   - FALLOFF is overwrite retention only:
+       0%   = keep all old tape and add new recording
+       100% = erase old tape as the record head writes new audio
 */
 
 const BASE_LOOP_SECONDS=10;
-const MAX_DELAY_SECONDS=42;
-const NATIVE_LEAD_SECONDS=0.12;
-const STATE_KEY="tapeworm-basic-v2";
+const STATE_KEY="tapeworm-basic-v3";
+const PROCESS_FRAMES=1024;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
 let ctx=null;
 let running=false;
 let drawHandle=0;
-let inputBus=null;
-let inputAnalyser=null;
-let delay=null;
-let oldTapeGain=null;
-let newTapeGain=null;
-let outputGain=null;
+let processor=null;
+let silentKeepAlive=null;
 let micStream=null;
 let micSource=null;
+let inputAnalyser=null;
 let nativeUnsubscribe=null;
 let nativeMode=false;
-let nextNativeTime=0;
-const nativeSources=new Set();
+
+let tape=null;
+let tapeLength=0;
+let head=0;
+let nativeQueue=[];
+let nativeQueueOffset=0;
 
 const tapeSpeed=document.getElementById("tapeSpeed");
 const falloff=document.getElementById("falloff");
@@ -42,15 +46,13 @@ const statusEl=document.getElementById("status");
 const scope=document.getElementById("scope");
 const scopeCtx=scope.getContext("2d");
 
-function speed(){return Number(tapeSpeed.value)}
-function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)))}
-function loopSeconds(){return BASE_LOOP_SECONDS/Math.max(.25,speed())}
+function speed(){return Math.max(.25,Math.min(4,Number(tapeSpeed.value)||1))}
+function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)||0))}
 function retention(){return 1-falloffAmount()}
+function loopSeconds(){return BASE_LOOP_SECONDS/speed()}
 
 function updateReadouts(){
-  const s=speed();
-  const seconds=loopSeconds();
-  const f=falloffAmount();
+  const s=speed(),f=falloffAmount(),seconds=loopSeconds();
   speedValue.textContent=`${s.toFixed(2)}×`;
   falloffValue.textContent=`${Math.round(f*100)}%`;
   speedReadout.textContent=`${s.toFixed(2)}× // ${seconds>=10?seconds.toFixed(1):seconds.toFixed(2)} s LOOP`;
@@ -60,7 +62,6 @@ function updateReadouts(){
 function saveState(){
   try{localStorage.setItem(STATE_KEY,JSON.stringify({tapeSpeed:tapeSpeed.value,falloff:falloff.value}))}catch(_){}
 }
-
 function loadState(){
   try{
     const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");
@@ -70,60 +71,75 @@ function loadState(){
   }catch(_){}
 }
 
-function buildLoop(){
-  inputBus=ctx.createGain();
-  inputBus.gain.value=1;
-
-  inputAnalyser=ctx.createAnalyser();
-  inputAnalyser.fftSize=1024;
-  inputAnalyser.smoothingTimeConstant=0;
-  inputBus.connect(inputAnalyser);
-
-  delay=ctx.createDelay(MAX_DELAY_SECONDS);
-  oldTapeGain=ctx.createGain();
-  newTapeGain=ctx.createGain();
-  outputGain=ctx.createGain();
-  outputGain.gain.value=1;
-  newTapeGain.gain.value=1;
-
-  // Fresh mic audio always writes to the tape input at full level.
-  inputBus.connect(newTapeGain);
-  newTapeGain.connect(delay);
-
-  // What is already on the tape comes back once per revolution.
-  // FALLOFF determines how much survives before fresh audio overwrites it.
-  delay.connect(oldTapeGain);
-  oldTapeGain.connect(delay);
-
-  // We hear the tape playback only. There is no direct mic monitor.
-  delay.connect(outputGain);
-  outputGain.connect(ctx.destination);
+function clearNativeQueue(){nativeQueue=[];nativeQueueOffset=0}
+function pushNative(pcm){if(pcm&&pcm.length)nativeQueue.push(pcm)}
+function pullNativeSample(){
+  while(nativeQueue.length){
+    const first=nativeQueue[0];
+    if(nativeQueueOffset<first.length)return first[nativeQueueOffset++];
+    nativeQueue.shift();nativeQueueOffset=0;
+  }
+  return 0;
 }
 
-function applyLoop(immediate=false){
-  updateReadouts();
-  saveState();
-  if(!ctx)return;
-  const now=ctx.currentTime;
-  delay.delayTime.setTargetAtTime(loopSeconds(),now,immediate?.001:.08);
-  oldTapeGain.gain.setTargetAtTime(retention(),now,immediate?.001:.05);
-  newTapeGain.gain.setTargetAtTime(1,now,immediate?.001:.05);
+function readTape(pos){
+  const i0=Math.floor(pos)%tapeLength;
+  const i1=(i0+1)%tapeLength;
+  const f=pos-Math.floor(pos);
+  return tape[i0]*(1-f)+tape[i1]*f;
 }
 
-function scheduleNativePCM(pcm,sampleRate){
-  if(!running||!nativeMode||!ctx||!pcm||!pcm.length)return;
-  const sr=Number(sampleRate)||48000;
-  const buffer=ctx.createBuffer(1,pcm.length,sr);
-  buffer.copyToChannel(pcm,0);
-  const src=ctx.createBufferSource();
-  src.buffer=buffer;
-  src.connect(inputBus);
-  const now=ctx.currentTime;
-  if(nextNativeTime<now+.025)nextNativeTime=now+NATIVE_LEAD_SECONDS;
-  src.start(nextNativeTime);
-  nextNativeTime+=buffer.duration;
-  nativeSources.add(src);
-  src.onended=()=>{nativeSources.delete(src);try{src.disconnect()}catch(_){}};
+function writeTape(pos,value,keep){
+  const base=Math.floor(pos);
+  const i0=((base%tapeLength)+tapeLength)%tapeLength;
+  const i1=(i0+1)%tapeLength;
+  const f=pos-base;
+
+  // PLAY has already happened for this tape position. RECORD happens now.
+  // At 100% falloff, keep=0, so old tape is replaced rather than regenerated.
+  const target0=tape[i0]*keep+value;
+  const target1=tape[i1]*keep+value;
+  tape[i0]=tape[i0]*(f)+target0*(1-f);
+  tape[i1]=tape[i1]*(1-f)+target1*f;
+
+  // Prevent additive overdub from numerically running away at 0% falloff.
+  tape[i0]=Math.max(-1,Math.min(1,tape[i0]));
+  tape[i1]=Math.max(-1,Math.min(1,tape[i1]));
+}
+
+function buildTapeEngine(){
+  tapeLength=Math.max(1,Math.round(ctx.sampleRate*BASE_LOOP_SECONDS));
+  tape=new Float32Array(tapeLength);
+  head=0;
+  clearNativeQueue();
+
+  processor=ctx.createScriptProcessor(PROCESS_FRAMES,1,1);
+  processor.onaudioprocess=e=>{
+    if(!running)return;
+    const input=e.inputBuffer.numberOfChannels?e.inputBuffer.getChannelData(0):null;
+    const output=e.outputBuffer.getChannelData(0);
+    const step=speed();
+    const keep=retention();
+
+    for(let i=0;i<output.length;i++){
+      // HEAD 1: PLAY. Hear what was on this tape position before recording.
+      const old=readTape(head);
+      output[i]=old;
+
+      // HEAD 2: RECORD. Overwrite/mix fresh mic only after playback.
+      const fresh=nativeMode?pullNativeSample():(input?input[i]:0);
+      writeTape(head,fresh,keep);
+
+      // Move the physical tape past both heads.
+      head+=step;
+      while(head>=tapeLength)head-=tapeLength;
+    }
+  };
+
+  // Keep processor alive and send only its tape playback to the speaker.
+  silentKeepAlive=ctx.createGain();
+  silentKeepAlive.gain.value=1;
+  processor.connect(ctx.destination);
 }
 
 async function startInput(){
@@ -132,16 +148,22 @@ async function startInput(){
     try{
       micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       micSource=ctx.createMediaStreamSource(micStream);
-      micSource.connect(inputBus);
+      inputAnalyser=ctx.createAnalyser();inputAnalyser.fftSize=1024;inputAnalyser.smoothingTimeConstant=0;
+      micSource.connect(inputAnalyser);
+      micSource.connect(processor);
       statusEl.textContent="TAPE RUNNING // DIRECT MIC";
       return;
     }catch(e){console.warn("direct mic failed, using native fallback",e)}
   }
+
   if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){
     nativeMode=true;
-    nextNativeTime=ctx.currentTime+NATIVE_LEAD_SECONDS;
-    nativeUnsubscribe=MultiSynthNativeMic.subscribe(scheduleNativePCM);
+    inputAnalyser=null;
+    nativeUnsubscribe=MultiSynthNativeMic.subscribe(pcm=>pushNative(pcm));
     if(!MultiSynthNativeMic.start())throw new Error("Microphone unavailable");
+    // ScriptProcessor needs an input connection even though native samples come through JS.
+    const zero=ctx.createConstantSource();zero.offset.value=0;zero.connect(processor);zero.start();
+    silentKeepAlive=zero;
     statusEl.textContent="TAPE RUNNING // NATIVE MIC";
     return;
   }
@@ -155,12 +177,12 @@ async function startTape(){
     if(!A)throw new Error("Web Audio unavailable");
     ctx=new A({latencyHint:"interactive"});
     await ctx.resume();
-    buildLoop();
     running=true;
-    applyLoop(true);
+    buildTapeEngine();
     await startInput();
     runButton.textContent="STOP TAPE";
     runButton.classList.add("active");
+    statusEl.textContent=statusEl.textContent||"TAPE RUNNING";
     drawScope();
   }catch(e){
     console.error(e);
@@ -174,15 +196,18 @@ async function stopTape(preserveError=false){
   cancelAnimationFrame(drawHandle);
   if(nativeUnsubscribe){try{nativeUnsubscribe()}catch(_){}nativeUnsubscribe=null}
   if(window.MultiSynthNativeMic){try{MultiSynthNativeMic.stop()}catch(_){}}
-  nativeSources.forEach(s=>{try{s.stop();s.disconnect()}catch(_){}});
-  nativeSources.clear();
-  nextNativeTime=0;
-  nativeMode=false;
+  clearNativeQueue();nativeMode=false;
   if(micStream)micStream.getTracks().forEach(t=>t.stop());
   micStream=null;
+  try{micSource&&micSource.disconnect()}catch(_){}
   micSource=null;
+  try{processor&&(processor.onaudioprocess=null,processor.disconnect())}catch(_){}
+  processor=null;
+  try{silentKeepAlive&&silentKeepAlive.stop&&silentKeepAlive.stop()}catch(_){}
+  try{silentKeepAlive&&silentKeepAlive.disconnect&&silentKeepAlive.disconnect()}catch(_){}
+  silentKeepAlive=null;
   if(ctx&&ctx.state!=="closed")try{await ctx.close()}catch(_){}
-  ctx=inputBus=inputAnalyser=delay=oldTapeGain=newTapeGain=outputGain=null;
+  ctx=null;inputAnalyser=null;tape=null;tapeLength=0;head=0;
   runButton.textContent="START TAPE";
   runButton.classList.remove("active");
   if(!preserveError)statusEl.textContent="STOPPED";
@@ -190,57 +215,37 @@ async function stopTape(preserveError=false){
 }
 
 function resizeScope(){
-  const dpr=window.devicePixelRatio||1;
-  const r=scope.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1,r=scope.getBoundingClientRect();
   scope.width=Math.max(1,Math.floor(r.width*dpr));
   scope.height=Math.max(1,Math.floor(r.height*dpr));
   scopeCtx.setTransform(dpr,0,0,dpr,0,0);
   if(!running)clearScope();
 }
-
 function clearScope(){
   const w=scope.clientWidth,h=scope.clientHeight;
-  scopeCtx.fillStyle="#fff4ef";
-  scopeCtx.fillRect(0,0,w,h);
-  scopeCtx.strokeStyle="#f58ab3";
-  scopeCtx.lineWidth=1;
-  scopeCtx.beginPath();
-  scopeCtx.moveTo(0,h/2);
-  scopeCtx.lineTo(w,h/2);
-  scopeCtx.stroke();
+  scopeCtx.fillStyle="#fff4ef";scopeCtx.fillRect(0,0,w,h);
+  scopeCtx.strokeStyle="#f58ab3";scopeCtx.lineWidth=1;scopeCtx.beginPath();scopeCtx.moveTo(0,h/2);scopeCtx.lineTo(w,h/2);scopeCtx.stroke();
 }
-
 function drawScope(){
-  if(!running||!inputAnalyser)return;
-  const data=new Uint8Array(inputAnalyser.fftSize);
-  inputAnalyser.getByteTimeDomainData(data);
   const w=scope.clientWidth,h=scope.clientHeight;
-  scopeCtx.fillStyle="#fff4ef";
-  scopeCtx.fillRect(0,0,w,h);
-  scopeCtx.strokeStyle="#ffd84a";
-  scopeCtx.lineWidth=3;
-  scopeCtx.beginPath();
-  for(let i=0;i<data.length;i++){
-    const x=i/(data.length-1)*w;
-    const y=data[i]/255*h;
-    if(i===0)scopeCtx.moveTo(x,y);else scopeCtx.lineTo(x,y);
+  scopeCtx.fillStyle="#fff4ef";scopeCtx.fillRect(0,0,w,h);
+  if(running&&inputAnalyser){
+    const data=new Uint8Array(inputAnalyser.fftSize);inputAnalyser.getByteTimeDomainData(data);
+    scopeCtx.strokeStyle="#ffd84a";scopeCtx.lineWidth=3;scopeCtx.beginPath();
+    for(let i=0;i<data.length;i++){
+      const x=i/(data.length-1)*w,y=data[i]/255*h;
+      i?scopeCtx.lineTo(x,y):scopeCtx.moveTo(x,y);
+    }
+    scopeCtx.stroke();
   }
-  scopeCtx.stroke();
-  scopeCtx.strokeStyle="#c83f78";
-  scopeCtx.lineWidth=1;
-  scopeCtx.beginPath();
-  scopeCtx.moveTo(0,h/2);
-  scopeCtx.lineTo(w,h/2);
-  scopeCtx.stroke();
-  drawHandle=requestAnimationFrame(drawScope);
+  scopeCtx.strokeStyle="#c83f78";scopeCtx.lineWidth=1;scopeCtx.beginPath();scopeCtx.moveTo(0,h/2);scopeCtx.lineTo(w,h/2);scopeCtx.stroke();
+  if(running)drawHandle=requestAnimationFrame(drawScope);
 }
 
-tapeSpeed.addEventListener("input",()=>applyLoop(false));
-falloff.addEventListener("input",()=>applyLoop(false));
+tapeSpeed.addEventListener("input",()=>{updateReadouts();saveState()});
+falloff.addEventListener("input",()=>{updateReadouts();saveState()});
 runButton.addEventListener("click",startTape);
 window.addEventListener("resize",resizeScope);
 window.addEventListener("pagehide",()=>{if(running)stopTape()});
 
-loadState();
-updateReadouts();
-requestAnimationFrame(resizeScope);
+loadState();updateReadouts();requestAnimationFrame(resizeScope);
