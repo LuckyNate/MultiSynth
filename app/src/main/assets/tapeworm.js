@@ -1,13 +1,14 @@
 "use strict";
 /* TAPEWORM — shedding segment echo.
    Mic captures immutable PCM segments at real-time 1x.
-   SEGMENT controls capture length only, up to 30 seconds.
+   SEGMENT controls capture length only, 50–500 ms.
    PITCH controls sample read rate inside each repeat.
-   LOOP LENGTH is an absolute repeat-start interval, independent of segment and pitch.
+   LOOP LENGTH is an absolute repeat-start interval, 500 ms–30 seconds.
+   No captured segment can exceed the minimum loop interval.
    No playback is ever rerecorded internally.
 */
-const MIN_SEGMENT_MS=50,MAX_SEGMENT_MS=30000,MIN_LOOP_MS=50,MAX_LOOP_MS=30000;
-const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v6";
+const MIN_SEGMENT_MS=50,MAX_SEGMENT_MS=500,MIN_LOOP_MS=500,MAX_LOOP_MS=30000;
+const PROCESS_FRAMES=1024,CEILING=.92,STATE_KEY="tapeworm-shed-v7";
 const GATE_HOLD=.10,GATE_ATTACK=.003,GATE_RELEASE=.035;
 let ctx=null,running=false,processor=null,micStream=null,micSource=null,silentKeepAlive=null,nativeUnsubscribe=null,nativeMode=false,nativeQueue=[],nativeQueueOffset=0;
 let capture=null,capturePos=0,captureSamples=0,sequences=[];
@@ -15,7 +16,7 @@ let gateEnv=0,gateGain=0,gateHold=0,scopeData=new Float32Array(PROCESS_FRAMES),s
 const pitchEl=document.getElementById("pitch"),segmentLength=document.getElementById("segmentLength"),loopLengthEl=document.getElementById("loopLength"),loopsEl=document.getElementById("loops"),micThreshold=document.getElementById("micThreshold"),pitchValue=document.getElementById("pitchValue"),segmentValue=document.getElementById("segmentValue"),loopLengthValue=document.getElementById("loopLengthValue"),loopsValue=document.getElementById("loopsValue"),thresholdValue=document.getElementById("thresholdValue"),speedReadout=document.getElementById("speedReadout"),segmentReadout=document.getElementById("segmentReadout"),runButton=document.getElementById("runButton"),statusEl=document.getElementById("status"),scope=document.getElementById("scope"),scopeCtx=scope.getContext("2d");
 function pitchSemis(){return Math.max(-24,Math.min(24,Math.round(+pitchEl.value||0)))}
 function pitchRate(){return Math.pow(2,pitchSemis()/12)}
-function segmentMs(){return Math.max(MIN_SEGMENT_MS,Math.min(MAX_SEGMENT_MS,+segmentLength.value||500))}
+function segmentMs(){return Math.max(MIN_SEGMENT_MS,Math.min(MAX_SEGMENT_MS,+segmentLength.value||80))}
 function loopLengthMs(){return Math.max(MIN_LOOP_MS,Math.min(MAX_LOOP_MS,+loopLengthEl.value||1000))}
 function loopCount(){return Math.max(1,Math.min(64,Math.round(+loopsEl.value||4)))}
 function threshold(){return Math.max(.02,Math.min(.4,+micThreshold.value||.14))}
@@ -23,7 +24,7 @@ function clamp(x){return Number.isFinite(x)?Math.max(-CEILING,Math.min(CEILING,x
 function fmtMs(ms){return ms>=1000?(ms/1000).toFixed(ms>=10000?1:2)+" s":Math.round(ms)+" ms"}
 function updateReadouts(){const p=pitchSemis(),m=segmentMs(),l=loopLengthMs(),n=loopCount(),t=threshold();pitchValue.textContent=(p>0?"+":"")+p+" st";segmentValue.textContent=fmtMs(m);loopLengthValue.textContent=fmtMs(l);loopsValue.textContent=String(n);thresholdValue.textContent=Math.round(t*100)+"%";speedReadout.textContent="LOOP "+fmtMs(l);segmentReadout.textContent=fmtMs(m)+" SEGMENT // "+n+" LOOP"+(n===1?"":"S")}
 function save(){try{localStorage.setItem(STATE_KEY,JSON.stringify({pitch:pitchEl.value,segment:segmentLength.value,loopLength:loopLengthEl.value,loops:loopsEl.value,threshold:micThreshold.value}))}catch(_){}}
-function load(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(!s)return;if(s.pitch!=null)pitchEl.value=s.pitch;if(s.segment!=null)segmentLength.value=s.segment;if(s.loopLength!=null)loopLengthEl.value=s.loopLength;if(s.loops!=null)loopsEl.value=s.loops;if(s.threshold!=null)micThreshold.value=s.threshold}catch(_){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(!s)return;if(s.pitch!=null)pitchEl.value=s.pitch;if(s.segment!=null)segmentLength.value=Math.max(MIN_SEGMENT_MS,Math.min(MAX_SEGMENT_MS,+s.segment));if(s.loopLength!=null)loopLengthEl.value=Math.max(MIN_LOOP_MS,Math.min(MAX_LOOP_MS,+s.loopLength));if(s.loops!=null)loopsEl.value=Math.max(1,Math.min(64,+s.loops));if(s.threshold!=null)micThreshold.value=s.threshold}catch(_){}}
 function clearNative(){nativeQueue=[];nativeQueueOffset=0}function pushNative(p){if(p&&p.length)nativeQueue.push(p)}function pullNative(){while(nativeQueue.length){const a=nativeQueue[0];if(nativeQueueOffset<a.length)return a[nativeQueueOffset++];nativeQueue.shift();nativeQueueOffset=0}return 0}
 function gateMic(x){const sr=ctx?ctx.sampleRate:48000,o=threshold(),c=o*.62,m=Math.abs(x),ec=m>gateEnv?Math.exp(-1/(sr*.002)):Math.exp(-1/(sr*.025));gateEnv=ec*gateEnv+(1-ec)*m;if(gateEnv>=o)gateHold=Math.round(GATE_HOLD*sr);else if(gateHold>0)gateHold--;const on=gateEnv>=o||(gateGain>0&&(gateEnv>=c||gateHold>0)),target=on?1:0,time=target>gateGain?GATE_ATTACK:GATE_RELEASE,k=Math.exp(-1/(sr*time));gateGain=k*gateGain+(1-k)*target;if(gateGain<1e-4)gateGain=0;return clamp(x*gateGain)}
 function desiredCaptureSamples(){return Math.max(1,Math.round(ctx.sampleRate*segmentMs()/1000))}
