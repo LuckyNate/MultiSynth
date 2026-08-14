@@ -4,7 +4,6 @@
 (function (global) {
     const racks = new Map();
     const cells = new Map();
-    const definitions = new Map();
     const listeners = new Map();
     let rackSerial = 0;
     let moduleSerial = 0;
@@ -12,6 +11,7 @@
     const key = (r, c) => `${r}:${c}`;
     const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
     const id = (prefix, n) => `${prefix}-${Date.now().toString(36)}-${n.toString(36)}`;
+    const Contract = () => global.MultiSynth?.ModuleContract;
 
     function emit(type, payload) {
         listeners.get(type)?.forEach(fn => { try { fn(payload); } catch (e) { console.error(e); } });
@@ -24,20 +24,22 @@
     }
 
     function defineModule(def) {
-        if (!def?.type) throw new Error("Module definition requires type");
-        const clean = {
-            type:String(def.type), version:String(def.version || "1"), kind:String(def.kind || "instrument"),
-            defaults:clone(def.defaults || {}), create:typeof def.create === "function" ? def.create : null
-        };
-        definitions.set(clean.type, clean);
-        return clean.type;
+        if (!Contract()) throw new Error("ModuleContract must load before RackEngine");
+        return Contract().define(def).type;
     }
 
     function moduleInstance(type, state) {
-        const def = definitions.get(type);
-        if (!def) throw new Error(`Unknown module type: ${type}`);
-        return {id:id(type, ++moduleSerial), type, version:def.version, kind:def.kind,
-            enabled:true, state:Object.assign({}, clone(def.defaults), clone(state || {}))};
+        const def = Contract().getDefinition(type);
+        return {
+            id:id(type, ++moduleSerial),
+            type,
+            displayName:def.displayName,
+            category:def.category,
+            version:def.version,
+            kind:def.category,
+            enabled:true,
+            state:Object.assign({}, clone(def.defaults), clone(state || {}))
+        };
     }
 
     function addRack(row, col, opts={}) {
@@ -51,7 +53,9 @@
     }
 
     function removeRack(rackId) {
-        const r = need(rackId); cells.delete(key(r.row,r.col)); racks.delete(rackId);
+        const r = need(rackId);
+        for (const m of r.modules) destroyRuntimeIfPresent(m.id);
+        cells.delete(key(r.row,r.col)); racks.delete(rackId);
         emit("rack-removed", {id:rackId}); changed();
     }
 
@@ -93,7 +97,8 @@
     function removeModule(rackId,moduleId) {
         const r=need(rackId), i=r.modules.findIndex(m=>m.id===moduleId);
         if(i<0) throw new Error(`Unknown module instance: ${moduleId}`);
-        const [m]=r.modules.splice(i,1); emit("module-removed",{rackId,moduleId:m.id}); changed();
+        const [m]=r.modules.splice(i,1); destroyRuntimeIfPresent(m.id);
+        emit("module-removed",{rackId,moduleId:m.id}); changed();
     }
     function moveModule(rackId,moduleId,index) {
         const r=need(rackId), old=r.modules.findIndex(m=>m.id===moduleId);
@@ -104,7 +109,19 @@
     function setModuleState(rackId,moduleId,patch) {
         const r=need(rackId), m=r.modules.find(x=>x.id===moduleId);
         if(!m) throw new Error(`Unknown module instance: ${moduleId}`);
-        Object.assign(m.state,clone(patch || {})); emit("module-state",{rackId,moduleId,state:clone(m.state)});
+        Object.assign(m.state,clone(patch || {}));
+        try { Contract().update(moduleId, patch); } catch (_) {}
+        emit("module-state",{rackId,moduleId,state:clone(m.state)});
+    }
+
+    function createModuleRuntime(rackId,moduleId,options={}) {
+        const r=need(rackId), m=r.modules.find(x=>x.id===moduleId);
+        if(!m) throw new Error(`Unknown module instance: ${moduleId}`);
+        return Contract().createRuntime(m,Object.assign({},options,{rack:{rackId,row:r.row,col:r.col}}));
+    }
+
+    function destroyRuntimeIfPresent(moduleId) {
+        try { Contract().destroy(moduleId); } catch (_) {}
     }
 
     function snapshotRack(r) { return {id:r.id,row:r.row,col:r.col,enabled:r.enabled,gain:r.gain,modules:clone(r.modules)}; }
@@ -118,10 +135,22 @@
     }
 
     function serialize(meta={}) {
-        return JSON.stringify({format:"multisynth-spatial-rack",version:1,meta:clone(meta),racks:[...racks.values()].map(snapshotRack)});
+        const saved=[...racks.values()].map(r=>{
+            const rack=snapshotRack(r);
+            rack.modules=rack.modules.map(m=>{
+                let state=m.state;
+                try { state=Contract().serialize(m.id); } catch (_) {}
+                return Object.assign({},m,{state:clone(state)});
+            });
+            return rack;
+        });
+        return JSON.stringify({format:"multisynth-spatial-rack",version:1,meta:clone(meta),racks:saved});
     }
 
-    function clear(){ racks.clear(); cells.clear(); changed(); }
+    function clear(){
+        for(const r of racks.values()) for(const m of r.modules) destroyRuntimeIfPresent(m.id);
+        racks.clear(); cells.clear(); changed();
+    }
 
     function restore(json) {
         const data=typeof json==="string" ? JSON.parse(json) : json;
@@ -136,8 +165,9 @@
 
     global.MultiSynth=global.MultiSynth || {};
     global.MultiSynth.RackEngine=Object.freeze({
-        defineModule,addRack,removeRack,moveRack,addModule,removeModule,moveModule,setModuleState,
+        defineModule,addRack,removeRack,moveRack,addModule,removeModule,moveModule,setModuleState,createModuleRuntime,
         neighborhood,graph,executionPlan,serialize,restore,clear,on,
+        listModuleDefinitions:()=>Contract().listDefinitions(),
         getRack:rackId=>snapshotRack(need(rackId)),
         rackAt:(row,col)=>{const r=at(row,col);return r?snapshotRack(r):null;}
     });
