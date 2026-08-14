@@ -1,12 +1,11 @@
 "use strict";
 
-/* TAPEWORM: one continuous input stream into one recirculating tape-delay path.
-   Android PCM chunks are scheduled end-to-end on the WebAudio clock. They are
-   never looped, replayed, or pulled by ScriptProcessor. */
+/* TAPEWORM: continuous live input into one recirculating tape-delay path. */
 
 const BASE_DELAY_SECONDS=15;
 const MAX_DELAY_SECONDS=62;
 const NATIVE_LEAD_SECONDS=0.12;
+const STATE_KEY="tapeworm-state-v2";
 
 let ctx=null,running=false,drawHandle=0;
 let inputBus=null,delay=null,tapeFilter=null,tapeSaturation=null,feedbackGain=null,dryGain=null,echoGain=null,outputGain=null,analyser=null;
@@ -24,10 +23,10 @@ const scopeCtx=scope.getContext("2d");
 
 function raw(id){return Number(controls[id].value)}
 function clamp01(x){return Math.max(0,Math.min(1,x))}
-function taper01(x){return Math.pow(clamp01(x),2)}
+function taper01(x){return Math.pow(clamp01(x),1.7)}
 function mapped(id){const el=controls[id],lo=Number(el.min),hi=Number(el.max),x=(raw(id)-lo)/(hi-lo);return lo+(hi-lo)*taper01(x)}
-function speed(){const r=raw("tapeSpeed");if(r===1)return 1;if(r<1){const x=(1-r)/.75;return 1-.75*taper01(x)}const x=(r-1)/3;return 1+3*taper01(x)}
-function loopSeconds(){return BASE_DELAY_SECONDS/Math.max(.25,speed())}
+function speed(){const r=raw("tapeSpeed");if(r===1)return 1;if(r<1){const x=(1-r)/.5;return 1-.5*taper01(x)}const x=(r-1)/1;return 1+1*taper01(x)}
+function loopSeconds(){return BASE_DELAY_SECONDS/Math.max(.5,speed())}
 function pct(x){return `${Math.round(x*100)}%`}
 
 function updateReadouts(){
@@ -45,10 +44,10 @@ function updateReadouts(){
   feedbackReadout.textContent=`FEEDBACK ${Math.round(mapped("feedback")*100)}%`;
 }
 
-function saveState(){const state={};ids.forEach(id=>state[id]=controls[id].value);try{localStorage.setItem("tapeworm-state",JSON.stringify(state))}catch(_){}}
-function loadState(){try{const s=JSON.parse(localStorage.getItem("tapeworm-state")||"null");if(s)ids.forEach(id=>{if(s[id]!==undefined)controls[id].value=s[id]})}catch(_){}}
+function saveState(){const state={};ids.forEach(id=>state[id]=controls[id].value);try{localStorage.setItem(STATE_KEY,JSON.stringify(state))}catch(_){}}
+function loadState(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(s)ids.forEach(id=>{if(s[id]!==undefined)controls[id].value=s[id]})}catch(_){}}
 
-function saturationCurve(amount){const n=2048,c=new Float32Array(n),drive=1+amount*5,norm=Math.tanh(drive);for(let i=0;i<n;i++){const x=i*2/(n-1)-1;c[i]=Math.tanh(x*drive)/norm}return c}
+function saturationCurve(amount){const n=2048,c=new Float32Array(n),drive=1+amount*2.2,norm=Math.tanh(drive);for(let i=0;i<n;i++){const x=i*2/(n-1)-1;c[i]=Math.tanh(x*drive)/norm}return c}
 function noiseBuffer(){const n=ctx.sampleRate*2,b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return b}
 
 function buildTape(){
@@ -70,41 +69,40 @@ function buildTape(){
   flutterOsc=ctx.createOscillator(); flutterOsc.type="sine"; flutterOsc.frequency.value=6.4;
   flutterDepth=ctx.createGain(); flutterOsc.connect(flutterDepth); flutterDepth.connect(delay.delayTime); flutterOsc.start();
 
+  // Tape hiss is audible on the wet return, but it does NOT feed back into itself.
   hissSource=ctx.createBufferSource(); hissSource.buffer=noiseBuffer(); hissSource.loop=true;
-  hissGain=ctx.createGain(); hissSource.connect(hissGain); hissGain.connect(tapeFilter); hissSource.start();
+  hissGain=ctx.createGain(); hissSource.connect(hissGain); hissGain.connect(echoGain); hissSource.start();
+
   outputGain.connect(analyser); analyser.connect(ctx.destination);
 }
 
 function applyDSP(immediate=false){
   updateReadouts(); saveState(); if(!ctx)return;
-  const now=ctx.currentTime,t=immediate?.001:.08;
+  const now=ctx.currentTime,t=immediate?.001:.1;
   inputBus.gain.setTargetAtTime(mapped("inputLevel"),now,t);
   dryGain.gain.setTargetAtTime(mapped("dryLevel"),now,t);
   echoGain.gain.setTargetAtTime(mapped("echoLevel"),now,t);
-  feedbackGain.gain.setTargetAtTime(Math.min(.94,mapped("feedback")),now,t);
+  feedbackGain.gain.setTargetAtTime(Math.min(.62,mapped("feedback")),now,t);
   outputGain.gain.setTargetAtTime(mapped("outputLevel"),now,t);
+
   const seconds=loopSeconds(),wow=mapped("wow"),flutter=mapped("flutter"),wear=mapped("wear");
-  delay.delayTime.setTargetAtTime(seconds,now,.18);
-  wowDepth.gain.setTargetAtTime(wow*Math.min(seconds*.006,.22),now,.12);
-  flutterDepth.gain.setTargetAtTime(flutter*Math.min(seconds*.0012,.035),now,.12);
-  tapeFilter.frequency.setTargetAtTime(19000-wear*10500,now,.12);
-  tapeFilter.Q.setTargetAtTime(.1+wear*.18,now,.12);
+  delay.delayTime.setTargetAtTime(seconds,now,.2);
+  wowDepth.gain.setTargetAtTime(wow*Math.min(seconds*.0025,.08),now,.14);
+  flutterDepth.gain.setTargetAtTime(flutter*Math.min(seconds*.00045,.012),now,.14);
+  tapeFilter.frequency.setTargetAtTime(19000-wear*6500,now,.14);
+  tapeFilter.Q.setTargetAtTime(.08+wear*.12,now,.14);
   tapeSaturation.curve=saturationCurve(wear);
-  hissGain.gain.setTargetAtTime(wear*.004,now,.12);
+  hissGain.gain.setTargetAtTime(wear*.0012,now,.14);
 }
 
 function scheduleNativePCM(pcm,sampleRate){
   if(!running||!nativeMode||!ctx||!pcm||!pcm.length)return;
   const sr=Number(sampleRate)||48000;
-  const b=ctx.createBuffer(1,pcm.length,sr);
-  b.copyToChannel(pcm,0);
+  const b=ctx.createBuffer(1,pcm.length,sr); b.copyToChannel(pcm,0);
   const src=ctx.createBufferSource(); src.buffer=b; src.connect(inputBus);
   const now=ctx.currentTime;
-  // Maintain a small clocked runway. If Android/WebView arrives late, restart
-  // from fresh audio; never replay or loop an old block.
   if(nextNativeTime<now+.025)nextNativeTime=now+NATIVE_LEAD_SECONDS;
-  src.start(nextNativeTime);
-  nextNativeTime+=b.duration;
+  src.start(nextNativeTime); nextNativeTime+=b.duration;
   nativeSources.add(src);
   src.onended=()=>{nativeSources.delete(src);try{src.disconnect()}catch(_){}};
 }
@@ -114,8 +112,7 @@ async function startInput(){
     nativeMode=true; nextNativeTime=ctx.currentTime+NATIVE_LEAD_SECONDS;
     nativeUnsubscribe=MultiSynthNativeMic.subscribe(scheduleNativePCM);
     if(!MultiSynthNativeMic.start())throw new Error("Native microphone unavailable");
-    statusEl.textContent="TAPE RUNNING // LIVE MIC";
-    return;
+    statusEl.textContent="TAPE RUNNING // LIVE MIC"; return;
   }
   nativeMode=false;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error("Microphone unavailable");
@@ -129,8 +126,7 @@ async function startTape(){
   try{
     const A=window.AudioContext||window.webkitAudioContext;if(!A)throw new Error("Web Audio unavailable");
     ctx=new A({latencyHint:"interactive"}); await ctx.resume();
-    buildTape(); running=true; applyDSP(true);
-    await startInput();
+    buildTape(); running=true; applyDSP(true); await startInput();
     runButton.textContent="STOP TAPE"; runButton.classList.add("active"); drawScope();
   }catch(e){console.error(e);statusEl.textContent="INPUT ERROR";await stopTape(true)}
 }
