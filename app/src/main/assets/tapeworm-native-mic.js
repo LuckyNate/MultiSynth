@@ -12,8 +12,10 @@
   let queueOffset=0;
   let queuedFrames=0;
 
-  const TARGET_QUEUE_FRAMES=2048;
-  const MAX_QUEUE_FRAMES=16384;
+  // Give the Android -> WebView bridge enough headroom to absorb scheduling
+  // jitter without repeating or chopping microphone audio.
+  const TARGET_QUEUE_FRAMES=8192;
+  const MAX_QUEUE_FRAMES=32768;
 
   function clearQueue(){
     pcmQueue=[];
@@ -33,12 +35,9 @@
 
   function feedChunk(pcm,sr){
     if(!running||!ctx||!streamNode||!pcm||!pcm.length)return;
-
     const sourceRate=Number(sr)||48000;
     let data=pcm;
 
-    // Android currently supplies 48 kHz PCM. Resample only if the WebAudio
-    // context is running at a different rate so pitch/timing stay correct.
     if(sourceRate!==ctx.sampleRate){
       const ratio=ctx.sampleRate/sourceRate;
       const outLength=Math.max(1,Math.round(pcm.length*ratio));
@@ -59,17 +58,14 @@
   }
 
   function makeContinuousStreamNode(context){
-    // ScriptProcessor is used intentionally here as a continuously pulled PCM
-    // sink. Unlike scheduling one AudioBufferSource per Android mic chunk, this
-    // presents one uninterrupted live stream to the existing Tapeworm graph.
-    const node=context.createScriptProcessor(1024,0,1);
+    const node=context.createScriptProcessor(2048,0,1);
     let primed=false;
 
     node.onaudioprocess=function(event){
       const out=event.outputBuffer.getChannelData(0);
       out.fill(0);
-
       if(!running)return;
+
       if(!primed){
         if(queuedFrames<TARGET_QUEUE_FRAMES)return;
         primed=true;
@@ -84,15 +80,14 @@
         write+=count;
         queueOffset+=count;
         queuedFrames-=count;
-
         if(queueOffset>=first.length){
           pcmQueue.shift();
           queueOffset=0;
         }
       }
 
-      // If Android/JS delivery briefly underruns, output silence rather than
-      // replaying old microphone audio. Re-prime a small queue before resuming.
+      // Never replay old material. A genuine underrun becomes silence until
+      // enough fresh microphone PCM has accumulated to resume cleanly.
       if(write<out.length)primed=false;
     };
 
@@ -103,6 +98,7 @@
     if(running)return stopNativeTape();
     try{
       const A=window.AudioContext||window.webkitAudioContext;
+      if(!A)throw new Error("Web Audio unavailable");
       ctx=new A({latencyHint:"interactive"});
       await ctx.resume();
 
@@ -122,43 +118,18 @@
 
       streamNode=makeContinuousStreamNode(ctx);
       streamNode.connect(inputGain);
+      inputGain.connect(dryGain); dryGain.connect(outputGain);
+      inputGain.connect(delay); delay.connect(tapeFilter); tapeFilter.connect(tapeSaturation); tapeSaturation.connect(echoGain); echoGain.connect(outputGain);
+      tapeSaturation.connect(feedbackGain); feedbackGain.connect(delay);
 
-      inputGain.connect(dryGain);
-      dryGain.connect(outputGain);
-      inputGain.connect(delay);
-      delay.connect(tapeFilter);
-      tapeFilter.connect(tapeSaturation);
-      tapeSaturation.connect(echoGain);
-      echoGain.connect(outputGain);
-      tapeSaturation.connect(feedbackGain);
-      feedbackGain.connect(delay);
+      wowOsc=ctx.createOscillator(); wowOsc.type="sine"; wowOsc.frequency.value=.55;
+      wowDepth=ctx.createGain(); wowOsc.connect(wowDepth); wowDepth.connect(delay.delayTime); wowOsc.start();
+      flutterOsc=ctx.createOscillator(); flutterOsc.type="sine"; flutterOsc.frequency.value=7.3;
+      flutterDepth=ctx.createGain(); flutterOsc.connect(flutterDepth); flutterDepth.connect(delay.delayTime); flutterOsc.start();
 
-      wowOsc=ctx.createOscillator();
-      wowOsc.type="sine";
-      wowOsc.frequency.value=.55;
-      wowDepth=ctx.createGain();
-      wowOsc.connect(wowDepth);
-      wowDepth.connect(delay.delayTime);
-      wowOsc.start();
-
-      flutterOsc=ctx.createOscillator();
-      flutterOsc.type="sine";
-      flutterOsc.frequency.value=7.3;
-      flutterDepth=ctx.createGain();
-      flutterOsc.connect(flutterDepth);
-      flutterDepth.connect(delay.delayTime);
-      flutterOsc.start();
-
-      hissSource=ctx.createBufferSource();
-      hissSource.buffer=makeNoiseBuffer(ctx);
-      hissSource.loop=true;
-      hissGain=ctx.createGain();
-      hissSource.connect(hissGain);
-      hissGain.connect(tapeFilter);
-      hissSource.start();
-
-      outputGain.connect(analyser);
-      analyser.connect(ctx.destination);
+      hissSource=ctx.createBufferSource(); hissSource.buffer=makeNoiseBuffer(ctx); hissSource.loop=true;
+      hissGain=ctx.createGain(); hissSource.connect(hissGain); hissGain.connect(tapeFilter); hissSource.start();
+      outputGain.connect(analyser); analyser.connect(ctx.destination);
 
       running=true;
       unsubscribe=MultiSynthNativeMic.subscribe(feedChunk);
@@ -180,13 +151,11 @@
     try{if(unsubscribe)unsubscribe()}catch(_){}
     unsubscribe=null;
     try{MultiSynthNativeMic.stop()}catch(_){}
-
     if(streamNode){
       try{streamNode.onaudioprocess=null;streamNode.disconnect()}catch(_){}
       streamNode=null;
     }
     clearQueue();
-
     const wasError=preserveError||statusEl.textContent==="INPUT ERROR";
     await stopTape();
     button.textContent="START TAPE";
