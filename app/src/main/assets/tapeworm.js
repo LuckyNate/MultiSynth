@@ -2,11 +2,11 @@
 
 /* TAPEWORM — literal circular tape loop.
    PLAY -> ERASE/ATTENUATE -> RECORD -> advance.
-   No dry monitor and no tape effects.
+   No dry monitor. Record input is conditioned only to prevent acoustic feedback.
 */
 
 const BASE_LOOP_SECONDS=4;
-const STATE_KEY="tapeworm-basic-v8";
+const STATE_KEY="tapeworm-basic-v9";
 const PROCESS_FRAMES=1024;
 const CEILING=.92;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
@@ -16,6 +16,10 @@ let micStream=null,micSource=null,nativeUnsubscribe=null,nativeMode=false;
 let tape=null,tapeLength=0,head=0,lastProcessedCell=-1;
 let nativeQueue=[],nativeQueueOffset=0;
 let recordScope=new Float32Array(PROCESS_FRAMES),recordScopeWrite=0;
+
+// Record-head conditioning: DC blocker + gentle tape-style HF ceiling +
+// slow automatic anti-feedback gain. This is protection, not a tape effect.
+let hpX1=0,hpY1=0,lpY=0,protectEnv=0,protectGain=1;
 
 const tapeSpeed=document.getElementById("tapeSpeed");
 const falloff=document.getElementById("falloff");
@@ -42,6 +46,30 @@ function clearNativeQueue(){nativeQueue=[];nativeQueueOffset=0}
 function pushNative(pcm){if(pcm&&pcm.length)nativeQueue.push(pcm)}
 function pullNativeSample(){while(nativeQueue.length){const a=nativeQueue[0];if(nativeQueueOffset<a.length)return a[nativeQueueOffset++];nativeQueue.shift();nativeQueueOffset=0}return 0}
 
+function conditionRecordInput(x){
+  // Remove subsonic/DC energy that only eats headroom.
+  const hp=x-hpX1+.995*hpY1;hpX1=x;hpY1=hp;
+
+  // Gentle one-pole ceiling around 9 kHz at 48 kHz. Keeps speech/music open,
+  // but stops the most common tiny-speaker/mic HF loop from being re-recorded hard.
+  const sr=ctx?ctx.sampleRate:48000;
+  const a=Math.exp(-2*Math.PI*9000/sr);
+  lpY=(1-a)*hp+a*lpY;
+
+  // Automatic record-head protection. Fast attack on sustained excessive energy,
+  // slow release, max ~12 dB reduction. Normal transients pass untouched.
+  const mag=Math.abs(lpY);
+  const envA=mag>protectEnv?.992:.9995;
+  protectEnv=envA*protectEnv+(1-envA)*mag;
+  const threshold=.48;
+  let target=1;
+  if(protectEnv>threshold)target=Math.max(.25,threshold/protectEnv);
+  const gA=target<protectGain?.985:.9997;
+  protectGain=gA*protectGain+(1-gA)*target;
+
+  return clamp(lpY*protectGain);
+}
+
 function processTapeCell(idx,fresh,keep){
   const erased=clamp(tape[idx]*keep);
   const written=clamp(erased+fresh);
@@ -50,42 +78,28 @@ function processTapeCell(idx,fresh,keep){
 }
 
 function processTravel(startPos,endPos,fresh,keep){
-  let start=Math.floor(startPos);
-  let end=Math.floor(endPos);
+  let start=Math.floor(startPos),end=Math.floor(endPos);
   if(endPos>=tapeLength)end=Math.floor(endPos-tapeLength)+tapeLength;
   if(end<start)end+=tapeLength;
-
-  if(lastProcessedCell<0){
-    const idx=wrapCell(start);
-    processTapeCell(idx,fresh,keep);
-    lastProcessedCell=idx;
-  }
-
-  for(let c=start+1;c<=end;c++){
-    const idx=wrapCell(c);
-    if(idx===lastProcessedCell)continue;
-    processTapeCell(idx,fresh,keep);
-    lastProcessedCell=idx;
-  }
+  if(lastProcessedCell<0){const idx=wrapCell(start);processTapeCell(idx,fresh,keep);lastProcessedCell=idx}
+  for(let c=start+1;c<=end;c++){const idx=wrapCell(c);if(idx===lastProcessedCell)continue;processTapeCell(idx,fresh,keep);lastProcessedCell=idx}
 }
 
 function buildTapeEngine(){
   tapeLength=Math.max(1,Math.round(ctx.sampleRate*BASE_LOOP_SECONDS));
   tape=new Float32Array(tapeLength);head=0;lastProcessedCell=-1;recordScope.fill(0);recordScopeWrite=0;clearNativeQueue();
+  hpX1=hpY1=lpY=protectEnv=0;protectGain=1;
   processor=ctx.createScriptProcessor(PROCESS_FRAMES,1,1);
   processor.onaudioprocess=e=>{
     if(!running)return;
     const input=e.inputBuffer.numberOfChannels?e.inputBuffer.getChannelData(0):null;
     const output=e.outputBuffer.getChannelData(0);
     const step=speed(),keep=retention();
-
     for(let i=0;i<output.length;i++){
       output[i]=clamp(tape[cellIndex(head)]);
-      const fresh=clamp(nativeMode?pullNativeSample():(input?input[i]:0));
-      let next=head+step;
-      processTravel(head,next,fresh,keep);
-      while(next>=tapeLength)next-=tapeLength;
-      head=next;
+      const raw=nativeMode?pullNativeSample():(input?input[i]:0);
+      const fresh=conditionRecordInput(clamp(raw));
+      let next=head+step;processTravel(head,next,fresh,keep);while(next>=tapeLength)next-=tapeLength;head=next;
     }
   };
   processor.connect(ctx.destination);
@@ -100,7 +114,7 @@ async function startInput(){
   if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){
     nativeMode=true;nativeUnsubscribe=MultiSynthNativeMic.subscribe(pcm=>pushNative(pcm));
     if(!MultiSynthNativeMic.start())throw new Error("Microphone unavailable");
-    const zero=ctx.createConstantSource();zero.offset.value=0;zero.connect(processor);zero.start();silentKeepAlive=zero;statusEl.textContent="TAPE RUNNING // NATIVE MIC";return;
+    const zero=ctx.createConstantSource();zero.offset.value=0;zero.connect(processor);zero.start();silentKeepAlive=zero;statusEl.textContent="TAPE RUNNING // NATIVE MIC + PROTECT";return;
   }
   throw new Error("Microphone unavailable");
 }
