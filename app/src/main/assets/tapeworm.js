@@ -5,8 +5,8 @@
    No dry monitor and no tape effects.
 */
 
-const BASE_LOOP_SECONDS=10;
-const STATE_KEY="tapeworm-basic-v7";
+const BASE_LOOP_SECONDS=4;
+const STATE_KEY="tapeworm-basic-v8";
 const PROCESS_FRAMES=1024;
 const CEILING=.92;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
@@ -28,14 +28,14 @@ const statusEl=document.getElementById("status");
 const scope=document.getElementById("scope");
 const scopeCtx=scope.getContext("2d");
 
-function speed(){return Math.max(.25,Math.min(4,Number(tapeSpeed.value)||1))}
+function speed(){return Math.max(.125,Math.min(8,Number(tapeSpeed.value)||1))}
 function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)||0))}
 function retention(){return 1-falloffAmount()}
 function loopSeconds(){return BASE_LOOP_SECONDS/speed()}
 function clamp(x){return !Number.isFinite(x)?0:Math.max(-CEILING,Math.min(CEILING,x))}
 function wrapCell(i){i%=tapeLength;if(i<0)i+=tapeLength;return i}
 function cellIndex(pos){return wrapCell(Math.floor(pos))}
-function updateReadouts(){const s=speed(),f=falloffAmount(),sec=loopSeconds();speedValue.textContent=`${s.toFixed(2)}×`;falloffValue.textContent=`${Math.round(f*100)}%`;speedReadout.textContent=`${s.toFixed(2)}× // ${sec>=10?sec.toFixed(1):sec.toFixed(2)} s LOOP`;falloffReadout.textContent=`FALLOFF ${Math.round(f*100)}%`}
+function updateReadouts(){const s=speed(),f=falloffAmount(),sec=loopSeconds();speedValue.textContent=`${s.toFixed(3)}×`;falloffValue.textContent=`${Math.round(f*100)}%`;speedReadout.textContent=`${s.toFixed(3)}× // ${sec>=10?sec.toFixed(1):sec.toFixed(2)} s LOOP`;falloffReadout.textContent=`FALLOFF ${Math.round(f*100)}%`}
 function saveState(){try{localStorage.setItem(STATE_KEY,JSON.stringify({tapeSpeed:tapeSpeed.value,falloff:falloff.value}))}catch(_){}}
 function loadState(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"null");if(s){if(s.tapeSpeed!==undefined)tapeSpeed.value=s.tapeSpeed;if(s.falloff!==undefined)falloff.value=s.falloff}}catch(_){}}
 function clearNativeQueue(){nativeQueue=[];nativeQueueOffset=0}
@@ -43,7 +43,6 @@ function pushNative(pcm){if(pcm&&pcm.length)nativeQueue.push(pcm)}
 function pullNativeSample(){while(nativeQueue.length){const a=nativeQueue[0];if(nativeQueueOffset<a.length)return a[nativeQueueOffset++];nativeQueue.shift();nativeQueueOffset=0}return 0}
 
 function processTapeCell(idx,fresh,keep){
-  // PLAY happens before this function; this function is ERASE -> RECORD.
   const erased=clamp(tape[idx]*keep);
   const written=clamp(erased+fresh);
   tape[idx]=written;
@@ -51,8 +50,6 @@ function processTapeCell(idx,fresh,keep){
 }
 
 function processTravel(startPos,endPos,fresh,keep){
-  // Every physical tape cell crossed by the heads must be processed exactly once.
-  // This prevents 2x/3x/4x speed from skipping unerased old cells.
   let start=Math.floor(startPos);
   let end=Math.floor(endPos);
   if(endPos>=tapeLength)end=Math.floor(endPos-tapeLength)+tapeLength;
@@ -83,9 +80,7 @@ function buildTapeEngine(){
     const step=speed(),keep=retention();
 
     for(let i=0;i<output.length;i++){
-      // PLAY HEAD: hear the old tape before erase/record touches it.
       output[i]=clamp(tape[cellIndex(head)]);
-
       const fresh=clamp(nativeMode?pullNativeSample():(input?input[i]:0));
       let next=head+step;
       processTravel(head,next,fresh,keep);
@@ -99,8 +94,6 @@ function buildTapeEngine(){
 async function startInput(){
   nativeMode=false;
   if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){try{
-    // Echo cancellation is not a tape effect; it is input isolation so the mic
-    // does not re-record this device's own speaker playback when WebView supports it.
     micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:false}});
     micSource=ctx.createMediaStreamSource(micStream);micSource.connect(processor);statusEl.textContent="TAPE RUNNING // DIRECT MIC + AEC";return;
   }catch(e){console.warn("direct mic failed, using native fallback",e)}}
