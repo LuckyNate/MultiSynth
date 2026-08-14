@@ -1,0 +1,114 @@
+"use strict";
+
+/*
+ * MultiSynth Module Contract
+ * --------------------------
+ * Canonical lifecycle/API for reusable module definitions and independent instances.
+ */
+(function(global){
+    const definitions=new Map();
+    const runtimes=new Map();
+
+    function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+    function assertAudioNode(node,name){
+        if(node==null)return null;
+        if(typeof node.connect!=="function")throw new Error(name+" must be an AudioNode-like object");
+        return node;
+    }
+
+    function normalizeDefinition(def){
+        if(!def||!def.type)throw new Error("Module definition requires type");
+        return Object.freeze({
+            type:String(def.type),
+            displayName:String(def.displayName||def.type),
+            category:String(def.category||"instrument"),
+            version:String(def.version||"1"),
+            color:def.color||null,
+            defaults:clone(def.defaults||{}),
+            resources:Array.isArray(def.resources)?def.resources.slice():[],
+            create:typeof def.create==="function"?def.create:null,
+            mount:typeof def.mount==="function"?def.mount:null,
+            setState:typeof def.setState==="function"?def.setState:null,
+            suspend:typeof def.suspend==="function"?def.suspend:null,
+            resume:typeof def.resume==="function"?def.resume:null,
+            destroy:typeof def.destroy==="function"?def.destroy:null,
+            serialize:typeof def.serialize==="function"?def.serialize:null,
+            restore:typeof def.restore==="function"?def.restore:null
+        });
+    }
+
+    function define(def){
+        const clean=normalizeDefinition(def);
+        definitions.set(clean.type,clean);
+        return clean;
+    }
+
+    function getDefinition(type){const d=definitions.get(type);if(!d)throw new Error("Unknown module type: "+type);return d;}
+    function listDefinitions(){return [...definitions.values()].map(d=>({type:d.type,displayName:d.displayName,category:d.category,version:d.version,color:d.color,defaults:clone(d.defaults),resources:d.resources.slice()}));}
+
+    function createRuntime(instance,{audioContext=null,native=null,rack=null}={}){
+        const def=getDefinition(instance.type);
+        const runtime={
+            instanceId:instance.id,type:instance.type,definition:def,state:Object.assign({},clone(def.defaults),clone(instance.state||{})),
+            context:audioContext,native,rack,input:null,output:null,ui:null,user:null,resources:new Set(),mounted:false,suspended:false
+        };
+        const api={
+            instanceId:runtime.instanceId,
+            get state(){return runtime.state;},
+            get context(){return runtime.context;},
+            get native(){return runtime.native;},
+            get rack(){return runtime.rack;},
+            setInput(node){runtime.input=assertAudioNode(node,"input");return runtime.input;},
+            setOutput(node){runtime.output=assertAudioNode(node,"output");return runtime.output;},
+            setUser(value){runtime.user=value;return value;},
+            subscribe(resource){runtime.resources.add(String(resource));return true;},
+            unsubscribe(resource){runtime.resources.delete(String(resource));},
+            emit(type,payload){global.dispatchEvent(new CustomEvent("multisynth-module",{detail:{instanceId:runtime.instanceId,type,payload}}));}
+        };
+        if(def.create)runtime.user=def.create(api)||runtime.user;
+        runtimes.set(runtime.instanceId,runtime);
+        return runtime;
+    }
+
+    function mount(instanceId,container){
+        const r=need(instanceId);if(r.mounted)return;
+        if(r.definition.mount)r.ui=r.definition.mount({runtime:r,container,state:r.state})||null;
+        r.mounted=true;
+    }
+
+    function update(instanceId,patch){
+        const r=need(instanceId);Object.assign(r.state,clone(patch||{}));
+        if(r.definition.setState)r.definition.setState({runtime:r,state:r.state,patch:clone(patch||{})});
+        return clone(r.state);
+    }
+
+    function suspend(instanceId){const r=need(instanceId);if(r.suspended)return;if(r.definition.suspend)r.definition.suspend({runtime:r});r.suspended=true;}
+    function resume(instanceId){const r=need(instanceId);if(!r.suspended)return;if(r.definition.resume)r.definition.resume({runtime:r});r.suspended=false;}
+
+    function serialize(instanceId){
+        const r=need(instanceId);
+        return r.definition.serialize?clone(r.definition.serialize({runtime:r,state:r.state})):clone(r.state);
+    }
+
+    function restore(instanceId,saved){
+        const r=need(instanceId);
+        r.state=r.definition.restore?clone(r.definition.restore({runtime:r,saved:clone(saved)})):clone(saved||{});
+        if(r.definition.setState)r.definition.setState({runtime:r,state:r.state,patch:clone(r.state)});
+        return clone(r.state);
+    }
+
+    function destroy(instanceId){
+        const r=need(instanceId);
+        try{if(r.definition.destroy)r.definition.destroy({runtime:r});}finally{
+            try{r.input?.disconnect?.();}catch(_){}
+            try{r.output?.disconnect?.();}catch(_){}
+            runtimes.delete(instanceId);
+        }
+    }
+
+    function need(id){const r=runtimes.get(id);if(!r)throw new Error("Unknown module runtime: "+id);return r;}
+    function getRuntime(id){return need(id);}
+
+    global.MultiSynth=global.MultiSynth||{};
+    global.MultiSynth.ModuleContract=Object.freeze({define,getDefinition,listDefinitions,createRuntime,mount,update,suspend,resume,serialize,restore,destroy,getRuntime});
+})(window);
