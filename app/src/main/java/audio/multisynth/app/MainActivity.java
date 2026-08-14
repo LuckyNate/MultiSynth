@@ -110,15 +110,11 @@ public final class MainActivity extends Activity {
 
     private void requestStartupPermissions() {
         List<String> missing = new ArrayList<>();
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            missing.add(Manifest.permission.RECORD_AUDIO);
-        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.RECORD_AUDIO);
         if (Build.VERSION.SDK_INT >= 31) {
             if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.BLUETOOTH_SCAN);
             if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.BLUETOOTH_CONNECT);
-        } else if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
+        } else if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
         if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), STARTUP_PERMISSION_REQUEST);
     }
 
@@ -132,7 +128,6 @@ public final class MainActivity extends Activity {
         webView.getSettings().setOffscreenPreRaster(true);
         webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowContentAccess(true);
-
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
@@ -145,33 +140,24 @@ public final class MainActivity extends Activity {
                 catch (Exception e) { fileChooserCallback.onReceiveValue(null); fileChooserCallback = null; }
                 return true;
             }
-
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> {
                     boolean wantsMic = false;
-                    for (String resource : request.getResources()) {
-                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsMic = true;
-                    }
-                    if (wantsMic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-                    } else {
-                        request.deny();
-                    }
+                    for (String resource : request.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsMic = true;
+                    if (wantsMic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                    else request.deny();
                 });
             }
         });
-
         webView.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 WebResourceResponse local = localAssetResponse(request.getUrl());
                 return local != null ? local : super.shouldInterceptRequest(view, request);
             }
-
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 return !("https".equals(uri.getScheme()) && APP_HOST.equals(uri.getHost()) && uri.getPath() != null && uri.getPath().startsWith(APP_PREFIX));
             }
-
             @Override public void onPageFinished(WebView view, String url) {
                 runJs("window.warmAudioEngine&&window.warmAudioEngine();");
                 installAutoPersistence();
@@ -184,236 +170,46 @@ public final class MainActivity extends Activity {
 
     private WebResourceResponse localAssetResponse(Uri uri) {
         if (uri == null || !"https".equals(uri.getScheme()) || !APP_HOST.equals(uri.getHost())) return null;
-        String path = uri.getPath();
-        if (path == null || !path.startsWith(APP_PREFIX)) return null;
-        String assetPath = path.substring(APP_PREFIX.length());
-        if (assetPath.isEmpty() || assetPath.contains("..")) return null;
-        try {
-            InputStream stream = getAssets().open(assetPath);
-            return new WebResourceResponse(mimeType(assetPath), "UTF-8", stream);
-        } catch (IOException e) {
-            return null;
-        }
+        String path = uri.getPath(); if (path == null || !path.startsWith(APP_PREFIX)) return null;
+        String assetPath = path.substring(APP_PREFIX.length()); if (assetPath.isEmpty() || assetPath.contains("..")) return null;
+        try { return new WebResourceResponse(mimeType(assetPath), "UTF-8", getAssets().open(assetPath)); } catch (IOException e) { return null; }
     }
-
-    private String mimeType(String path) {
-        String p = path.toLowerCase();
-        if (p.endsWith(".html") || p.endsWith(".htm")) return "text/html";
-        if (p.endsWith(".css")) return "text/css";
-        if (p.endsWith(".js")) return "application/javascript";
-        if (p.endsWith(".json")) return "application/json";
-        if (p.endsWith(".svg")) return "image/svg+xml";
-        if (p.endsWith(".png")) return "image/png";
-        if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
-        if (p.endsWith(".webp")) return "image/webp";
-        if (p.endsWith(".mp3")) return "audio/mpeg";
-        if (p.endsWith(".mp4")) return "video/mp4";
-        return "application/octet-stream";
-    }
+    private String mimeType(String path) { String p=path.toLowerCase(); if(p.endsWith(".html")||p.endsWith(".htm"))return"text/html";if(p.endsWith(".css"))return"text/css";if(p.endsWith(".js"))return"application/javascript";if(p.endsWith(".json"))return"application/json";if(p.endsWith(".svg"))return"image/svg+xml";if(p.endsWith(".png"))return"image/png";if(p.endsWith(".jpg")||p.endsWith(".jpeg"))return"image/jpeg";if(p.endsWith(".webp"))return"image/webp";if(p.endsWith(".mp3"))return"audio/mpeg";if(p.endsWith(".mp4"))return"video/mp4";return"application/octet-stream"; }
 
     private void installAutoPersistence() {
-        String js = "(function(){if(window.__multiSynthAutoSave)return;window.__multiSynthAutoSave=true;" +
-                "var key='multisynth-autostate:'+location.pathname;" +
-                "function id(e,i){return e.id||e.name||('auto-'+i)};" +
-                "function save(){try{var a=[];document.querySelectorAll('input,select,textarea').forEach(function(e,i){if(e.type==='file')return;a.push({k:id(e,i),v:(e.type==='checkbox'||e.type==='radio')?e.checked:e.value,t:e.type});});localStorage.setItem(key,JSON.stringify(a));}catch(x){}}" +
-                "function restore(){try{var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw),els=[].slice.call(document.querySelectorAll('input,select,textarea'));a.forEach(function(s){var e=els.find(function(x,i){return id(x,i)===s.k});if(!e||e.type==='file')return;if(e.type==='checkbox'||e.type==='radio')e.checked=!!s.v;else e.value=s.v;try{e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}catch(x){}});}catch(x){}}" +
-                "restore();document.addEventListener('input',save,true);document.addEventListener('change',save,true);document.addEventListener('click',function(){setTimeout(save,0)},true);window.addEventListener('pagehide',save);window.MultiSynthSaveNow=save;})();";
+        String js="(function(){if(window.__multiSynthAutoSave)return;window.__multiSynthAutoSave=true;var q=new URLSearchParams(location.search),inst=q.get('instance'),key='multisynth-autostate:'+(inst?('instance:'+inst):location.pathname);function id(e,i){return e.id||e.name||('auto-'+i)};function save(){try{var a=[];document.querySelectorAll('input,select,textarea').forEach(function(e,i){if(e.type==='file')return;a.push({k:id(e,i),v:(e.type==='checkbox'||e.type==='radio')?e.checked:e.value,t:e.type});});localStorage.setItem(key,JSON.stringify(a));}catch(x){}}function restore(){try{var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw),els=[].slice.call(document.querySelectorAll('input,select,textarea'));a.forEach(function(s){var e=els.find(function(x,i){return id(x,i)===s.k});if(!e||e.type==='file')return;if(e.type==='checkbox'||e.type==='radio')e.checked=!!s.v;else e.value=s.v;try{e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}catch(x){}});}catch(x){}}restore();document.addEventListener('input',save,true);document.addEventListener('change',save,true);document.addEventListener('click',function(){setTimeout(save,0)},true);window.addEventListener('pagehide',save);window.MultiSynthSaveNow=save;})();";
         runJs(js);
     }
 
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != FILE_CHOOSER_REQUEST || fileChooserCallback == null) return;
-        Uri[] result = null;
-        if (resultCode == RESULT_OK) result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-        fileChooserCallback.onReceiveValue(result);
-        fileChooserCallback = null;
-    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode!=FILE_CHOOSER_REQUEST||fileChooserCallback==null)return;Uri[] result=null;if(resultCode==RESULT_OK)result=WebChromeClient.FileChooserParams.parseResult(resultCode,data);fileChooserCallback.onReceiveValue(result);fileChooserCallback=null;}
 
     private final class Bridge {
-        @JavascriptInterface public void chooseInput() { runOnUiThread(MainActivity.this::beginMidiSelection); }
-        @JavascriptInterface public void disconnect() { runOnUiThread(MainActivity.this::disconnectMidi); }
-        @JavascriptInterface public void openAudioSettings() { runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))); }
-        @JavascriptInterface public String listInputs() { return midiChoicesJson().toString(); }
-        @JavascriptInterface public boolean startMic() { return startNativeMic(); }
-        @JavascriptInterface public void stopMic() { stopNativeMic(); }
+        @JavascriptInterface public void chooseInput(){runOnUiThread(MainActivity.this::beginMidiSelection);} @JavascriptInterface public void disconnect(){runOnUiThread(MainActivity.this::disconnectMidi);} @JavascriptInterface public void openAudioSettings(){runOnUiThread(()->startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)));} @JavascriptInterface public String listInputs(){return midiChoicesJson().toString();} @JavascriptInterface public boolean startMic(){return startNativeMic();} @JavascriptInterface public void stopMic(){stopNativeMic();}
     }
 
-    private synchronized boolean startNativeMic() {
-        if (nativeMicRunning) return true;
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC PERMISSION REQUIRED');");
-            return false;
-        }
-        int minBytes = AudioRecord.getMinBufferSize(MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-        if (minBytes <= 0) minBytes = MIC_CHUNK_FRAMES * 4;
-        int bufferBytes = Math.max(minBytes, MIC_CHUNK_FRAMES * 4);
-        try {
-            nativeMic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferBytes);
-            if (nativeMic.getState() != AudioRecord.STATE_INITIALIZED) {
-                nativeMic.release(); nativeMic = null;
-                runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC INIT FAILED');");
-                return false;
-            }
+    private synchronized boolean startNativeMic(){if(nativeMicRunning)return true;if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC PERMISSION REQUIRED');");return false;}int minBytes=AudioRecord.getMinBufferSize(MIC_SAMPLE_RATE,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);if(minBytes<=0)minBytes=MIC_CHUNK_FRAMES*4;int bufferBytes=Math.max(minBytes,MIC_CHUNK_FRAMES*4);try{nativeMic=new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION,MIC_SAMPLE_RATE,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,bufferBytes);if(nativeMic.getState()!=AudioRecord.STATE_INITIALIZED){nativeMic.release();nativeMic=null;return false;}boolean aecOn=false;if(AcousticEchoCanceler.isAvailable()){try{nativeAec=AcousticEchoCanceler.create(nativeMic.getAudioSessionId());if(nativeAec!=null){nativeAec.setEnabled(true);aecOn=nativeAec.getEnabled();}}catch(Exception ignored){}}nativeMic.startRecording();nativeMicRunning=true;nativeMicThread=new Thread(this::nativeMicLoop,"MultiSynthMic");nativeMicThread.start();runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('"+(aecOn?"MIC LIVE // AEC ON":"MIC LIVE // AEC UNAVAILABLE")+"');");return true;}catch(Exception e){nativeMicRunning=false;return false;}}
+    private void nativeMicLoop(){short[] shorts=new short[MIC_CHUNK_FRAMES];while(nativeMicRunning){AudioRecord recorder=nativeMic;if(recorder==null)break;int n;try{n=recorder.read(shorts,0,shorts.length);}catch(Exception e){break;}if(n<=0)continue;byte[] bytes=new byte[n*2];for(int i=0,j=0;i<n;i++,j+=2){int v=shorts[i];bytes[j]=(byte)(v&0xff);bytes[j+1]=(byte)((v>>>8)&0xff);}String b64=Base64.encodeToString(bytes,Base64.NO_WRAP);runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.receive("+JSONObject.quote(b64)+","+MIC_SAMPLE_RATE+");");}}
+    private synchronized void stopNativeMic(){nativeMicRunning=false;AudioRecord recorder=nativeMic;nativeMic=null;AcousticEchoCanceler aec=nativeAec;nativeAec=null;if(recorder!=null)try{recorder.stop();}catch(Exception ignored){}if(aec!=null){try{aec.setEnabled(false);}catch(Exception ignored){}try{aec.release();}catch(Exception ignored){}}if(recorder!=null)try{recorder.release();}catch(Exception ignored){}nativeMicThread=null;runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC STOPPED');");}
 
-            boolean aecOn = false;
-            if (AcousticEchoCanceler.isAvailable()) {
-                try {
-                    nativeAec = AcousticEchoCanceler.create(nativeMic.getAudioSessionId());
-                    if (nativeAec != null) {
-                        nativeAec.setEnabled(true);
-                        aecOn = nativeAec.getEnabled();
-                    }
-                } catch (Exception ignored) {
-                    if (nativeAec != null) {
-                        try { nativeAec.release(); } catch (Exception ignored2) {}
-                        nativeAec = null;
-                    }
-                }
-            }
-
-            nativeMic.startRecording();
-            nativeMicRunning = true;
-            nativeMicThread = new Thread(this::nativeMicLoop, "MultiSynthMic");
-            nativeMicThread.start();
-            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('" + (aecOn ? "MIC LIVE // AEC ON" : "MIC LIVE // AEC UNAVAILABLE") + "');");
-            return true;
-        } catch (Exception e) {
-            nativeMicRunning = false;
-            if (nativeAec != null) {
-                try { nativeAec.release(); } catch (Exception ignored) {}
-                nativeAec = null;
-            }
-            try { if (nativeMic != null) nativeMic.release(); } catch (Exception ignored) {}
-            nativeMic = null;
-            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC START FAILED');");
-            return false;
-        }
-    }
-
-    private void nativeMicLoop() {
-        short[] shorts = new short[MIC_CHUNK_FRAMES];
-        while (nativeMicRunning) {
-            AudioRecord recorder = nativeMic;
-            if (recorder == null) break;
-            int n;
-            try { n = recorder.read(shorts, 0, shorts.length); }
-            catch (Exception e) { break; }
-            if (n <= 0) continue;
-            byte[] bytes = new byte[n * 2];
-            for (int i = 0, j = 0; i < n; i++, j += 2) {
-                int v = shorts[i];
-                bytes[j] = (byte)(v & 0xff);
-                bytes[j + 1] = (byte)((v >>> 8) & 0xff);
-            }
-            String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
-            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.receive(" + JSONObject.quote(b64) + "," + MIC_SAMPLE_RATE + ");");
-        }
-    }
-
-    private synchronized void stopNativeMic() {
-        nativeMicRunning = false;
-        AudioRecord recorder = nativeMic;
-        nativeMic = null;
-        AcousticEchoCanceler aec = nativeAec;
-        nativeAec = null;
-        if (recorder != null) {
-            try { recorder.stop(); } catch (Exception ignored) {}
-        }
-        if (aec != null) {
-            try { aec.setEnabled(false); } catch (Exception ignored) {}
-            try { aec.release(); } catch (Exception ignored) {}
-        }
-        if (recorder != null) {
-            try { recorder.release(); } catch (Exception ignored) {}
-        }
-        nativeMicThread = null;
-        runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC STOPPED');");
-    }
-
-    private boolean hasBluetoothPermission() {
-        if (Build.VERSION.SDK_INT < 31) return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void beginMidiSelection() {
-        if (!hasBluetoothPermission()) {
-            status("MIDI PERMISSION REQUIRED — ENABLE IN ANDROID SETTINGS", false);
-            return;
-        }
-        scanAndShowMidiInputs();
-    }
-
-    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (requestCode == STARTUP_PERMISSION_REQUEST) {
-            publishDeviceChange();
-        }
-    }
-
-    private void scanAndShowMidiInputs() {
-        scannedBluetooth.clear(); status("SCANNING MIDI...", false);
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) { showChoices(); return; }
-        BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
-        if (scanner == null) { showChoices(); return; }
-        ScanFilter filter = new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(BLE_MIDI_SERVICE)).build();
-        ScanSettings settings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-        ScanCallback callback = new ScanCallback() {
-            @Override public void onScanResult(int type, ScanResult result) { BluetoothDevice d=result.getDevice(); scannedBluetooth.put(d.getAddress(),d); }
-            @Override public void onBatchScanResults(List<ScanResult> results) { for(ScanResult r:results) scannedBluetooth.put(r.getDevice().getAddress(),r.getDevice()); }
-        };
-        try {
-            scanner.startScan(java.util.Collections.singletonList(filter), settings, callback);
-            main.postDelayed(() -> { try { scanner.stopScan(callback); } catch (SecurityException ignored) {} showChoices(); }, 3500);
-        } catch (SecurityException e) { showChoices(); }
-    }
-
-    private void rebuildChoices() {
-        choices.clear();
-        for (MidiDeviceInfo info : midiManager.getDevices()) {
-            String name=info.getProperties().getString(MidiDeviceInfo.PROPERTY_NAME);
-            if(name==null)name=info.getProperties().getString(MidiDeviceInfo.PROPERTY_PRODUCT);
-            if(name==null)name="MIDI "+info.getId();
-            for(MidiDeviceInfo.PortInfo port:info.getPorts()) if(port.getType()==MidiDeviceInfo.PortInfo.TYPE_OUTPUT) choices.add(Choice.port(info,port.getPortNumber(),name+" — "+(port.getName()==null?"Input "+(port.getPortNumber()+1):port.getName())));
-        }
-        for(BluetoothDevice device:scannedBluetooth.values()) {
-            String name; try{name=device.getName();}catch(SecurityException e){name=null;}
-            choices.add(Choice.bluetooth(device,"Bluetooth MIDI — "+(name==null?device.getAddress():name)));
-        }
-    }
-
-    private void showChoices() {
-        rebuildChoices();
-        if(choices.isEmpty()) {
-            new AlertDialog.Builder(this).setTitle("MIDI INPUT").setMessage("No MIDI controller was found. Turn on the GO:88 Bluetooth MIDI function or connect USB MIDI, then try again.").setPositiveButton("TRY AGAIN",(d,w)->scanAndShowMidiInputs()).setNeutralButton("BLUETOOTH SETTINGS",(d,w)->startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))).setNegativeButton("CLOSE",null).show();
-            status("MIDI INPUT",false); return;
-        }
-        String[] labels=new String[choices.size()]; for(int i=0;i<choices.size();i++)labels[i]=choices.get(i).label;
-        new AlertDialog.Builder(this).setTitle("MIDI INPUT").setItems(labels,(dialog,which)->connectChoice(choices.get(which))).setNegativeButton("CANCEL",null).show();
-    }
-
-    private void connectChoice(Choice choice){if(choice.bluetooth!=null)openBluetoothMidi(choice.bluetooth,choice.label);else openMidiDevice(choice.info,choice.port,choice.label);}
-    private void openMidiDevice(MidiDeviceInfo info,int port,String label){closeOpenMidi(false);midiManager.openDevice(info,device->finishOpen(device,port,label),main);}
-    private void openBluetoothMidi(BluetoothDevice bluetooth,String label){closeOpenMidi(false);try{midiManager.openBluetoothDevice(bluetooth,device->{if(device==null){status("BLUETOOTH MIDI FAILED",false);return;}int port=firstOutputPort(device.getInfo());if(port<0){try{device.close();}catch(IOException ignored){}status("NO MIDI PORT",false);return;}preferences.edit().putString("bluetooth",bluetooth.getAddress()).apply();finishOpen(device,port,label);},main);}catch(SecurityException e){status("MIDI PERMISSION REQUIRED",false);}}
-    private int firstOutputPort(MidiDeviceInfo info){for(MidiDeviceInfo.PortInfo p:info.getPorts())if(p.getType()==MidiDeviceInfo.PortInfo.TYPE_OUTPUT)return p.getPortNumber();return -1;}
-    private void finishOpen(MidiDevice device,int port,String label){if(device==null){status("MIDI OPEN FAILED",false);return;}MidiOutputPort opened=device.openOutputPort(port);if(opened==null){try{device.close();}catch(IOException ignored){}status("MIDI PORT FAILED",false);return;}opened.connect(midiReceiver);openDevice=device;openPort=opened;preferences.edit().putInt("device",device.getInfo().getId()).putInt("port",port).apply();status(label,true);}
-    private void reconnectRememberedMidi(){int id=preferences.getInt("device",-1),port=preferences.getInt("port",-1);if(id<0||port<0)return;for(MidiDeviceInfo info:midiManager.getDevices())if(info.getId()==id){openMidiDevice(info,port,"MIDI ON");return;}}
-    private void disconnectMidi(){closeOpenMidi(true);}
-    private void closeOpenMidi(boolean notify){try{if(openPort!=null)openPort.disconnect(midiReceiver);}catch(Exception ignored){}try{if(openPort!=null)openPort.close();}catch(IOException ignored){}try{if(openDevice!=null)openDevice.close();}catch(IOException ignored){}openPort=null;openDevice=null;if(notify)status("MIDI INPUT",false);}
-    private JSONArray midiChoicesJson(){rebuildChoices();JSONArray result=new JSONArray();for(Choice c:choices){JSONObject o=new JSONObject();try{o.put("name",c.label);}catch(Exception ignored){}result.put(o);}return result;}
-    private void publishDeviceChange(){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.devicesChanged("+midiChoicesJson()+");");}
-    private void status(String text,boolean connected){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status("+JSONObject.quote(text)+","+connected+");");}
-    private void runJs(String script){main.post(()->{if(webView!=null)webView.evaluateJavascript(script,null);});}
+    private boolean hasBluetoothPermission(){if(Build.VERSION.SDK_INT<31)return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)==PackageManager.PERMISSION_GRANTED&&checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)==PackageManager.PERMISSION_GRANTED;}
+    private void beginMidiSelection(){if(!hasBluetoothPermission()){status("MIDI PERMISSION REQUIRED — ENABLE IN ANDROID SETTINGS",false);return;}scanAndShowMidiInputs();}
+    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] results){super.onRequestPermissionsResult(requestCode,permissions,results);if(requestCode==STARTUP_PERMISSION_REQUEST)publishDeviceChange();}
+    private void scanAndShowMidiInputs(){scannedBluetooth.clear();status("SCANNING MIDI...",false);if(bluetoothAdapter==null||!bluetoothAdapter.isEnabled()){showChoices();return;}BluetoothLeScanner scanner=bluetoothAdapter.getBluetoothLeScanner();if(scanner==null){showChoices();return;}ScanFilter filter=new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(BLE_MIDI_SERVICE)).build();ScanSettings settings=new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();ScanCallback callback=new ScanCallback(){@Override public void onScanResult(int type,ScanResult result){BluetoothDevice d=result.getDevice();scannedBluetooth.put(d.getAddress(),d);}@Override public void onBatchScanResults(List<ScanResult> results){for(ScanResult r:results)scannedBluetooth.put(r.getDevice().getAddress(),r.getDevice());}};try{scanner.startScan(java.util.Collections.singletonList(filter),settings,callback);main.postDelayed(()->{try{scanner.stopScan(callback);}catch(SecurityException ignored){}showChoices();},3500);}catch(SecurityException e){showChoices();}}
+    private void rebuildChoices(){choices.clear();for(MidiDeviceInfo info:midiManager.getDevices()){String name=info.getProperties().getString(MidiDeviceInfo.PROPERTY_NAME);if(name==null)name=info.getProperties().getString(MidiDeviceInfo.PROPERTY_PRODUCT);if(name==null)name="MIDI "+info.getId();for(MidiDeviceInfo.PortInfo port:info.getPorts())if(port.getType()==MidiDeviceInfo.PortInfo.TYPE_OUTPUT)choices.add(Choice.port(info,port.getPortNumber(),name+" — "+(port.getName()==null?"Input "+(port.getPortNumber()+1):port.getName())));}for(BluetoothDevice device:scannedBluetooth.values()){String name;try{name=device.getName();}catch(SecurityException e){name=null;}choices.add(Choice.bluetooth(device,"Bluetooth MIDI — "+(name==null?device.getAddress():name)));}}
+    private void showChoices(){rebuildChoices();if(choices.isEmpty()){new AlertDialog.Builder(this).setTitle("MIDI INPUT").setMessage("No MIDI controller was found. Turn on the GO:88 Bluetooth MIDI function or connect USB MIDI, then try again.").setPositiveButton("TRY AGAIN",(d,w)->scanAndShowMidiInputs()).setNeutralButton("BLUETOOTH SETTINGS",(d,w)->startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))).setNegativeButton("CLOSE",null).show();status("MIDI INPUT",false);return;}String[] labels=new String[choices.size()];for(int i=0;i<choices.size();i++)labels[i]=choices.get(i).label;new AlertDialog.Builder(this).setTitle("MIDI INPUT").setItems(labels,(dialog,which)->connectChoice(choices.get(which))).setNegativeButton("CANCEL",null).show();}
+    private void connectChoice(Choice choice){if(choice.bluetooth!=null)openBluetoothMidi(choice.bluetooth,choice.label);else openMidiDevice(choice.info,choice.port,choice.label);}private void openMidiDevice(MidiDeviceInfo info,int port,String label){closeOpenMidi(false);midiManager.openDevice(info,device->finishOpen(device,port,label),main);}private void openBluetoothMidi(BluetoothDevice bluetooth,String label){closeOpenMidi(false);try{midiManager.openBluetoothDevice(bluetooth,device->{if(device==null){status("BLUETOOTH MIDI FAILED",false);return;}int port=firstOutputPort(device.getInfo());if(port<0){try{device.close();}catch(IOException ignored){}status("NO MIDI PORT",false);return;}preferences.edit().putString("bluetooth",bluetooth.getAddress()).apply();finishOpen(device,port,label);},main);}catch(SecurityException e){status("MIDI PERMISSION REQUIRED",false);}}private int firstOutputPort(MidiDeviceInfo info){for(MidiDeviceInfo.PortInfo p:info.getPorts())if(p.getType()==MidiDeviceInfo.PortInfo.TYPE_OUTPUT)return p.getPortNumber();return-1;}private void finishOpen(MidiDevice device,int port,String label){if(device==null){status("MIDI OPEN FAILED",false);return;}MidiOutputPort opened=device.openOutputPort(port);if(opened==null){try{device.close();}catch(IOException ignored){}status("MIDI PORT FAILED",false);return;}opened.connect(midiReceiver);openDevice=device;openPort=opened;preferences.edit().putInt("device",device.getInfo().getId()).putInt("port",port).apply();status(label,true);}private void reconnectRememberedMidi(){int id=preferences.getInt("device",-1),port=preferences.getInt("port",-1);if(id<0||port<0)return;for(MidiDeviceInfo info:midiManager.getDevices())if(info.getId()==id){openMidiDevice(info,port,"MIDI ON");return;}}private void disconnectMidi(){closeOpenMidi(true);}private void closeOpenMidi(boolean notify){try{if(openPort!=null)openPort.disconnect(midiReceiver);}catch(Exception ignored){}try{if(openPort!=null)openPort.close();}catch(IOException ignored){}try{if(openDevice!=null)openDevice.close();}catch(IOException ignored){}openPort=null;openDevice=null;if(notify)status("MIDI INPUT",false);}private JSONArray midiChoicesJson(){rebuildChoices();JSONArray result=new JSONArray();for(Choice c:choices){JSONObject o=new JSONObject();try{o.put("name",c.label);}catch(Exception ignored){}result.put(o);}return result;}private void publishDeviceChange(){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.devicesChanged("+midiChoicesJson()+");");}private void status(String text,boolean connected){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status("+JSONObject.quote(text)+","+connected+");");}private void runJs(String script){main.post(()->{if(webView!=null)webView.evaluateJavascript(script,null);});}
 
     @Override protected void onPause(){stopNativeMic();runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");super.onPause();}
     @Override protected void onResume(){super.onResume();runJs("window.warmAudioEngine&&window.warmAudioEngine();");}
-    @Override public void onBackPressed(){if(webView!=null&&webView.canGoBack())webView.goBack();else super.onBackPressed();}
+    @Override public void onBackPressed(){
+        if(webView==null){super.onBackPressed();return;}
+        webView.evaluateJavascript("(function(){if(window.MultiSynthRackHandleBack){try{return window.MultiSynthRackHandleBack()? '1':'0';}catch(e){}}return '0';})()", value->{
+            boolean handled=value!=null&&(value.contains("1"));
+            if(handled)return;
+            if(webView!=null&&webView.canGoBack())webView.goBack();else MainActivity.super.onBackPressed();
+        });
+    }
     @Override protected void onDestroy(){stopNativeMic();closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
 
-    private static final class Choice {
-        final MidiDeviceInfo info;final int port;final BluetoothDevice bluetooth;final String label;
-        private Choice(MidiDeviceInfo i,int p,BluetoothDevice b,String l){info=i;port=p;bluetooth=b;label=l;}
-        static Choice port(MidiDeviceInfo i,int p,String l){return new Choice(i,p,null,l);}
-        static Choice bluetooth(BluetoothDevice b,String l){return new Choice(null,-1,b,l);}
-    }
+    private static final class Choice{final MidiDeviceInfo info;final int port;final BluetoothDevice bluetooth;final String label;private Choice(MidiDeviceInfo i,int p,BluetoothDevice b,String l){info=i;port=p;bluetooth=b;label=l;}static Choice port(MidiDeviceInfo i,int p,String l){return new Choice(i,p,null,l);}static Choice bluetooth(BluetoothDevice b,String l){return new Choice(null,-1,b,l);}}
 }
