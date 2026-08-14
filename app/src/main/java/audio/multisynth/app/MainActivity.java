@@ -48,8 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class MainActivity extends Activity {
-    private static final int MIDI_PERMISSION_REQUEST = 44;
-    private static final int MIC_PERMISSION_REQUEST = 45;
+    private static final int STARTUP_PERMISSION_REQUEST = 44;
     private static final int FILE_CHOOSER_REQUEST = 46;
     private static final String BLE_MIDI_SERVICE = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
     private static final String APP_HOST = "appassets.androidplatform.net";
@@ -66,7 +65,6 @@ public final class MainActivity extends Activity {
     private MidiOutputPort openPort;
     private SharedPreferences preferences;
     private ValueCallback<Uri[]> fileChooserCallback;
-    private PermissionRequest pendingMicRequest;
 
     private final MidiReceiver midiReceiver = new MidiReceiver() {
         @Override public void onSend(byte[] data, int offset, int count, long timestamp) {
@@ -96,6 +94,21 @@ public final class MainActivity extends Activity {
         configureWebView();
         midiManager.registerDeviceCallback(deviceCallback, main);
         webView.loadUrl(APP_START);
+        requestStartupPermissions();
+    }
+
+    private void requestStartupPermissions() {
+        List<String> missing = new ArrayList<>();
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.RECORD_AUDIO);
+        }
+        if (Build.VERSION.SDK_INT >= 31) {
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.BLUETOOTH_SCAN);
+            if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.BLUETOOTH_CONNECT);
+        } else if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+        if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), STARTUP_PERMISSION_REQUEST);
     }
 
     private void configureWebView() {
@@ -125,13 +138,13 @@ public final class MainActivity extends Activity {
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> {
                     boolean wantsMic = false;
-                    for (String resource : request.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsMic = true;
-                    if (!wantsMic) { request.deny(); return; }
-                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    for (String resource : request.getResources()) {
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) wantsMic = true;
+                    }
+                    if (wantsMic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                         request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
                     } else {
-                        pendingMicRequest = request;
-                        requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST);
+                        request.deny();
                     }
                 });
             }
@@ -220,8 +233,7 @@ public final class MainActivity extends Activity {
 
     private void beginMidiSelection() {
         if (!hasBluetoothPermission()) {
-            if (Build.VERSION.SDK_INT >= 31) requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}, MIDI_PERMISSION_REQUEST);
-            else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MIDI_PERMISSION_REQUEST);
+            status("MIDI PERMISSION REQUIRED — ENABLE IN ANDROID SETTINGS", false);
             return;
         }
         scanAndShowMidiInputs();
@@ -229,17 +241,8 @@ public final class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (requestCode == MIC_PERMISSION_REQUEST) {
-            if (pendingMicRequest != null) {
-                if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) pendingMicRequest.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-                else pendingMicRequest.deny();
-                pendingMicRequest = null;
-            }
-            return;
-        }
-        if (requestCode == MIDI_PERMISSION_REQUEST) {
-            if (hasBluetoothPermission()) scanAndShowMidiInputs();
-            else status("MIDI PERMISSION DENIED", false);
+        if (requestCode == STARTUP_PERMISSION_REQUEST) {
+            publishDeviceChange();
         }
     }
 
@@ -300,7 +303,7 @@ public final class MainActivity extends Activity {
     @Override protected void onPause(){runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");super.onPause();}
     @Override protected void onResume(){super.onResume();runJs("window.warmAudioEngine&&window.warmAudioEngine();");}
     @Override public void onBackPressed(){if(webView!=null&&webView.canGoBack())webView.goBack();else super.onBackPressed();}
-    @Override protected void onDestroy(){closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(pendingMicRequest!=null){pendingMicRequest.deny();pendingMicRequest=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
+    @Override protected void onDestroy(){closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
 
     private static final class Choice {
         final MidiDeviceInfo info;final int port;final BluetoothDevice bluetooth;final String label;
