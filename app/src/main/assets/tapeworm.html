@@ -11,17 +11,18 @@
 <header class="scopeWrap"><div class="scopePanel">
 <div class="scopeTop"><strong>TAPEWORM // SHEDDING SEGMENT ECHO</strong><span id="status">STOPPED</span></div>
 <canvas id="scope"></canvas>
-<div class="scopeBottom"><span id="speedReadout">PLAY 1.000×</span><span id="segmentReadout">80 ms // 4 LOOPS</span></div>
+<div class="scopeBottom"><span id="speedReadout">SPACING 1.000× // PITCH 0 st</span><span id="segmentReadout">80 ms // 4 LOOPS</span></div>
 </div></header>
 <main class="controls">
-<section class="panel transportPanel"><button id="runButton" class="runButton" type="button">START WORM</button><p>The microphone continuously grows new segments. Each finished segment loops a fixed number of times, fades proportionally with each pass, then drops off the end of the worm. Playback is never recorded back into the microphone path.</p></section>
+<section class="panel transportPanel"><button id="runButton" class="runButton" type="button">START WORM</button><p>The microphone continuously grows new segments. Each finished segment repeats a fixed number of times, fades proportionally with each pass, then drops off the worm. Playback never feeds the record path.</p></section>
 <section class="panel knobGrid">
 <label class="knobControl hero"><span>SPEED</span><input id="tapeSpeed" type="range" min="0.4" max="8" step="0.005" value="1"><output id="speedValue">1.000×</output></label>
+<label class="knobControl hero"><span>PITCH</span><input id="pitch" type="range" min="-24" max="24" step="1" value="0"><output id="pitchValue">0 st</output></label>
 <label class="knobControl hero"><span>SEGMENT</span><input id="segmentLength" type="range" min="50" max="500" step="1" value="80"><output id="segmentValue">80 ms</output></label>
 <label class="knobControl hero"><span>LOOPS</span><input id="loops" type="range" min="1" max="16" step="1" value="4"><output id="loopsValue">4</output></label>
 <label class="knobControl hero"><span>MIC THRESHOLD</span><input id="micThreshold" type="range" min="0.02" max="0.40" step="0.005" value="0.14"><output id="thresholdValue">14%</output></label>
 </section>
-<section class="panel infoPanel"><strong>CAPTURE → LOOP → FADE → SHED.</strong><p>Every segment is immutable PCM after capture. LOOPS defines its entire life and its falloff: 4 loops play at 100%, 75%, 50%, 25%, then the segment is discarded. New segments keep arriving continuously behind it.</p></section>
+<section class="panel infoPanel"><strong>CAPTURE → REPEAT → FADE → SHED.</strong><p>SPEED changes the spacing between segment launches without changing their pitch. PITCH changes how fast each individual segment is read. At 2× SPEED and 0 st PITCH, segments are packed twice as tightly while the voice inside each segment stays at its recorded pitch.</p></section>
 </main></div>
 <script src="native-mic.js"></script><script src="tapeworm.js"></script>
 </body></html>
