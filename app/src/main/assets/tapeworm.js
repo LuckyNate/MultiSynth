@@ -1,18 +1,18 @@
 "use strict";
 
 /* TAPEWORM
-   Basic continuous tape loop only.
+   True continuous overwrite loop.
    - 10 second loop at 1.00x
    - speed range 0.25x to 4.00x
-   - no dry monitor
+   - no direct mic monitor
    - no wow/flutter/wear/hiss/saturation
-   - falloff controls how much older audio survives each pass
+   - falloff determines how much old tape remains when new audio overwrites it
 */
 
 const BASE_LOOP_SECONDS=10;
 const MAX_DELAY_SECONDS=42;
 const NATIVE_LEAD_SECONDS=0.12;
-const STATE_KEY="tapeworm-basic-v1";
+const STATE_KEY="tapeworm-basic-v2";
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
 let ctx=null;
@@ -21,7 +21,8 @@ let drawHandle=0;
 let inputBus=null;
 let inputAnalyser=null;
 let delay=null;
-let loopGain=null;
+let oldTapeGain=null;
+let newTapeGain=null;
 let outputGain=null;
 let micStream=null;
 let micSource=null;
@@ -44,7 +45,7 @@ const scopeCtx=scope.getContext("2d");
 function speed(){return Number(tapeSpeed.value)}
 function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)))}
 function loopSeconds(){return BASE_LOOP_SECONDS/Math.max(.25,speed())}
-function survival(){return 1-falloffAmount()}
+function retention(){return 1-falloffAmount()}
 
 function updateReadouts(){
   const s=speed();
@@ -79,21 +80,24 @@ function buildLoop(){
   inputBus.connect(inputAnalyser);
 
   delay=ctx.createDelay(MAX_DELAY_SECONDS);
-  loopGain=ctx.createGain();
+  oldTapeGain=ctx.createGain();
+  newTapeGain=ctx.createGain();
   outputGain=ctx.createGain();
   outputGain.gain.value=1;
+  newTapeGain.gain.value=1;
 
-  // Microphone only enters the tape. Nothing routes directly to the speaker.
-  inputBus.connect(delay);
+  // Fresh mic audio always writes to the tape input at full level.
+  inputBus.connect(newTapeGain);
+  newTapeGain.connect(delay);
 
-  // The delayed tape is what we hear.
+  // What is already on the tape comes back once per revolution.
+  // FALLOFF determines how much survives before fresh audio overwrites it.
+  delay.connect(oldTapeGain);
+  oldTapeGain.connect(delay);
+
+  // We hear the tape playback only. There is no direct mic monitor.
   delay.connect(outputGain);
   outputGain.connect(ctx.destination);
-
-  // The delayed tape also returns to the tape input for the next revolution.
-  // At falloff 0 this gain is exactly 1, so old material does not fade.
-  delay.connect(loopGain);
-  loopGain.connect(delay);
 }
 
 function applyLoop(immediate=false){
@@ -102,7 +106,8 @@ function applyLoop(immediate=false){
   if(!ctx)return;
   const now=ctx.currentTime;
   delay.delayTime.setTargetAtTime(loopSeconds(),now,immediate?.001:.08);
-  loopGain.gain.setTargetAtTime(survival(),now,immediate?.001:.05);
+  oldTapeGain.gain.setTargetAtTime(retention(),now,immediate?.001:.05);
+  newTapeGain.gain.setTargetAtTime(1,now,immediate?.001:.05);
 }
 
 function scheduleNativePCM(pcm,sampleRate){
@@ -113,36 +118,25 @@ function scheduleNativePCM(pcm,sampleRate){
   const src=ctx.createBufferSource();
   src.buffer=buffer;
   src.connect(inputBus);
-
   const now=ctx.currentTime;
   if(nextNativeTime<now+.025)nextNativeTime=now+NATIVE_LEAD_SECONDS;
   src.start(nextNativeTime);
   nextNativeTime+=buffer.duration;
-
   nativeSources.add(src);
-  src.onended=()=>{
-    nativeSources.delete(src);
-    try{src.disconnect()}catch(_){}
-  };
+  src.onended=()=>{nativeSources.delete(src);try{src.disconnect()}catch(_){}};
 }
 
 async function startInput(){
   nativeMode=false;
-
   if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
     try{
-      micStream=await navigator.mediaDevices.getUserMedia({
-        audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}
-      });
+      micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       micSource=ctx.createMediaStreamSource(micStream);
       micSource.connect(inputBus);
       statusEl.textContent="TAPE RUNNING // DIRECT MIC";
       return;
-    }catch(e){
-      console.warn("direct mic failed, using native fallback",e);
-    }
+    }catch(e){console.warn("direct mic failed, using native fallback",e)}
   }
-
   if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){
     nativeMode=true;
     nextNativeTime=ctx.currentTime+NATIVE_LEAD_SECONDS;
@@ -151,25 +145,20 @@ async function startInput(){
     statusEl.textContent="TAPE RUNNING // NATIVE MIC";
     return;
   }
-
   throw new Error("Microphone unavailable");
 }
 
 async function startTape(){
   if(running){await stopTape();return}
-
   try{
     const A=window.AudioContext||window.webkitAudioContext;
     if(!A)throw new Error("Web Audio unavailable");
-
     ctx=new A({latencyHint:"interactive"});
     await ctx.resume();
-
     buildLoop();
     running=true;
     applyLoop(true);
     await startInput();
-
     runButton.textContent="STOP TAPE";
     runButton.classList.add("active");
     drawScope();
@@ -183,21 +172,17 @@ async function startTape(){
 async function stopTape(preserveError=false){
   running=false;
   cancelAnimationFrame(drawHandle);
-
   if(nativeUnsubscribe){try{nativeUnsubscribe()}catch(_){}nativeUnsubscribe=null}
   if(window.MultiSynthNativeMic){try{MultiSynthNativeMic.stop()}catch(_){}}
   nativeSources.forEach(s=>{try{s.stop();s.disconnect()}catch(_){}});
   nativeSources.clear();
   nextNativeTime=0;
   nativeMode=false;
-
   if(micStream)micStream.getTracks().forEach(t=>t.stop());
   micStream=null;
   micSource=null;
-
   if(ctx&&ctx.state!=="closed")try{await ctx.close()}catch(_){}
-  ctx=inputBus=inputAnalyser=delay=loopGain=outputGain=null;
-
+  ctx=inputBus=inputAnalyser=delay=oldTapeGain=newTapeGain=outputGain=null;
   runButton.textContent="START TAPE";
   runButton.classList.remove("active");
   if(!preserveError)statusEl.textContent="STOPPED";
@@ -230,7 +215,6 @@ function drawScope(){
   const data=new Uint8Array(inputAnalyser.fftSize);
   inputAnalyser.getByteTimeDomainData(data);
   const w=scope.clientWidth,h=scope.clientHeight;
-
   scopeCtx.fillStyle="#fff4ef";
   scopeCtx.fillRect(0,0,w,h);
   scopeCtx.strokeStyle="#ffd84a";
@@ -242,14 +226,12 @@ function drawScope(){
     if(i===0)scopeCtx.moveTo(x,y);else scopeCtx.lineTo(x,y);
   }
   scopeCtx.stroke();
-
   scopeCtx.strokeStyle="#c83f78";
   scopeCtx.lineWidth=1;
   scopeCtx.beginPath();
   scopeCtx.moveTo(0,h/2);
   scopeCtx.lineTo(w,h/2);
   scopeCtx.stroke();
-
   drawHandle=requestAnimationFrame(drawScope);
 }
 
