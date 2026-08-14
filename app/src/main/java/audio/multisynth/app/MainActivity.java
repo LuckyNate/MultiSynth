@@ -19,6 +19,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
@@ -72,6 +73,7 @@ public final class MainActivity extends Activity {
     private SharedPreferences preferences;
     private ValueCallback<Uri[]> fileChooserCallback;
     private AudioRecord nativeMic;
+    private AcousticEchoCanceler nativeAec;
     private Thread nativeMicThread;
     private volatile boolean nativeMicRunning;
 
@@ -247,20 +249,41 @@ public final class MainActivity extends Activity {
         if (minBytes <= 0) minBytes = MIC_CHUNK_FRAMES * 4;
         int bufferBytes = Math.max(minBytes, MIC_CHUNK_FRAMES * 4);
         try {
-            nativeMic = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferBytes);
+            nativeMic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferBytes);
             if (nativeMic.getState() != AudioRecord.STATE_INITIALIZED) {
                 nativeMic.release(); nativeMic = null;
                 runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC INIT FAILED');");
                 return false;
             }
+
+            boolean aecOn = false;
+            if (AcousticEchoCanceler.isAvailable()) {
+                try {
+                    nativeAec = AcousticEchoCanceler.create(nativeMic.getAudioSessionId());
+                    if (nativeAec != null) {
+                        nativeAec.setEnabled(true);
+                        aecOn = nativeAec.getEnabled();
+                    }
+                } catch (Exception ignored) {
+                    if (nativeAec != null) {
+                        try { nativeAec.release(); } catch (Exception ignored2) {}
+                        nativeAec = null;
+                    }
+                }
+            }
+
             nativeMic.startRecording();
             nativeMicRunning = true;
             nativeMicThread = new Thread(this::nativeMicLoop, "MultiSynthMic");
             nativeMicThread.start();
-            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC LIVE');");
+            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('" + (aecOn ? "MIC LIVE // AEC ON" : "MIC LIVE // AEC UNAVAILABLE") + "');");
             return true;
         } catch (Exception e) {
             nativeMicRunning = false;
+            if (nativeAec != null) {
+                try { nativeAec.release(); } catch (Exception ignored) {}
+                nativeAec = null;
+            }
             try { if (nativeMic != null) nativeMic.release(); } catch (Exception ignored) {}
             nativeMic = null;
             runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC START FAILED');");
@@ -292,8 +315,16 @@ public final class MainActivity extends Activity {
         nativeMicRunning = false;
         AudioRecord recorder = nativeMic;
         nativeMic = null;
+        AcousticEchoCanceler aec = nativeAec;
+        nativeAec = null;
         if (recorder != null) {
             try { recorder.stop(); } catch (Exception ignored) {}
+        }
+        if (aec != null) {
+            try { aec.setEnabled(false); } catch (Exception ignored) {}
+            try { aec.release(); } catch (Exception ignored) {}
+        }
+        if (recorder != null) {
             try { recorder.release(); } catch (Exception ignored) {}
         }
         nativeMicThread = null;
