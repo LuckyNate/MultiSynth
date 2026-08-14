@@ -12,23 +12,23 @@
     <div class="scopePanel">
       <div class="scopeTop"><strong>TAPEWORM // 32 SEGMENT LIVE LOOP</strong><span id="status">STOPPED</span></div>
       <canvas id="scope"></canvas>
-      <div class="scopeBottom"><span id="speedReadout">1.000× // 2.56 s LOOP</span><span id="segmentReadout">32 × 80 ms</span></div>
+      <div class="scopeBottom"><span id="speedReadout">PLAY 1.000× // 2.56 s LOOP</span><span id="segmentReadout">REC 1.000× // 32 × 80 ms</span></div>
     </div>
   </header>
   <main class="controls">
     <section class="panel transportPanel">
       <button id="runButton" class="runButton" type="button">START WORM</button>
-      <p>Thirty-two permanent PCM segments circulate continuously. Segment length changes when each tooth is replaced; it never rebuilds or clears the worm.</p>
+      <p>Thirty-two permanent PCM segments circulate continuously. Recording is always real-time 1×; playback speed is relative to the recorded sound.</p>
     </section>
     <section class="panel knobGrid">
-      <label class="knobControl hero"><span>SPEED</span><input id="tapeSpeed" type="range" min="0.125" max="8" step="0.005" value="1"><output id="speedValue">1.000×</output></label>
-      <label class="knobControl hero"><span>SEGMENT</span><input id="segmentLength" type="range" min="50" max="500" step="1" value="80"><output id="segmentValue">80 ms</output></label>
+      <label class="knobControl hero"><span>SPEED</span><input id="tapeSpeed" type="range" min="0.4" max="8" step="0.005" value="1"><output id="speedValue">1.000×</output></label>
+      <label class="knobControl hero"><span>SEGMENT</span><input id="segmentLength" type="range" min="50" max="125" step="1" value="80"><output id="segmentValue">80 ms</output></label>
       <label class="knobControl hero"><span>FALLOFF</span><input id="falloff" type="range" min="0" max="1" step="0.01" value="0"><output id="falloffValue">0%</output></label>
       <label class="knobControl hero"><span>MIC THRESHOLD</span><input id="micThreshold" type="range" min="0.02" max="0.40" step="0.005" value="0.14"><output id="thresholdValue">14%</output></label>
     </section>
     <section class="panel infoPanel">
       <strong>PLAY → FALLOFF → RECORD → STORE.</strong>
-      <p>The worm always has 32 teeth. SEGMENT ranges from 50–500 ms, never shorter than one 20 Hz period. Each tooth plays completely before falloff is applied; fresh gated mic audio is then added at its captured level and stored for the next revolution.</p>
+      <p>The worm always has 32 teeth. SEGMENT ranges from 50–125 ms, never shorter than one 20 Hz period. At 125 ms the native 1× loop is 4 seconds; at the slowest 0.4× playback it stretches to exactly 10 seconds. Fresh mic audio is always captured at real-time 1×.</p>
     </section>
   </main>
 </div>
