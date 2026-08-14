@@ -15,7 +15,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
@@ -28,6 +31,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelUuid;
 import android.provider.Settings;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -50,6 +54,8 @@ import java.util.Map;
 public final class MainActivity extends Activity {
     private static final int STARTUP_PERMISSION_REQUEST = 44;
     private static final int FILE_CHOOSER_REQUEST = 46;
+    private static final int MIC_SAMPLE_RATE = 48000;
+    private static final int MIC_CHUNK_FRAMES = 1024;
     private static final String BLE_MIDI_SERVICE = "03b80e5a-ede8-4b33-a751-6ce34ec4c700";
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String APP_PREFIX = "/assets/";
@@ -65,6 +71,9 @@ public final class MainActivity extends Activity {
     private MidiOutputPort openPort;
     private SharedPreferences preferences;
     private ValueCallback<Uri[]> fileChooserCallback;
+    private AudioRecord nativeMic;
+    private Thread nativeMicThread;
+    private volatile boolean nativeMicRunning;
 
     private final MidiReceiver midiReceiver = new MidiReceiver() {
         @Override public void onSend(byte[] data, int offset, int count, long timestamp) {
@@ -224,6 +233,71 @@ public final class MainActivity extends Activity {
         @JavascriptInterface public void disconnect() { runOnUiThread(MainActivity.this::disconnectMidi); }
         @JavascriptInterface public void openAudioSettings() { runOnUiThread(() -> startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS))); }
         @JavascriptInterface public String listInputs() { return midiChoicesJson().toString(); }
+        @JavascriptInterface public boolean startMic() { return startNativeMic(); }
+        @JavascriptInterface public void stopMic() { stopNativeMic(); }
+    }
+
+    private synchronized boolean startNativeMic() {
+        if (nativeMicRunning) return true;
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC PERMISSION REQUIRED');");
+            return false;
+        }
+        int minBytes = AudioRecord.getMinBufferSize(MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        if (minBytes <= 0) minBytes = MIC_CHUNK_FRAMES * 4;
+        int bufferBytes = Math.max(minBytes, MIC_CHUNK_FRAMES * 4);
+        try {
+            nativeMic = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, MIC_SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferBytes);
+            if (nativeMic.getState() != AudioRecord.STATE_INITIALIZED) {
+                nativeMic.release(); nativeMic = null;
+                runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC INIT FAILED');");
+                return false;
+            }
+            nativeMic.startRecording();
+            nativeMicRunning = true;
+            nativeMicThread = new Thread(this::nativeMicLoop, "MultiSynthMic");
+            nativeMicThread.start();
+            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC LIVE');");
+            return true;
+        } catch (Exception e) {
+            nativeMicRunning = false;
+            try { if (nativeMic != null) nativeMic.release(); } catch (Exception ignored) {}
+            nativeMic = null;
+            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC START FAILED');");
+            return false;
+        }
+    }
+
+    private void nativeMicLoop() {
+        short[] shorts = new short[MIC_CHUNK_FRAMES];
+        while (nativeMicRunning) {
+            AudioRecord recorder = nativeMic;
+            if (recorder == null) break;
+            int n;
+            try { n = recorder.read(shorts, 0, shorts.length); }
+            catch (Exception e) { break; }
+            if (n <= 0) continue;
+            byte[] bytes = new byte[n * 2];
+            for (int i = 0, j = 0; i < n; i++, j += 2) {
+                int v = shorts[i];
+                bytes[j] = (byte)(v & 0xff);
+                bytes[j + 1] = (byte)((v >>> 8) & 0xff);
+            }
+            String b64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+            runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.receive(" + JSONObject.quote(b64) + "," + MIC_SAMPLE_RATE + ");");
+        }
+    }
+
+    private synchronized void stopNativeMic() {
+        nativeMicRunning = false;
+        AudioRecord recorder = nativeMic;
+        nativeMic = null;
+        if (recorder != null) {
+            try { recorder.stop(); } catch (Exception ignored) {}
+            try { recorder.release(); } catch (Exception ignored) {}
+        }
+        nativeMicThread = null;
+        runJs("window.MultiSynthNativeMic&&window.MultiSynthNativeMic.status('MIC STOPPED');");
     }
 
     private boolean hasBluetoothPermission() {
@@ -300,10 +374,10 @@ public final class MainActivity extends Activity {
     private void status(String text,boolean connected){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status("+JSONObject.quote(text)+","+connected+");");}
     private void runJs(String script){main.post(()->{if(webView!=null)webView.evaluateJavascript(script,null);});}
 
-    @Override protected void onPause(){runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");super.onPause();}
+    @Override protected void onPause(){stopNativeMic();runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");super.onPause();}
     @Override protected void onResume(){super.onResume();runJs("window.warmAudioEngine&&window.warmAudioEngine();");}
     @Override public void onBackPressed(){if(webView!=null&&webView.canGoBack())webView.goBack();else super.onBackPressed();}
-    @Override protected void onDestroy(){closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
+    @Override protected void onDestroy(){stopNativeMic();closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
 
     private static final class Choice {
         final MidiDeviceInfo info;final int port;final BluetoothDevice bluetooth;final String label;
