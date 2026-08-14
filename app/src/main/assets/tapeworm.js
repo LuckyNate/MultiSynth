@@ -8,7 +8,8 @@
 const BASE_DELAY_SECONDS=15;
 const MAX_DELAY_SECONDS=62;
 const NATIVE_LEAD_SECONDS=0.12;
-const STATE_KEY="tapeworm-state-v3";
+const STATE_KEY="tapeworm-state-v4";
+try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
 let ctx=null,running=false,drawHandle=0;
 let inputBus=null,inputAnalyser=null,delay=null,tapeFilter=null,tapeSaturation=null,feedbackGain=null,dryGain=null,echoGain=null,outputGain=null;
@@ -29,7 +30,7 @@ function clamp01(x){return Math.max(0,Math.min(1,x))}
 function taper01(x){return Math.pow(clamp01(x),2)}
 function norm(id){const el=controls[id],lo=Number(el.min),hi=Number(el.max);return taper01((raw(id)-lo)/(hi-lo))}
 function inputAmount(){return 0.25+norm("inputLevel")*0.75}
-function dryAmount(){return norm("dryLevel")}
+function dryAmount(){return norm("dryLevel")*0.20}
 function echoAmount(){return norm("echoLevel")*0.65}
 function feedbackAmount(){return norm("feedback")*0.62}
 function outputAmount(){return 0.25+norm("outputLevel")*0.75}
@@ -82,34 +83,37 @@ function buildTape(){
   flutterDepth=ctx.createGain();flutterOsc.connect(flutterDepth);flutterDepth.connect(delay.delayTime);flutterOsc.start();
 
   hissSource=ctx.createBufferSource();hissSource.buffer=noiseBuffer();hissSource.loop=true;
-  hissGain=ctx.createGain();hissSource.connect(hissGain);hissGain.connect(outputGain);hissSource.start();
+  hissGain=ctx.createGain();hissSource.connect(hissGain);hissGain.connect(echoGain);hissSource.start();
   outputGain.connect(ctx.destination);
 }
 
 function applyDSP(immediate=false){
   updateReadouts();saveState();if(!ctx)return;
-  const now=ctx.currentTime,t=immediate?.001:.08;
+  const now=ctx.currentTime,t=immediate?.001:.1;
   inputBus.gain.setTargetAtTime(inputAmount(),now,t);
   dryGain.gain.setTargetAtTime(dryAmount(),now,t);
   echoGain.gain.setTargetAtTime(echoAmount(),now,t);
   feedbackGain.gain.setTargetAtTime(feedbackAmount(),now,t);
   outputGain.gain.setTargetAtTime(outputAmount(),now,t);
   const seconds=loopSeconds(),wow=wowAmount(),flutter=flutterAmount(),wear=wearAmount();
-  delay.delayTime.setTargetAtTime(seconds,now,.18);
-  wowDepth.gain.setTargetAtTime(wow*Math.min(seconds*.0018,.055),now,.12);
-  flutterDepth.gain.setTargetAtTime(flutter*Math.min(seconds*.00035,.008),now,.12);
-  tapeFilter.frequency.setTargetAtTime(19500-wear*6500,now,.12);
-  tapeFilter.Q.setTargetAtTime(.08+wear*.08,now,.12);
+  delay.delayTime.setTargetAtTime(seconds,now,.2);
+  wowDepth.gain.setTargetAtTime(wow*Math.min(seconds*.0025,.08),now,.14);
+  flutterDepth.gain.setTargetAtTime(flutter*Math.min(seconds*.00045,.012),now,.14);
+  tapeFilter.frequency.setTargetAtTime(19000-wear*6500,now,.14);
+  tapeFilter.Q.setTargetAtTime(.08+wear*.12,now,.14);
   tapeSaturation.curve=saturationCurve(wear);
-  hissGain.gain.setTargetAtTime(wear*.0007,now,.12);
+  hissGain.gain.setTargetAtTime(wear*.0012,now,.14);
 }
 
 function scheduleNativePCM(pcm,sampleRate){
   if(!running||!nativeMode||!ctx||!pcm||!pcm.length)return;
-  const sr=Number(sampleRate)||48000,b=ctx.createBuffer(1,pcm.length,sr);b.copyToChannel(pcm,0);
+  const sr=Number(sampleRate)||48000;
+  const b=ctx.createBuffer(1,pcm.length,sr);b.copyToChannel(pcm,0);
   const src=ctx.createBufferSource();src.buffer=b;src.connect(inputBus);
-  const now=ctx.currentTime;if(nextNativeTime<now+.025)nextNativeTime=now+NATIVE_LEAD_SECONDS;
-  src.start(nextNativeTime);nextNativeTime+=b.duration;nativeSources.add(src);
+  const now=ctx.currentTime;
+  if(nextNativeTime<now+.025)nextNativeTime=now+NATIVE_LEAD_SECONDS;
+  src.start(nextNativeTime);nextNativeTime+=b.duration;
+  nativeSources.add(src);
   src.onended=()=>{nativeSources.delete(src);try{src.disconnect()}catch(_){}};
 }
 
@@ -119,16 +123,14 @@ async function startInput(){
     try{
       micStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
       micSource=ctx.createMediaStreamSource(micStream);micSource.connect(inputBus);
-      statusEl.textContent="TAPE RUNNING // DIRECT MIC";
-      return;
-    }catch(e){console.warn("Direct microphone failed; trying native fallback",e)}
+      statusEl.textContent="TAPE RUNNING // DIRECT MIC";return;
+    }catch(e){console.warn("direct mic failed, using native fallback",e)}
   }
   if(window.MultiSynthNativeMic&&window.AndroidMidi&&typeof AndroidMidi.startMic==="function"){
     nativeMode=true;nextNativeTime=ctx.currentTime+NATIVE_LEAD_SECONDS;
     nativeUnsubscribe=MultiSynthNativeMic.subscribe(scheduleNativePCM);
-    if(!MultiSynthNativeMic.start())throw new Error("Native microphone unavailable");
-    statusEl.textContent="TAPE RUNNING // NATIVE MIC";
-    return;
+    if(!MultiSynthNativeMic.start())throw new Error("Microphone unavailable");
+    statusEl.textContent="TAPE RUNNING // NATIVE MIC";return;
   }
   throw new Error("Microphone unavailable");
 }
@@ -137,8 +139,9 @@ async function startTape(){
   if(running){await stopTape();return}
   try{
     const A=window.AudioContext||window.webkitAudioContext;if(!A)throw new Error("Web Audio unavailable");
-    ctx=new A({latencyHint:"interactive"});await ctx.resume();buildTape();running=true;applyDSP(true);
-    await startInput();runButton.textContent="STOP TAPE";runButton.classList.add("active");drawScope();
+    ctx=new A({latencyHint:"interactive"});await ctx.resume();
+    buildTape();running=true;applyDSP(true);await startInput();
+    runButton.textContent="STOP TAPE";runButton.classList.add("active");drawScope();
   }catch(e){console.error(e);statusEl.textContent="INPUT ERROR";await stopTape(true)}
 }
 
@@ -152,7 +155,8 @@ async function stopTape(preserveError=false){
   if(ctx&&ctx.state!=="closed")try{await ctx.close()}catch(_){}
   ctx=inputBus=inputAnalyser=delay=tapeFilter=tapeSaturation=feedbackGain=dryGain=echoGain=outputGain=null;
   wowOsc=wowDepth=flutterOsc=flutterDepth=hissSource=hissGain=null;
-  runButton.textContent="START TAPE";runButton.classList.remove("active");if(!preserveError)statusEl.textContent="STOPPED";clearScope();
+  runButton.textContent="START TAPE";runButton.classList.remove("active");
+  if(!preserveError)statusEl.textContent="STOPPED";clearScope();
 }
 
 function resizeScope(){const dpr=window.devicePixelRatio||1,r=scope.getBoundingClientRect();scope.width=Math.max(1,Math.floor(r.width*dpr));scope.height=Math.max(1,Math.floor(r.height*dpr));scopeCtx.setTransform(dpr,0,0,dpr,0,0);if(!running)clearScope()}
