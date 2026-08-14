@@ -6,17 +6,17 @@
 */
 
 const BASE_LOOP_SECONDS=4;
-const STATE_KEY="tapeworm-basic-v13";
+const STATE_KEY="tapeworm-basic-v14";
 const PROCESS_FRAMES=1024;
 const CEILING=.92;
 
-// The microphone must exceed this level before it is allowed onto tape.
-// Hysteresis + hold keep speech/music natural instead of chattering at the threshold.
-const GATE_OPEN=.055;
-const GATE_CLOSE=.035;
-const GATE_HOLD_SECONDS=.12;
-const GATE_ATTACK_SECONDS=.004;
-const GATE_RELEASE_SECONDS=.045;
+// Deliberately conservative mic gate. Nearby intentional sound must be clearly
+// louder than speaker spill before it is allowed onto tape.
+const GATE_OPEN=.14;
+const GATE_CLOSE=.085;
+const GATE_HOLD_SECONDS=.10;
+const GATE_ATTACK_SECONDS=.003;
+const GATE_RELEASE_SECONDS=.035;
 
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
 
@@ -55,7 +55,7 @@ function pullNativeSample(){while(nativeQueue.length){const a=nativeQueue[0];if(
 function gateMic(x){
   const sr=ctx?ctx.sampleRate:48000;
   const mag=Math.abs(x);
-  const envCoeff=mag>gateEnv?Math.exp(-1/(sr*.002)):Math.exp(-1/(sr*.035));
+  const envCoeff=mag>gateEnv?Math.exp(-1/(sr*.002)):Math.exp(-1/(sr*.025));
   gateEnv=envCoeff*gateEnv+(1-envCoeff)*mag;
 
   if(gateEnv>=GATE_OPEN){gateHold=Math.round(GATE_HOLD_SECONDS*sr)}
@@ -71,9 +71,7 @@ function gateMic(x){
 }
 
 function rewriteCell(idx,fresh,keep){
-  // Dedicated attenuation head: old tape is reduced BEFORE any new mic is considered.
   const retained=clamp(tape[idx]*keep);
-  // Record head: only gated microphone is added after attenuation.
   const written=clamp(retained+fresh);
   tape[idx]=written;
   recordScope[recordScopeWrite++%recordScope.length]=written;
@@ -102,10 +100,7 @@ function buildTapeEngine(){
     const step=speed(),keep=retention();
 
     for(let i=0;i<output.length;i++){
-      // PLAY HEAD: output only the existing tape. Nothing from output is routed to RECORD in software.
       output[i]=clamp(tape[cellIndex(head)]);
-
-      // RECORD INPUT: microphone only, and only when it clears the gate threshold.
       const raw=clamp(nativeMode?pullNativeSample():(input?input[i]:0));
       const fresh=gateMic(raw);
 
