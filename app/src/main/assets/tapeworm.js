@@ -2,19 +2,21 @@
 
 /* TAPEWORM
    Literal circular tape loop.
-   Head order is PLAY -> RECORD -> advance tape.
+   Head order is PLAY -> ERASE/ATTENUATE -> RECORD -> advance tape.
 
    - 10 seconds of tape at 1.00x
    - tape speed 0.25x to 4.00x
    - no direct mic monitor
    - no effects
-   - FALLOFF controls old-tape retention at the RECORD head
-   - scope shows the exact signal written by the RECORD head
+   - FALLOFF controls the ERASE head:
+       0%   = erase nothing; old tape remains under the new recording
+       100% = erase old tape completely before the RECORD head writes
+   - scope shows the exact signal left on tape by the RECORD head
    - transparent peak limiting prevents runaway acoustic/overdub buildup
 */
 
 const BASE_LOOP_SECONDS=10;
-const STATE_KEY="tapeworm-basic-v4";
+const STATE_KEY="tapeworm-basic-v5";
 const PROCESS_FRAMES=1024;
 const WRITE_CEILING=0.92;
 const OUTPUT_CEILING=0.92;
@@ -91,34 +93,39 @@ function pullNativeSample(){
   return 0;
 }
 
-function readTape(pos){
+function headCells(pos){
   const base=Math.floor(pos);
   const i0=((base%tapeLength)+tapeLength)%tapeLength;
   const i1=(i0+1)%tapeLength;
   const f=pos-base;
+  return {i0,i1,f};
+}
+
+function readTape(pos){
+  const {i0,i1,f}=headCells(pos);
   return tape[i0]*(1-f)+tape[i1]*f;
 }
 
-function writeTape(pos,fresh,keep){
-  const base=Math.floor(pos);
-  const i0=((base%tapeLength)+tapeLength)%tapeLength;
-  const i1=(i0+1)%tapeLength;
-  const f=pos-base;
+function eraseTape(pos,keep){
+  const {i0,i1}=headCells(pos);
 
-  /* PLAY has already happened. RECORD now combines retained tape with fresh mic.
-     The combined write is peak-limited before it reaches the tape, so repeated
-     overdubs or speaker-to-mic leakage cannot numerically run away into clipping. */
-  const oldAtHead=tape[i0]*(1-f)+tape[i1]*f;
-  const mixed=oldAtHead*keep+fresh;
-  const written=clampSample(mixed,WRITE_CEILING);
+  // HEAD 2 — ERASE/ATTENUATE.
+  // This is deliberately separate from recording. At 100% falloff keep=0,
+  // therefore BOTH tape cells under the head are zeroed before new audio arrives.
+  tape[i0]=clampSample(tape[i0]*keep,WRITE_CEILING);
+  tape[i1]=clampSample(tape[i1]*keep,WRITE_CEILING);
+}
 
-  // Write the same head value into the two neighboring samples using interpolation.
-  tape[i0]=tape[i0]*f+written*(1-f);
-  tape[i1]=tape[i1]*(1-f)+written*f;
-  tape[i0]=clampSample(tape[i0],WRITE_CEILING);
-  tape[i1]=clampSample(tape[i1],WRITE_CEILING);
+function recordTape(pos,fresh){
+  const {i0,i1,f}=headCells(pos);
 
-  // Scope is the RECORD head, not raw mic and not playback.
+  // HEAD 3 — RECORD. Fresh mic is laid onto the already-erased tape.
+  // Fractional tape speeds distribute the write between neighboring cells.
+  tape[i0]=clampSample(tape[i0]+fresh*(1-f),WRITE_CEILING);
+  tape[i1]=clampSample(tape[i1]+fresh*f,WRITE_CEILING);
+
+  // What is now physically on tape at the record head.
+  const written=clampSample(tape[i0]*(1-f)+tape[i1]*f,WRITE_CEILING);
   recordScope[recordScopeWrite++%recordScope.length]=written;
   return written;
 }
@@ -140,15 +147,18 @@ function buildTapeEngine(){
     const keep=retention();
 
     for(let i=0;i<output.length;i++){
-      // HEAD 1 — PLAY: hear the tape before this position is rewritten.
+      // HEAD 1 — PLAY: hear the tape before anything changes it.
       const old=readTape(head);
       output[i]=clampSample(old,OUTPUT_CEILING);
 
-      // HEAD 2 — RECORD: old tape retention + fresh mic, then bounded write.
-      const fresh=clampSample(nativeMode?pullNativeSample():(input?input[i]:0),WRITE_CEILING);
-      writeTape(head,fresh,keep);
+      // HEAD 2 — ERASE/ATTENUATE: reduce or completely remove the old recording.
+      eraseTape(head,keep);
 
-      // Physical tape advances past PLAY then RECORD.
+      // HEAD 3 — RECORD: write only fresh mic onto what remains after erase.
+      const fresh=clampSample(nativeMode?pullNativeSample():(input?input[i]:0),WRITE_CEILING);
+      recordTape(head,fresh);
+
+      // Physical tape advances past PLAY -> ERASE -> RECORD.
       head+=step;
       while(head>=tapeLength)head-=tapeLength;
     }
