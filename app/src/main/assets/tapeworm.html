@@ -8,31 +8,20 @@
 </head>
 <body>
 <div id="app">
-  <header class="scopeWrap">
-    <div class="scopePanel">
-      <div class="scopeTop"><strong>TAPEWORM // SEGMENTED LIVE LOOP</strong><span id="status">STOPPED</span></div>
-      <canvas id="scope"></canvas>
-      <div class="scopeBottom"><span id="speedReadout">PLAY 1.000× // 4.00 s LOOP</span><span id="segmentReadout">50 SEGMENTS × 80 ms</span></div>
-    </div>
-  </header>
-  <main class="controls">
-    <section class="panel transportPanel">
-      <button id="runButton" class="runButton" type="button">START WORM</button>
-      <p>The worm is one continuous four-second PCM loop. SEGMENT only divides that loop into teeth; changing it never rebuilds or clears the recorded audio.</p>
-    </section>
-    <section class="panel knobGrid">
-      <label class="knobControl hero"><span>SPEED</span><input id="tapeSpeed" type="range" min="0.4" max="8" step="0.005" value="1"><output id="speedValue">1.000×</output></label>
-      <label class="knobControl hero"><span>SEGMENT</span><input id="segmentLength" type="range" min="50" max="125" step="1" value="80"><output id="segmentValue">80 ms</output></label>
-      <label class="knobControl hero"><span>FALLOFF</span><input id="falloff" type="range" min="0" max="1" step="0.01" value="0"><output id="falloffValue">0%</output></label>
-      <label class="knobControl hero"><span>MIC THRESHOLD</span><input id="micThreshold" type="range" min="0.02" max="0.40" step="0.005" value="0.14"><output id="thresholdValue">14%</output></label>
-    </section>
-    <section class="panel infoPanel">
-      <strong>4 SECOND WORM // VARIABLE TEETH.</strong>
-      <p>Segment count is derived from loop length ÷ segment length. 50 ms gives 80 teeth; 80 ms gives 50; 100 ms gives 40; 125 ms gives 32. Recording is always real-time 1×. Playback is relative to that recording, and 0.4× stretches the four-second loop to the ten-second maximum.</p>
-    </section>
-  </main>
-</div>
-<script src="native-mic.js"></script>
-<script src="tapeworm.js"></script>
-</body>
-</html>
+<header class="scopeWrap"><div class="scopePanel">
+<div class="scopeTop"><strong>TAPEWORM // SHEDDING SEGMENT ECHO</strong><span id="status">STOPPED</span></div>
+<canvas id="scope"></canvas>
+<div class="scopeBottom"><span id="speedReadout">PLAY 1.000×</span><span id="segmentReadout">80 ms // 4 LOOPS</span></div>
+</div></header>
+<main class="controls">
+<section class="panel transportPanel"><button id="runButton" class="runButton" type="button">START WORM</button><p>The microphone continuously grows new segments. Each finished segment loops a fixed number of times, fades proportionally with each pass, then drops off the end of the worm. Playback is never recorded back into the microphone path.</p></section>
+<section class="panel knobGrid">
+<label class="knobControl hero"><span>SPEED</span><input id="tapeSpeed" type="range" min="0.4" max="8" step="0.005" value="1"><output id="speedValue">1.000×</output></label>
+<label class="knobControl hero"><span>SEGMENT</span><input id="segmentLength" type="range" min="50" max="500" step="1" value="80"><output id="segmentValue">80 ms</output></label>
+<label class="knobControl hero"><span>LOOPS</span><input id="loops" type="range" min="1" max="16" step="1" value="4"><output id="loopsValue">4</output></label>
+<label class="knobControl hero"><span>MIC THRESHOLD</span><input id="micThreshold" type="range" min="0.02" max="0.40" step="0.005" value="0.14"><output id="thresholdValue">14%</output></label>
+</section>
+<section class="panel infoPanel"><strong>CAPTURE → LOOP → FADE → SHED.</strong><p>Every segment is immutable PCM after capture. LOOPS defines its entire life and its falloff: 4 loops play at 100%, 75%, 50%, 25%, then the segment is discarded. New segments keep arriving continuously behind it.</p></section>
+</main></div>
+<script src="native-mic.js"></script><script src="tapeworm.js"></script>
+</body></html>
