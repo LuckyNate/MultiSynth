@@ -1,44 +1,47 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const VOICES=[
- {name:"SUB",type:"SUB HIT",pitch:45,decay:900,bend:-1200,tone:35,character:30,level:85,kind:"sub"},
- {name:"KICK",type:"KICK",pitch:60,decay:500,bend:-1800,tone:55,character:65,level:90,kind:"kick"},
- {name:"SNARE",type:"SNARE",pitch:180,decay:320,bend:-300,tone:65,character:70,level:78,kind:"snare"},
- {name:"TOM 1",type:"ROTO TOM",pitch:140,decay:650,bend:-500,tone:55,character:45,level:78,kind:"tom"},
- {name:"TOM 2",type:"ROTO TOM",pitch:210,decay:650,bend:-500,tone:55,character:45,level:78,kind:"tom"},
- {name:"TOM 3",type:"ROTO TOM",pitch:315,decay:650,bend:-500,tone:55,character:45,level:78,kind:"tom"},
- {name:"CYMBAL 1",type:"METAL",pitch:520,decay:1100,bend:0,tone:72,character:50,level:68,kind:"cym"},
- {name:"CYMBAL 2",type:"METAL",pitch:760,decay:1400,bend:0,tone:76,character:62,level:66,kind:"cym"},
- {name:"CYMBAL 3",type:"METAL",pitch:1050,decay:1800,bend:0,tone:82,character:72,level:64,kind:"cym"},
- {name:"HAT CLOSED",type:"HI HAT",pitch:1250,decay:90,bend:0,tone:88,character:65,level:62,kind:"hatc"},
- {name:"HAT OPEN",type:"HI HAT",pitch:1250,decay:650,bend:0,tone:88,character:65,level:60,kind:"hato"},
- {name:"TAMBOURINE",type:"JINGLE",pitch:900,decay:420,bend:0,tone:82,character:80,level:64,kind:"tamb"}
+ {name:"SUB",type:"SUB BOOM",pitch:42,decay:1200,bend:-700,tone:28,character:65,level:88,kind:"sub",minPitch:20,maxPitch:110},
+ {name:"KICK",type:"KICK",pitch:58,decay:520,bend:-1500,tone:52,character:72,level:92,kind:"kick",minPitch:28,maxPitch:220},
+ {name:"SNARE",type:"SNARE",pitch:190,decay:360,bend:-250,tone:68,character:72,level:80,kind:"snare",minPitch:90,maxPitch:520},
+ {name:"TOM 1",type:"ROTO TOM",pitch:130,decay:720,bend:-380,tone:52,character:38,level:80,kind:"tom",minPitch:70,maxPitch:700},
+ {name:"TOM 2",type:"ROTO TOM",pitch:205,decay:720,bend:-380,tone:52,character:38,level:80,kind:"tom",minPitch:70,maxPitch:700},
+ {name:"TOM 3",type:"ROTO TOM",pitch:320,decay:720,bend:-380,tone:52,character:38,level:80,kind:"tom",minPitch:70,maxPitch:700},
+ {name:"CYMBAL 1",type:"METAL",pitch:520,decay:1100,bend:0,tone:72,character:50,level:68,kind:"cym",minPitch:300,maxPitch:2000},
+ {name:"CYMBAL 2",type:"METAL",pitch:760,decay:1400,bend:0,tone:76,character:62,level:66,kind:"cym",minPitch:300,maxPitch:2000},
+ {name:"CYMBAL 3",type:"METAL",pitch:1050,decay:1800,bend:0,tone:82,character:72,level:64,kind:"cym",minPitch:300,maxPitch:2000},
+ {name:"HAT CLOSED",type:"HI HAT",pitch:1250,decay:90,bend:0,tone:88,character:65,level:62,kind:"hatc",minPitch:600,maxPitch:2000},
+ {name:"HAT OPEN",type:"HI HAT",pitch:1250,decay:650,bend:0,tone:88,character:65,level:60,kind:"hato",minPitch:600,maxPitch:2000},
+ {name:"TAMBOURINE",type:"JINGLE",pitch:900,decay:420,bend:0,tone:82,character:80,level:64,kind:"tamb",minPitch:400,maxPitch:2000}
 ];
 let ctx,master,analyser,playing=false,currentStep=0,playheadStep=0,nextStepTime=0,timer=null,selected=0,syncMode="internal",openHatGain=null;
 let pattern=VOICES.map(()=>Array(32).fill(0));
 const stateKey="multisynth.rhythm32.v1";
-const PITCH_MIN=20,PITCH_MAX=2000;
-function pitchToSlider(hz){hz=Math.max(PITCH_MIN,Math.min(PITCH_MAX,hz));return Math.round(1000*Math.log(hz/PITCH_MIN)/Math.log(PITCH_MAX/PITCH_MIN))}
-function sliderToPitch(v){return Math.round(PITCH_MIN*Math.pow(PITCH_MAX/PITCH_MIN,v/1000))}
-function load(){try{let s=JSON.parse(localStorage.getItem(stateKey)||"null");if(!s)return;if(Array.isArray(s.pattern)&&s.pattern.length===VOICES.length)pattern=s.pattern;if(Array.isArray(s.voices)&&s.voices.length===VOICES.length)s.voices.forEach((v,i)=>Object.assign(VOICES[i],v));if(s.bpm)$("bpm").value=s.bpm;if(s.swing!=null)$("swing").value=s.swing;if(s.steps)$("steps").value=s.steps;if(s.syncMode)syncMode=s.syncMode}catch(e){}}
+function pitchToSlider(hz,v){let lo=v.minPitch,hi=v.maxPitch;hz=Math.max(lo,Math.min(hi,hz));return Math.round(1000*Math.log(hz/lo)/Math.log(hi/lo))}
+function sliderToPitch(x,v){let lo=v.minPitch,hi=v.maxPitch;return Math.round(lo*Math.pow(hi/lo,x/1000))}
+function load(){try{let s=JSON.parse(localStorage.getItem(stateKey)||"null");if(!s)return;if(Array.isArray(s.pattern)&&s.pattern.length===VOICES.length)pattern=s.pattern;if(Array.isArray(s.voices)&&s.voices.length===VOICES.length)s.voices.forEach((v,i)=>{let keepMin=VOICES[i].minPitch,keepMax=VOICES[i].maxPitch;Object.assign(VOICES[i],v);VOICES[i].minPitch=keepMin;VOICES[i].maxPitch=keepMax;VOICES[i].pitch=Math.max(keepMin,Math.min(keepMax,VOICES[i].pitch))});if(s.bpm)$("bpm").value=s.bpm;if(s.swing!=null)$("swing").value=s.swing;if(s.steps)$("steps").value=s.steps;if(s.syncMode)syncMode=s.syncMode}catch(e){}}
 function save(){localStorage.setItem(stateKey,JSON.stringify({pattern,voices:VOICES,bpm:+$("bpm").value,swing:+$("swing").value,steps:+$("steps").value,syncMode}))}
 load();
 function ensureAudio(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:"interactive"});master=ctx.createGain();master.gain.value=.8;analyser=ctx.createAnalyser();analyser.fftSize=1024;master.connect(analyser);analyser.connect(ctx.destination);drawScope()}
 function env(g,t,peak,decay){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(Math.max(.0001,peak),t);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.02,decay/1000))}
 function oscHit(v,t,wave="sine",mul=1,amp=.5){let o=ctx.createOscillator(),g=ctx.createGain();o.type=wave;o.frequency.setValueAtTime(Math.max(10,v.pitch*mul),t);if(v.bend!==0){let ratio=Math.pow(2,v.bend/1200);o.frequency.exponentialRampToValueAtTime(Math.max(10,v.pitch*mul*ratio),t+Math.min(.25,v.decay/2000))}env(g,t,(v.level/100)*amp,v.decay);o.connect(g).connect(master);o.start(t);o.stop(t+v.decay/1000+.08)}
+function subBoom(v,t){let body=ctx.createOscillator(),sub=ctx.createOscillator(),g=ctx.createGain(),sat=ctx.createWaveShaper(),filter=ctx.createBiquadFilter();body.type="sine";sub.type="sine";body.frequency.setValueAtTime(v.pitch*1.55,t);body.frequency.exponentialRampToValueAtTime(Math.max(18,v.pitch),t+.18);sub.frequency.setValueAtTime(Math.max(18,v.pitch*.5),t);let curve=new Float32Array(257);let drive=1.4+v.character/35;for(let i=0;i<curve.length;i++){let x=i/(curve.length-1)*2-1;curve[i]=Math.tanh(x*drive)}sat.curve=curve;sat.oversample="2x";filter.type="lowpass";filter.frequency.value=110+v.tone*8;filter.Q.value=.7+v.character/40;g.gain.setValueAtTime(Math.max(.0001,v.level/100*.95),t);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.25,v.decay/1000));body.connect(sat);sub.connect(sat);sat.connect(filter).connect(g).connect(master);body.start(t);sub.start(t);body.stop(t+v.decay/1000+.12);sub.stop(t+v.decay/1000+.12)}
 function noiseBurst(v,t,durScale=1,band=true){let dur=Math.max(.03,v.decay/1000*durScale),frames=Math.max(64,Math.floor(ctx.sampleRate*dur)),b=ctx.createBuffer(1,frames,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<frames;i++)d[i]=Math.random()*2-1;let s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();s.buffer=b;f.type=band?"bandpass":"highpass";f.frequency.value=Math.min(12000,Math.max(200,v.pitch*(1+v.tone/20)));f.Q.value=band?0.5+v.character/25:.7;env(g,t,(v.level/100)*.45,v.decay*durScale);s.connect(f).connect(g).connect(master);s.start(t)}
 function metal(v,t,count=6){for(let i=0;i<count;i++){let o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter(),ratio=1+[1,1.37,1.73,2.11,2.64,3.17,3.91][i%7]*(0.8+v.character/250);o.type="square";o.frequency.value=Math.min(15000,v.pitch*ratio);f.type="highpass";f.frequency.value=700+v.tone*70;env(g,t,(v.level/100)*(0.08+0.02*(i===0)),v.decay*(.75+i*.035));o.connect(f).connect(g).connect(master);o.start(t);o.stop(t+v.decay/1000+.1)}}
-function hit(i,t=ctx.currentTime){ensureAudio();let v=VOICES[i];if(v.kind==="sub"){oscHit(v,t,"sine",1,.9)}
-else if(v.kind==="kick"){oscHit(v,t,"sine",1,.85);let click={...v,pitch:1200,decay:25,bend:0,level:v.level*(v.character/100)};noiseBurst(click,t,.25,false)}
-else if(v.kind==="snare"){oscHit(v,t,"triangle",1,.28);noiseBurst(v,t,1,false)}
-else if(v.kind==="tom"){oscHit(v,t,"sine",1,.72);if(v.character>55)oscHit({...v,level:v.level*(v.character-50)/100,decay:v.decay*.7},t,"triangle",2,.2)}
+function kickHit(v,t){let body={...v,decay:v.decay*.92};oscHit(body,t,"sine",1,.9);let attack=ctx.createOscillator(),ag=ctx.createGain();attack.type="triangle";attack.frequency.setValueAtTime(Math.min(1500,v.pitch*(8+v.character/8)),t);attack.frequency.exponentialRampToValueAtTime(Math.max(80,v.pitch*2),t+.035);env(ag,t,(v.level/100)*(.08+v.character/180),35);attack.connect(ag).connect(master);attack.start(t);attack.stop(t+.06)}
+function snareHit(v,t){let body={...v,decay:v.decay*.75,level:v.level*.72};oscHit(body,t,"triangle",1,.34);let noise={...v,pitch:Math.max(220,v.pitch*(1.4+v.tone/70)),decay:v.decay,level:v.level*(.55+v.character/220)};noiseBurst(noise,t,1,true)}
+function tomHit(v,t){let fundamental=ctx.createOscillator(),ring=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();fundamental.type="sine";ring.type="triangle";fundamental.frequency.setValueAtTime(v.pitch*Math.pow(2,Math.max(0,-v.bend)/1200),t);fundamental.frequency.exponentialRampToValueAtTime(v.pitch,t+Math.min(.22,v.decay/1800));ring.frequency.setValueAtTime(v.pitch*2.03,t);f.type="lowpass";f.frequency.value=Math.min(5000,v.pitch*(3+v.tone/20));f.Q.value=1+v.character/35;env(g,t,v.level/100*.8,v.decay);fundamental.connect(f);ring.connect(f);f.connect(g).connect(master);fundamental.start(t);ring.start(t);fundamental.stop(t+v.decay/1000+.1);ring.stop(t+v.decay/1000+.1)}
+function hit(i,t=ctx.currentTime){ensureAudio();let v=VOICES[i];if(v.kind==="sub"){subBoom(v,t)}
+else if(v.kind==="kick"){kickHit(v,t)}
+else if(v.kind==="snare"){snareHit(v,t)}
+else if(v.kind==="tom"){tomHit(v,t)}
 else if(v.kind==="cym"){metal(v,t,7);noiseBurst({...v,level:v.level*.45},t,.9,false)}
 else if(v.kind==="hatc"){if(openHatGain){try{openHatGain.gain.cancelScheduledValues(t);openHatGain.gain.setTargetAtTime(.0001,t,.012)}catch(e){}}metal(v,t,5);noiseBurst(v,t,.45,false)}
 else if(v.kind==="hato"){let g=ctx.createGain();openHatGain=g;for(let k=0;k<5;k++){let o=ctx.createOscillator(),f=ctx.createBiquadFilter();o.type="square";o.frequency.value=Math.min(14000,v.pitch*(1.2+k*.71));f.type="highpass";f.frequency.value=1800+v.tone*65;o.connect(f).connect(g);o.start(t);o.stop(t+v.decay/1000+.1)}env(g,t,(v.level/100)*.22,v.decay);g.connect(master)}
 else if(v.kind==="tamb"){for(let k=0;k<6;k++){let dt=t+k*.012*(1-v.character/140);metal({...v,pitch:v.pitch*(.8+Math.random()*.7),decay:v.decay*(.35+Math.random()*.35),level:v.level*.42},dt,2)}noiseBurst({...v,decay:v.decay*.6,level:v.level*.55},t,.6,false)}}
 function buildGrid(){let g=$("grid");g.innerHTML="";let blank=document.createElement("div");blank.className="stepHead";g.appendChild(blank);for(let s=0;s<32;s++){let h=document.createElement("div");h.className="stepHead";h.textContent=s+1;g.appendChild(h)}VOICES.forEach((v,r)=>{let lab=document.createElement("button");lab.className="voiceLabel"+(r===selected?" selected":"");lab.textContent=v.name;lab.addEventListener("click",()=>{selected=r;renderEditor();buildGrid();hit(r)});g.appendChild(lab);for(let s=0;s<32;s++){let b=document.createElement("button");b.className="step"+(pattern[r][s]?" on":"")+(s>=+$("steps").value?" inactive":"");b.dataset.r=r;b.dataset.s=s;b.addEventListener("click",()=>{pattern[r][s]=pattern[r][s]?0:1;b.classList.toggle("on",!!pattern[r][s]);if(pattern[r][s])hit(r);save()});g.appendChild(b)}});paintPlayhead()}
-function renderEditor(){let v=VOICES[selected];$("voiceName").textContent=v.name;$("voiceType").textContent=v.type;$("pitch").value=pitchToSlider(v.pitch);$("pitch").nextElementSibling.textContent=Math.round(v.pitch)+" Hz";["decay","bend","tone","character"].forEach(id=>{$(id).value=v[id];$(id).nextElementSibling.textContent=v[id]+(id==="decay"?" ms":id==="bend"?" ct":"")});$("voiceLevel").value=v.level;$("voiceLevel").nextElementSibling.textContent=v.level}
-$("pitch").addEventListener("input",()=>{let hz=sliderToPitch(+$("pitch").value);VOICES[selected].pitch=hz;$("pitch").nextElementSibling.textContent=hz+" Hz";save()});
+function renderEditor(){let v=VOICES[selected];$("voiceName").textContent=v.name;$("voiceType").textContent=v.type+` · ${v.minPitch}-${v.maxPitch} Hz`;$("pitch").value=pitchToSlider(v.pitch,v);$("pitch").nextElementSibling.textContent=Math.round(v.pitch)+" Hz";["decay","bend","tone","character"].forEach(id=>{$(id).value=v[id];$(id).nextElementSibling.textContent=v[id]+(id==="decay"?" ms":id==="bend"?" ct":"")});$("voiceLevel").value=v.level;$("voiceLevel").nextElementSibling.textContent=v.level}
+$("pitch").addEventListener("input",()=>{let voice=VOICES[selected],hz=sliderToPitch(+$("pitch").value,voice);voice.pitch=hz;$("pitch").nextElementSibling.textContent=hz+" Hz";save()});
 ["decay","bend","tone","character"].forEach(id=>$(id).addEventListener("input",()=>{VOICES[selected][id]=+$(id).value;$(id).nextElementSibling.textContent=$(id).value+(id==="decay"?" ms":id==="bend"?" ct":"");save()}));$("voiceLevel").addEventListener("input",()=>{VOICES[selected].level=+$("voiceLevel").value;$("voiceLevel").nextElementSibling.textContent=$("voiceLevel").value;save()});
 function stepDuration(step){let base=60/+$("bpm").value/4,sw=+$("swing").value/100;return base*(step%2?1+sw*.5:1-sw*.5)}
 function schedule(){if(!playing||syncMode!=="internal")return;let horizon=ctx.currentTime+.12;while(nextStepTime<horizon){let len=+$("steps").value;let s=currentStep%len;VOICES.forEach((v,i)=>{if(pattern[i][s])hit(i,nextStepTime)});let shown=s;setTimeout(()=>{playheadStep=shown;paintPlayhead()},Math.max(0,(nextStepTime-ctx.currentTime)*1000));nextStepTime+=stepDuration(s);currentStep=(s+1)%len}timer=setTimeout(schedule,25)}
