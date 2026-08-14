@@ -1,12 +1,12 @@
 "use strict";
 
 /* TAPEWORM — literal circular tape loop.
-   PLAY -> ERASE/ATTENUATE -> RECORD -> advance.
-   No dry monitor. Input/output bandwidth is limited only to suppress acoustic feedback.
+   PLAY -> ATTENUATE OLD TAPE -> ADD FRESH MIC -> RECORD -> advance.
+   FALLOFF affects only the old tape contribution before overdub.
 */
 
 const BASE_LOOP_SECONDS=4;
-const STATE_KEY="tapeworm-basic-v10";
+const STATE_KEY="tapeworm-basic-v11";
 const PROCESS_FRAMES=1024;
 const CEILING=.92;
 try{localStorage.removeItem("multisynth-autostate:"+location.pathname)}catch(_){}
@@ -17,11 +17,7 @@ let tape=null,tapeLength=0,head=0,lastProcessedCell=-1;
 let nativeQueue=[],nativeQueueOffset=0;
 let recordScope=new Float32Array(PROCESS_FRAMES),recordScopeWrite=0;
 
-// RECORD bandwidth: ~75 Hz high-pass, ~7.2 kHz two-pole low-pass.
 let inHpX1=0,inHpY1=0,inLp1=0,inLp2=0;
-// PLAYBACK bandwidth: ~90 Hz high-pass, ~6.3 kHz two-pole low-pass.
-// Playback is slightly narrower so the speaker does not keep throwing the most
-// feedback-prone top octave back into the microphone.
 let outHpX1=0,outHpY1=0,outLp1=0,outLp2=0;
 let protectEnv=0,protectGain=1;
 
@@ -38,7 +34,7 @@ const scopeCtx=scope.getContext("2d");
 
 function speed(){return Math.max(.125,Math.min(8,Number(tapeSpeed.value)||1))}
 function falloffAmount(){return Math.max(0,Math.min(1,Number(falloff.value)||0))}
-function retention(){return 1-falloffAmount()}
+function retention(){const f=falloffAmount();return 1-f}
 function loopSeconds(){return BASE_LOOP_SECONDS/speed()}
 function clamp(x){return !Number.isFinite(x)?0:Math.max(-CEILING,Math.min(CEILING,x))}
 function wrapCell(i){i%=tapeLength;if(i<0)i+=tapeLength;return i}
@@ -49,56 +45,45 @@ function loadState(){try{const s=JSON.parse(localStorage.getItem(STATE_KEY)||"nu
 function clearNativeQueue(){nativeQueue=[];nativeQueueOffset=0}
 function pushNative(pcm){if(pcm&&pcm.length)nativeQueue.push(pcm)}
 function pullNativeSample(){while(nativeQueue.length){const a=nativeQueue[0];if(nativeQueueOffset<a.length)return a[nativeQueueOffset++];nativeQueue.shift();nativeQueueOffset=0}return 0}
-
 function hpCoeff(fc,sr){return Math.exp(-2*Math.PI*fc/sr)}
 function lpCoeff(fc,sr){return Math.exp(-2*Math.PI*fc/sr)}
 
 function conditionRecordInput(x){
   const sr=ctx?ctx.sampleRate:48000;
-
-  // Musical high-pass: removes rumble and subsonic room/speaker energy.
   const hpA=hpCoeff(75,sr);
   const hp=x-inHpX1+hpA*inHpY1;inHpX1=x;inHpY1=hp;
-
-  // Two-pole low-pass around 7.2 kHz. Enough articulation remains for voice and
-  // instruments, but the high-frequency acoustic loop is strongly reduced.
   const lpA=lpCoeff(7200,sr);
   inLp1=(1-lpA)*hp+lpA*inLp1;
   inLp2=(1-lpA)*inLp1+lpA*inLp2;
 
-  // Slow automatic protection: normal material remains at unity; sustained
-  // runaway energy gets up to roughly 12 dB of record-head attenuation.
   const mag=Math.abs(inLp2);
   const envA=mag>protectEnv?.992:.9995;
   protectEnv=envA*protectEnv+(1-envA)*mag;
-  const threshold=.46;
+  const threshold=.40;
   let target=1;
-  if(protectEnv>threshold)target=Math.max(.25,threshold/protectEnv);
-  const gA=target<protectGain?.985:.9997;
+  if(protectEnv>threshold)target=Math.max(.18,threshold/protectEnv);
+  const gA=target<protectGain?.98:.9997;
   protectGain=gA*protectGain+(1-gA)*target;
-
   return clamp(inLp2*protectGain);
 }
 
 function conditionPlayback(x){
   const sr=ctx?ctx.sampleRate:48000;
-
-  // Playback high-pass keeps low-frequency acoustic room buildup out of the loop.
   const hpA=hpCoeff(90,sr);
   const hp=x-outHpX1+hpA*outHpY1;outHpX1=x;outHpY1=hp;
-
-  // Slightly darker playback than record: two poles at ~6.3 kHz. This is the
-  // hardware-style trick that keeps the speaker/mic loop from regenerating the
-  // highest-frequency whistle while leaving the useful midrange intact.
   const lpA=lpCoeff(6300,sr);
   outLp1=(1-lpA)*hp+lpA*outLp1;
   outLp2=(1-lpA)*outLp1+lpA*outLp2;
   return clamp(outLp2);
 }
 
-function processTapeCell(idx,fresh,keep){
-  const erased=clamp(tape[idx]*keep);
-  const written=clamp(erased+fresh);
+function rewriteCell(idx,fresh,keep){
+  // OLD TAPE is attenuated first. This value can never bypass FALLOFF.
+  const old=tape[idx];
+  const retained=clamp(old*keep);
+
+  // Only after attenuation is the fresh microphone overdub added.
+  const written=clamp(retained+fresh);
   tape[idx]=written;
   recordScope[recordScopeWrite++%recordScope.length]=written;
 }
@@ -107,8 +92,13 @@ function processTravel(startPos,endPos,fresh,keep){
   let start=Math.floor(startPos),end=Math.floor(endPos);
   if(endPos>=tapeLength)end=Math.floor(endPos-tapeLength)+tapeLength;
   if(end<start)end+=tapeLength;
-  if(lastProcessedCell<0){const idx=wrapCell(start);processTapeCell(idx,fresh,keep);lastProcessedCell=idx}
-  for(let c=start+1;c<=end;c++){const idx=wrapCell(c);if(idx===lastProcessedCell)continue;processTapeCell(idx,fresh,keep);lastProcessedCell=idx}
+  if(lastProcessedCell<0){const idx=wrapCell(start);rewriteCell(idx,fresh,keep);lastProcessedCell=idx}
+  for(let c=start+1;c<=end;c++){
+    const idx=wrapCell(c);
+    if(idx===lastProcessedCell)continue;
+    rewriteCell(idx,fresh,keep);
+    lastProcessedCell=idx;
+  }
 }
 
 function buildTapeEngine(){
@@ -120,12 +110,19 @@ function buildTapeEngine(){
     if(!running)return;
     const input=e.inputBuffer.numberOfChannels?e.inputBuffer.getChannelData(0):null;
     const output=e.outputBuffer.getChannelData(0);
-    const step=speed(),keep=retention();
+    const step=speed();
+    const keep=retention();
+
     for(let i=0;i<output.length;i++){
+      // PLAY HEAD hears the old tape once before attenuation/rewrite.
       output[i]=conditionPlayback(clamp(tape[cellIndex(head)]));
+
       const raw=nativeMode?pullNativeSample():(input?input[i]:0);
       const fresh=conditionRecordInput(clamp(raw));
-      let next=head+step;processTravel(head,next,fresh,keep);while(next>=tapeLength)next-=tapeLength;head=next;
+      let next=head+step;
+      processTravel(head,next,fresh,keep);
+      while(next>=tapeLength)next-=tapeLength;
+      head=next;
     }
   };
   processor.connect(ctx.destination);
