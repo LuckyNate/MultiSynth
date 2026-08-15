@@ -1,0 +1,1 @@
+"use strict";(()=>{const type=new URLSearchParams(location.search).get("type")||"puresynth";document.documentElement.dataset.instrument=type})();
