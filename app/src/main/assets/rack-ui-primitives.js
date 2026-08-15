@@ -1,0 +1,9 @@
+"use strict";
+(function(global){
+const parentMS=global.parent?.MultiSynth||global.MultiSynth||{},S=parentMS.RackStandard||global.MultiSynth?.RackStandard;
+function range(sec,{value,min,max,step=1,label,onInput}){const l=document.createElement("label"),n=document.createElement("span"),el=document.createElement("input"),o=document.createElement("output");n.textContent=label;el.type="range";el.min=min;el.max=max;el.step=step;el.value=value??min;o.textContent=el.value;el.oninput=()=>{o.textContent=el.value;onInput?.(Number(el.value),el)};l.append(n,el,o);sec.appendChild(l);return el}
+function toggle(sec,{value=false,label,onChange}){const b=document.createElement("button");b.type="button";b.className="toggle"+(value?" active":"");let v=!!value;const draw=()=>b.textContent=label+": "+(v?"ON":"OFF");draw();b.onclick=()=>{v=!v;b.classList.toggle("active",v);draw();onChange?.(v,b)};sec.appendChild(b);return b}
+function select(sec,{value,label,options,onChange}){const l=document.createElement("label"),n=document.createElement("span"),el=document.createElement("select"),o=document.createElement("output");n.textContent=label;for(const [v,t] of options||[]){const op=document.createElement("option");op.value=v;op.textContent=t;el.appendChild(op)}el.value=String(value??options?.[0]?.[0]??"");el.onchange=()=>onChange?.(el.value,el);l.append(n,el,o);sec.appendChild(l);return el}
+function hold(sec,{idleText="HOLD",activeText="ACTIVE — RELEASE",onDown,onUp,className="toggle micHold"}){const b=document.createElement("button");b.type="button";b.className=className;b.textContent=idleText;sec?.appendChild(b);if(S?.bindHold)S.bindHold(b,{idleText,activeText,down:onDown,up:onUp});return b}
+global.RackUI=Object.freeze({range,toggle,select,hold});
+})(window);
