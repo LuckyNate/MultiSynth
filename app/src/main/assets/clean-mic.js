@@ -1,0 +1,8 @@
+"use strict";
+(function(global){
+const MS=global.MultiSynth=global.MultiSynth||{},sessions=new Map();
+async function start(id,ctx,target){if(!id||!ctx||!target)return false;if(sessions.has(id))return true;if(!navigator.mediaDevices?.getUserMedia)return false;let stream=null;try{stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:false}});if(sessions.has(id)){stream.getTracks().forEach(t=>t.stop());return true}const src=ctx.createMediaStreamSource(stream),hp=ctx.createBiquadFilter(),lp=ctx.createBiquadFilter(),comp=ctx.createDynamicsCompressor(),gain=ctx.createGain();hp.type="highpass";hp.frequency.value=70;hp.Q.value=.7;lp.type="lowpass";lp.frequency.value=14500;lp.Q.value=.5;comp.threshold.value=-38;comp.knee.value=18;comp.ratio.value=3;comp.attack.value=.004;comp.release.value=.16;gain.gain.value=1;src.connect(hp).connect(lp).connect(comp).connect(gain).connect(target);sessions.set(id,{stream,src,hp,lp,comp,gain});return true}catch(err){try{stream?.getTracks?.().forEach(t=>t.stop())}catch(_){}console.error("CleanMic",err);return false}}
+function stop(id){const s=sessions.get(id);if(!s)return;try{s.stream?.getTracks?.().forEach(t=>t.stop())}catch(_){}for(const n of [s.src,s.hp,s.lp,s.comp,s.gain])try{n?.disconnect?.()}catch(_){}sessions.delete(id)}
+function active(id){return sessions.has(id)}
+MS.CleanMic=Object.freeze({start,stop,active});
+})(window);
