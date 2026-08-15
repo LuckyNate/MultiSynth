@@ -117,7 +117,11 @@
     function createModuleRuntime(rackId,moduleId,options={}) {
         const r=need(rackId), m=r.modules.find(x=>x.id===moduleId);
         if(!m) throw new Error(`Unknown module instance: ${moduleId}`);
-        return Contract().createRuntime(m,Object.assign({},options,{rack:{rackId,row:r.row,col:r.col}}));
+        const rackContext={rackId,row:r.row,col:r.col,hasUpstream:false};
+        /* Compatibility shim: older rack-native modules asked rack.neighbors(instanceId)
+           instead of reading hasUpstream. Keep that API truthful and local to this runtime. */
+        rackContext.neighbors=()=>({upstream:rackContext.hasUpstream?[rackId]:[]});
+        return Contract().createRuntime(m,Object.assign({},options,{rack:rackContext}));
     }
 
     function destroyRuntimeIfPresent(moduleId) {
