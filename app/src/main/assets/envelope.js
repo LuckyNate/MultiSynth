@@ -1,0 +1,2 @@
+"use strict";
+(function(){const ids=["attack","decay","sustain","release"];function fmt(id,v){if(id==="sustain")return Math.round(v*100)+"%";return v<1?Math.round(v*1000)+" ms":v.toFixed(2)+" s";}for(const id of ids){const el=document.getElementById(id),out=document.getElementById(id+"-value");if(!el||!out)continue;const sync=()=>out.textContent=fmt(id,Number(el.value));el.addEventListener("input",sync);sync();}})();
