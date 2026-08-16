@@ -4,10 +4,13 @@
     const held = new Map();
     const sustained = new Set();
     const sustainByChannel = new Array(16).fill(false);
+    const fatherRestore = new Map();
     let runningStatus = null;
     let midiClockPulses = 0;
     let lastQuarterAt = 0;
     let clockBpm = 120;
+    let usbClockActive = false;
+    let usbClockTimer = null;
 
     function key(channel, note) { return channel + ":" + note; }
     function MS() { return window.MultiSynth || {}; }
@@ -22,6 +25,46 @@
         const children = new Set((graph.edges || []).map(e => e.to));
         const roots = (graph.racks || []).filter(r => !children.has(r.id));
         return roots.length ? roots : (graph.racks || []);
+    }
+
+    function fatherModules(graph) {
+        const out = [];
+        for (const rack of graph.racks || []) for (const module of rack.modules || []) {
+            if (module.enabled !== false && module.type === "metronome") out.push({ rack, module });
+        }
+        return out;
+    }
+
+    function setFatherTimeSlaved(active, bpm) {
+        const engine = MS().RackEngine;
+        if (!engine?.graph || !engine?.setModuleState) return;
+        let graph;
+        try { graph = engine.graph(); } catch (_) { return; }
+        if (active) {
+            for (const x of fatherModules(graph)) {
+                if (!fatherRestore.has(x.module.id)) fatherRestore.set(x.module.id, x.module.state?.running === true);
+                engine.setModuleState(x.rack.id, x.module.id, { running: false, bpm: Number(bpm) || Number(x.module.state?.bpm) || 120 });
+            }
+        } else {
+            for (const x of fatherModules(graph)) {
+                const wasRunning = fatherRestore.get(x.module.id);
+                if (wasRunning !== undefined) engine.setModuleState(x.rack.id, x.module.id, { running: wasRunning, bpm: Number(bpm) || Number(x.module.state?.bpm) || 120 });
+            }
+            fatherRestore.clear();
+        }
+        try { MS().RackAudioGraph?.rebuild?.(); } catch (_) {}
+    }
+
+    function armUsbClockTimeout() {
+        if (usbClockTimer) clearTimeout(usbClockTimer);
+        const quarterMs = 60000 / Math.max(20, Math.min(300, clockBpm || 120));
+        usbClockTimer = setTimeout(() => {
+            usbClockTimer = null;
+            if (!usbClockActive) return;
+            usbClockActive = false;
+            setFatherTimeSlaved(false, clockBpm);
+            emitCV({ kind: "transport", action: "stop", value: 0, gate: false, bpm: clockBpm, clockLost: true });
+        }, Math.max(1500, Math.min(8000, quarterMs * 2.5)));
     }
 
     function routeRack(graph, rackId, packet, seen) {
@@ -56,6 +99,23 @@
         window.dispatchEvent(new CustomEvent("multisynth-usb-cv", { detail: clone(p) }));
         return true;
     }
+
+    function sendNative(status, d1, d2, length) {
+        if (!window.AndroidMidi || typeof AndroidMidi.sendMidi !== "function") return false;
+        try { return AndroidMidi.sendMidi(status & 255, (d1 || 0) & 127, (d2 || 0) & 127, Math.max(1, Math.min(3, length || 1))) !== false; }
+        catch (_) { return false; }
+    }
+
+    function sendClock16th(bpm) {
+        if (usbClockActive) return false;
+        const q = 60 / Math.max(20, Math.min(300, Number(bpm) || 120));
+        const spacing = q * 1000 / 24;
+        for (let i = 0; i < 6; i++) setTimeout(() => sendNative(0xf8, 0, 0, 1), Math.max(0, i * spacing));
+        return true;
+    }
+
+    function sendStart() { if (!usbClockActive) return sendNative(0xfa, 0, 0, 1); return false; }
+    function sendStop() { if (!usbClockActive) return sendNative(0xfc, 0, 0, 1); return false; }
 
     function noteOnNative(channel, note, velocity) {
         const id = "native-midi:" + key(channel, note);
@@ -99,24 +159,38 @@
         if (status === 0xfa) {
             midiClockPulses = 0;
             lastQuarterAt = 0;
+            usbClockActive = true;
+            setFatherTimeSlaved(true, clockBpm);
             emitCV({ kind: "transport", action: "start", value: 1, gate: true, bpm: clockBpm });
+            armUsbClockTimeout();
             return;
         }
         if (status === 0xfc) {
             emitCV({ kind: "transport", action: "stop", value: 0, gate: false, bpm: clockBpm });
             midiClockPulses = 0;
             lastQuarterAt = 0;
+            if (usbClockTimer) clearTimeout(usbClockTimer);
+            usbClockTimer = null;
+            usbClockActive = false;
+            setFatherTimeSlaved(false, clockBpm);
             return;
         }
         if (status !== 0xf8) return;
-        midiClockPulses++;
-        if (midiClockPulses % 24 !== 0) return;
-        if (lastQuarterAt > 0) {
-            const ms = now - lastQuarterAt;
-            if (ms > 40 && ms < 4000) clockBpm = Math.max(20, Math.min(300, 60000 / ms));
+        if (!usbClockActive) {
+            usbClockActive = true;
+            setFatherTimeSlaved(true, clockBpm);
+            emitCV({ kind: "transport", action: "start", value: 1, gate: true, bpm: clockBpm, inferred: true });
         }
-        lastQuarterAt = now;
-        emitCV({ kind: "trigger", gate: true, value: 1, clock: true, quarter: Math.floor(midiClockPulses / 24) - 1, bpm: clockBpm });
+        midiClockPulses++;
+        if (midiClockPulses % 24 === 0) {
+            if (lastQuarterAt > 0) {
+                const ms = now - lastQuarterAt;
+                if (ms > 40 && ms < 4000) clockBpm = Math.max(20, Math.min(300, 60000 / ms));
+            }
+            lastQuarterAt = now;
+            emitCV({ kind: "trigger", gate: true, value: 1, clock: true, quarter: Math.floor(midiClockPulses / 24) - 1, bpm: clockBpm });
+        }
+        armUsbClockTimeout();
     }
 
     function process(bytes) {
@@ -144,13 +218,9 @@
             } else if (command === 0xe0) {
                 const raw = (d2 << 7) | d1;
                 emitCV({ kind: "pitch", value: (raw - 8192) / 8192, raw, channel });
-            } else if (command === 0xd0) {
-                emitCV({ kind: "pressure", value: d1 / 127, raw: d1, channel });
-            } else if (command === 0xa0) {
-                emitCV({ kind: "poly-pressure", value: d2 / 127, raw: d2, note: d1, channel });
-            } else if (command === 0xc0) {
-                emitCV({ kind: "program", value: d1, program: d1, channel });
-            }
+            } else if (command === 0xd0) emitCV({ kind: "pressure", value: d1 / 127, raw: d1, channel });
+            else if (command === 0xa0) emitCV({ kind: "poly-pressure", value: d2 / 127, raw: d2, note: d1, channel });
+            else if (command === 0xc0) emitCV({ kind: "program", value: d1, program: d1, channel });
         }
     }
 
@@ -195,6 +265,10 @@
     window.MultiSynthNativeMidi = {
         receive: process,
         receiveCV: emitCV,
+        sendClock16th,
+        sendStart,
+        sendStop,
+        get usbClockActive() { return usbClockActive; },
         devicesChanged: function () {},
         permissionResult: function () {},
         status: function (text, connected) {
@@ -207,6 +281,7 @@
         panic: panicAll
     };
 
+    window.addEventListener("multisynth-father-time-external-start", () => {});
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installButton);
     else installButton();
 })();
