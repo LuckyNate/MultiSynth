@@ -20,11 +20,24 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Prepare stable MultiSynth development signing key
+      - name: Prepare publishable signing key
+        env:
+          MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
+          MULTISYNTH_KEYSTORE_PASSWORD: ${{ secrets.MULTISYNTH_KEYSTORE_PASSWORD }}
+          MULTISYNTH_KEY_ALIAS: ${{ secrets.MULTISYNTH_KEY_ALIAS }}
+          MULTISYNTH_KEY_PASSWORD: ${{ secrets.MULTISYNTH_KEY_PASSWORD }}
         run: |
+          test -n "$MULTISYNTH_KEYSTORE_B64"
+          test -n "$MULTISYNTH_KEYSTORE_PASSWORD"
+          test -n "$MULTISYNTH_KEY_ALIAS"
+          test -n "$MULTISYNTH_KEY_PASSWORD"
           mkdir -p .signing
-          base64 -d .github/multisynth-dev.keystore.b64 > .signing/multisynth-dev.jks
-          keytool -list -keystore .signing/multisynth-dev.jks -storepass multisynth-dev -alias multisynth >/dev/null
+          printf '%s' "$MULTISYNTH_KEYSTORE_B64" | base64 -d > .signing/multisynth-release.jks
+          keytool -list -keystore .signing/multisynth-release.jks -storepass "$MULTISYNTH_KEYSTORE_PASSWORD" -alias "$MULTISYNTH_KEY_ALIAS" >/dev/null
+          echo "MULTISYNTH_KEYSTORE_PATH=${GITHUB_WORKSPACE}/.signing/multisynth-release.jks" >> "$GITHUB_ENV"
+          echo "MULTISYNTH_KEYSTORE_PASSWORD=$MULTISYNTH_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "MULTISYNTH_KEY_ALIAS=$MULTISYNTH_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "MULTISYNTH_KEY_PASSWORD=$MULTISYNTH_KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - run: gradle assembleDebug --stacktrace
       - name: Rename APK with build number
