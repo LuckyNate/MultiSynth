@@ -2,7 +2,7 @@
 (()=>{
 const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.RackEngine,A=P.RackAudioGraph,L=P.PCMLibrary,U=window.RackUI;
 let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module||module.type!=="whitman")return;
-const root=document.getElementById("controls");let state=module.state||{};if(!root)return;root.innerHTML="";
+const root=document.getElementById("controls");let state=module.state||{};if(!root)return;document.getElementById("title").textContent="WHITMAN";document.getElementById("desc").textContent="32-STEP PCM SAMPLER · SHARED LIBRARY · RACK CAPTURE";root.innerHTML="";
 const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
 const group=name=>{const s=document.createElement("section");s.className="group";const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
 const range=(sec,id,label,min,max,step=1)=>U.range(sec,{value:state[id]??min,min,max,step,label,onInput:v=>patch({[id]:v})});
