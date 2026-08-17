@@ -1,0 +1,18 @@
+"use strict";
+(function(global){
+const MS=global.MultiSynth=global.MultiSynth||{},DB_NAME="multisynth-grain-library",DB_VERSION=1,STORE="grains";let dbp=null;
+function open(){if(dbp)return dbp;dbp=new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(STORE)){const s=db.createObjectStore(STORE,{keyPath:"id"});s.createIndex("createdAt","createdAt");s.createIndex("name","name")}};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});return dbp}
+function tx(mode,fn){return open().then(db=>new Promise((resolve,reject)=>{const t=db.transaction(STORE,mode),s=t.objectStore(STORE);let result;try{result=fn(s,t)}catch(e){reject(e);return}t.oncomplete=()=>resolve(result);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error||new Error("Grain transaction aborted"))}))}
+function id(){return"grain-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9)}
+async function save(grain){if(!grain?.data?.length||!grain.sampleRate)throw new Error("Grain requires data and sampleRate");const data=grain.data instanceof Float32Array?grain.data:new Float32Array(grain.data),now=Date.now(),rec={id:grain.id||id(),name:String(grain.name||"GRAIN"),sampleRate:Number(grain.sampleRate),channels:1,frames:data.length,duration:data.length/Number(grain.sampleRate),createdAt:Number(grain.createdAt)||now,updatedAt:now,sourceId:grain.sourceId?String(grain.sourceId):null,sourceName:String(grain.sourceName||""),startFrame:Number(grain.startFrame)||0,endFrame:Number(grain.endFrame)||data.length,tags:Array.isArray(grain.tags)?grain.tags.map(String):[],data};await tx("readwrite",s=>s.put(rec));global.dispatchEvent(new CustomEvent("multisynth-grain-library",{detail:{action:"save",id:rec.id,name:rec.name}}));return{...rec,data:undefined,library:"grain"}}
+async function get(id){const db=await open();return new Promise((resolve,reject)=>{const t=db.transaction(STORE,"readonly"),r=t.objectStore(STORE).get(String(id));r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}
+async function list(){const db=await open();return new Promise((resolve,reject)=>{const t=db.transaction(STORE,"readonly"),r=t.objectStore(STORE).getAll();r.onsuccess=()=>resolve((r.result||[]).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(x=>({id:x.id,name:x.name,sampleRate:x.sampleRate,frames:x.frames,duration:x.duration,createdAt:x.createdAt,updatedAt:x.updatedAt,sourceId:x.sourceId,sourceName:x.sourceName,tags:x.tags||[],library:"grain",source:"grain-library"})));r.onerror=()=>reject(r.error)})}
+async function remove(id){await tx("readwrite",s=>s.delete(String(id)));global.dispatchEvent(new CustomEvent("multisynth-grain-library",{detail:{action:"delete",id:String(id)}}));return true}
+async function rename(id,name){const rec=await get(id);if(!rec)return false;rec.name=String(name||rec.name);rec.updatedAt=Date.now();await tx("readwrite",s=>s.put(rec));return true}
+MS.GrainLibrary=Object.freeze({open,save,get,list,remove,rename});
+MS.UnifiedLibrary=Object.freeze({
+ async list(){const [pcm,grains]=await Promise.all([MS.PCMLibrary?.list?.()||[],list()]);return[...pcm.map(x=>({...x,library:"pcm"})),...grains].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))},
+ async get(key){if(String(key||"").startsWith("grain-"))return get(key);const p=await MS.PCMLibrary?.get?.(key);return p||get(key)},
+ save:v=>MS.PCMLibrary.save(v),saveCapture:(...a)=>MS.PCMLibrary.saveCapture(...a),remove:key=>String(key||"").startsWith("grain-")?remove(key):MS.PCMLibrary.remove(key),rename:(key,name)=>String(key||"").startsWith("grain-")?rename(key,name):MS.PCMLibrary.rename(key,name)
+});
+})(window);
