@@ -1,132 +1,105 @@
-# MultiSynth Android — Minimal Java Shell
+# MultiSynth
 
-Native Android wrapper for the MultiSynth instrument collection. One plain-Java Activity contains a WebView for the selector and instruments, while Android `MidiManager` handles USB/Bluetooth MIDI. It has no AndroidX, Kotlin, Web MIDI, or Web Bluetooth dependency.
+MultiSynth is an Android-hosted HTML5 modular audio workstation. A small plain-Java Android shell hosts the app in a WebView and provides native MIDI, USB/Bluetooth MIDI transport, microphone capture, file picking, and Android lifecycle/back-navigation integration. The instrument and rack interfaces live in `app/src/main/assets/`.
 
-## Interface contract
+The current application entry point is the rack system. `index.html` is intentionally retained as a tiny compatibility launcher and redirects immediately to `rackbuilder.html`.
 
-Every instrument keeps its oscilloscope fixed at the top and its playable keyboard fixed at the bottom while the controls scroll independently between them. PureSynth and No Quarter also ship static keyboard markup as a visible fallback before JavaScript initializes.
+## Current architecture
 
-## Included instruments
+### Android shell
 
-The selector and known-working QuadSynth files are already installed in `app/src/main/assets/`:
+`MainActivity` owns Android-specific services only:
 
-- `index.html` — synth selector and app entry point
-- `selector.css` — selector theme and future synth slots
-- `quadsynth.html` — QuadSynth instrument interface
-- `quadsynth.css`
-- `quadsynth.js`
-- `pulsynth.html` — Pulsynth three-stage PWM ladder interface
-- `pulsynth.css`
-- `pulsynth.js`
-- `sinladder.html` — SinLadder three-stage sine harmonic ladder interface
-- `sinladder.css`
-- `sinladder.js`
-- `stinger.html` — Stinger three-stage overlapping cycloid click ladder
-- `stinger.css`
-- `stinger.js`
-- `razorback.html` — Razorback three-stage movable-peak ramp ladder
-- `razorback.css`
-- `razorback.js`
-- `puresynth.html` — PureSynth mathematically generated waveform instrument with movable triangle peak
-- `puresynth.css`
-- `puresynth.js`
-- `noquarter.html` — No Quarter velocity-responsive electric piano
-- `noquarter.css`
-- `noquarter.js`
+- WebView hosting and local asset delivery
+- USB/Bluetooth MIDI input and output
+- MIDI device reconnection
+- microphone capture and acoustic echo cancellation when available
+- audio-file selection
+- Android permission and lifecycle handling
+- Android Back integration
 
-`quadsynth.html` loads the native bridge immediately after `quadsynth.js`:
+The Android application namespace is `audio.multisynth.app` and the application is branded MultiSynth. Instrument names such as QuadSynth and Pulsynth remain instrument identities, not app-shell names.
 
-```html
-<script src="native-midi.js"></script>
-```
+### Rack application
 
-The browser-only `BT MIDI` / Web MIDI implementation has been removed; native MIDI replaces it.
+`rackbuilder.html` is the main interface. The rack grid is a constrained spatial signal graph:
 
-## Latency work
+- modules inside one rack execute top-to-bottom
+- side-by-side racks are parallel branches
+- racks above are parents and racks below are children
+- each rack can receive from up to three local parents and feed up to three local children
+- sibling relationships are limited to the immediate horizontal neighbors
+- terminal rack outputs are mixed into the unified output pool
+- the rack keyboard plays the pool through the active rack graph
 
-MultiSynth requests Web Audio's interactive latency mode, holds the Android WebView renderer at high priority, uses hardware rendering, keeps the audio graph warm, and prebuilds each instrument's current waveform data before the first MIDI note. Bluetooth A2DP codec buffering remains controlled by Android and the receiving device.
+Routing is determined by rack position rather than patch cables. Do not introduce arbitrary cross-rack wiring as a cleanup shortcut; the neighborhood topology is part of the project design.
 
-## Launcher icon
+### Module contract
 
-The adaptive launcher icon uses seven signal bars representing the seven included instruments and falls back to a vector icon on pre-Android 8 devices.
+`module-contract.js` is the shared runtime contract for rack modules. Module definitions register themselves through `MultiSynth.ModuleContract` and may provide state, lifecycle, audio input/output, note, trigger, clock, CV, serialization, and editor behavior.
 
-## Future architecture — spatial rack builder
+Shared rack helpers currently live alongside the contract as `MultiSynth.RackStandard`. They cover PCM capture, transport scheduling, sampler playback, hold-button interaction, and scope painting. They remain in the same file for compatibility with existing module/editor loading paths.
 
-Implement this after the individual MultiSynth units are finished. The rack builder deliberately uses a constrained spatial routing grammar instead of patch cables or arbitrary module-to-module wiring. The goal is simplicity without sacrificing complex composition.
+### Rack engine and UI
 
-### Core model
+The rack implementation is intentionally split by responsibility:
 
-- The arranger is the trunk/root of the signal structure and owns global transport/song coordination.
-- A rack is one routing node (one "house on the block") regardless of how many modules or how much internal complexity it contains.
-- Modules inside a rack form one ordered ladder and execute top-to-bottom. There are no internal patch cables.
-- If a patch needs an internal branch, instantiate another rack node instead of adding an exception to the ladder rule.
-- Routing exists between rack nodes, never directly between synths/modules.
-- The resulting project is a tree/branching-ladder structure whose geometry is also its routing diagram.
+- `rack-engine.js` — rack/project graph and module instance state
+- `rack-audio-graph.js` — audio/CV/clock routing and pool output
+- `rack-builder.js` — rack and cascade interaction helpers
+- `rackbuilder-app.js` — application orchestration, persistence, module editor hosting, chooser, and rack keyboard integration
+- `rack-grid-overview.js` — grid presentation and navigation
+- `rack-keyboard.js` — rack keyboard behavior
+- `rack-ui-controls.js` — direct rack/module UI behavior
+- `rack-editor-scope.js` — embedded module scope support
 
-### Neighborhood routing
+Individual rack implementations live under `assets/modules/`. Standalone instrument/editor pages remain available because rack instances can embed them and because they are useful independently.
 
-Treat rack positions like a local cellular neighborhood. Signal direction runs from parent racks above to child racks below. Each rack may have up to three local parents and up to three local children (upper-left/upper-center/upper-right and lower-left/lower-center/lower-right where occupied).
+## Persistence
 
-For this layout:
+Rack projects use `multisynth.rack.project.v1` and serialize the complete rack graph plus module state. Rack-module editors synchronize their controls back into the corresponding rack runtime.
 
-```text
-[A] [B] [C]
-[D] [E] [F]
-```
+The Android shell also provides generic form persistence for standalone pages. The rack builder opts out of that generic layer because the rack serializer is the authoritative source for rack/module state. Existing storage keys are intentionally preserved for backward compatibility.
 
-local connectivity is:
+Do not rename or delete persistence keys merely as cleanup; doing so would discard saved user state.
 
-```text
-A -> D, E
-B -> D, E, F
-C -> E, F
-```
+## Audio and performance rules
 
-A does not reach F and C does not reach D. There are no long-range connections outside the local neighborhood.
+MultiSynth requests interactive Web Audio latency, keeps important audio graphs warm where appropriate, and uses hardware-rendered WebView output. Bluetooth A2DP buffering is controlled by Android and the receiving device and cannot be eliminated entirely by the web audio graph.
 
-### Mixing, splitting, and parallel paths
+Rack modules should preserve these project rules:
 
-Neighborhood geometry creates routing operations automatically:
+- incoming carrier audio remains usable unless the module is intentionally a generator-only source
+- zero/neutral processing should not unexpectedly destroy the carrier
+- CV/trigger/clock behavior must remain independent of audible audio unless the module explicitly generates sound
+- oscilloscopes should represent the relevant post-process signal
+- modules must clean up audio nodes, timers, microphone subscriptions, and other resources when destroyed
+- state changes must remain serializable and restorable
 
-- One parent touching several child positions splits its output to those child racks.
-- Several parent positions feeding one child combine/mix at that child's input.
-- Side-by-side racks represent simultaneous/parallel branches rather than one feeding the other.
-- A square of two parents over two children creates crossing paths: both children receive both parents because each child is in the local neighborhood of both parents.
+## Standalone instruments and editors
 
-Example:
+The repository retains standalone HTML/CSS/JS interfaces for instruments and processors including QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, PureSynth, No Quarter, samplers, loopers, processors, and editors. These files are not assumed dead merely because the rack builder is now the main entry point; rack definitions may use them as embedded editors.
 
-```text
-[P1] [P2]
-[C1] [C2]
-```
+The selector/list of rack modules is generated from registered module definitions rather than maintained as a separate hard-coded product list.
 
-means:
+## Build
 
-```text
-P1 -> C1
-P1 -> C2
-P2 -> C1
-P2 -> C2
-```
+GitHub Actions builds the Android APK through **Build MultiSynth APK**. The uploaded debug artifact is named `MultiSynth-debug-apk`. Minimum Android version is Android 6.0 / API 23.
 
-Thus C1 processes P1 + P2 and C2 independently processes P1 + P2. Larger blocks extend the same local rule; adjacency determines connectivity rather than explicit cables or a routing matrix.
+The project can also be opened in Android Studio.
 
-### Design constraint
+## MIDI
 
-This topology is intentionally limited. Do not later "fix" it by introducing arbitrary internal cables. Complexity should emerge by composing and instantiating additional rack nodes. Rack contents may be simple or extremely complex, but every rack still occupies exactly one neighborhood cell and follows the same external routing rules.
+MultiSynth supports native Android USB/Bluetooth MIDI. The app remembers the selected MIDI device and port and attempts to reconnect when Android exposes the same device again. Native handling includes note on/off, velocity, sustain, all-notes-off behavior, multi-channel note identity, and bidirectional MIDI transport used by rack clock/CV features.
 
-## Build online from a phone
+## Cleanup policy
 
-Upload the complete project to a GitHub repository. Open **Actions**, choose **Build MultiSynth APK**, press **Run workflow**, then download the `MultiSynth-debug-apk` artifact. The workflow installs Java/Gradle and builds the APK in GitHub's cloud runner. Minimum Android version is 6.0 (API 23).
+This repository has evolved rapidly, so cleanup should be conservative:
 
-The same project also opens normally in Android Studio if a computer is available.
+1. preserve every working module and editor unless it is proven unreachable
+2. preserve storage keys and serialized schemas unless a migration exists
+3. distinguish old app-shell names from valid instrument names before renaming anything
+4. avoid combining cleanup with DSP, routing, clock, CV, sampler, or latency behavior changes
+5. prefer small behavior-neutral refactors that can be validated independently
 
-## GO:88 connection
-
-1. Pair the GO:88 as a Bluetooth audio device in Android so normal app audio plays from the piano speakers.
-2. Pair its Bluetooth MIDI connection in Android. MultiSynth can explicitly open a paired Bluetooth device through Android's native `openBluetoothDevice()` API, so Roland Piano App does not need to remain open. USB MIDI is also supported directly.
-3. Open MultiSynth, choose an instrument, and tap **MIDI INPUT**.
-4. Select the GO:88 output port.
-5. Tap **AUDIO OUT** if you need to change Android's Bluetooth output.
-
-The app remembers the selected MIDI device and port and reconnects when Android presents the same device again. CC64 sustain, velocity, note on/off, all-notes-off, and multi-channel note identity are supported.
+Historical-looking filenames may still be compatibility paths. Verify references and module registration before deleting or renaming them.
