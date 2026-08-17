@@ -19,6 +19,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+
+      # Android only accepts an APK as an update when it is signed by the same
+      # certificate as the installed app. GitHub runners are otherwise fresh
+      # machines and would generate a new debug key for every build.
+      - name: Restore MultiSynth update signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: multisynth-android-debug-signing-v1
+
       - run: gradle assembleDebug --stacktrace
       - name: Rename APK with build number
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MultiSynth-build-${{ github.run_number }}.apk
