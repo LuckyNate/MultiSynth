@@ -1,0 +1,2 @@
+MultiSynth Android update-preservation test trigger.
+No app behavior changes.
