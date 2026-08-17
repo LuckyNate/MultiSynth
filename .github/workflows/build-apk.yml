@@ -21,13 +21,16 @@ jobs:
           gradle-version: "8.9"
 
       # Android only accepts an APK as an update when it is signed by the same
-      # certificate as the installed app. GitHub runners are otherwise fresh
-      # machines and would generate a new debug key for every build.
+      # certificate as the installed app. The cache now contains the established
+      # MultiSynth development signing identity. Never silently generate another
+      # key: if this cache is missing, fail the build instead of producing an APK
+      # that would force users to uninstall and lose app-private data.
       - name: Restore MultiSynth update signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: multisynth-android-debug-signing-v1
+          fail-on-cache-miss: true
 
       - run: gradle assembleDebug --stacktrace
       - name: Rename APK with build number
