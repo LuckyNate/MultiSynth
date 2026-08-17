@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -20,17 +20,11 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      # Android only accepts an APK as an update when it is signed by the same
-      # certificate as the installed app. The cache now contains the established
-      # MultiSynth development signing identity. Never silently generate another
-      # key: if this cache is missing, fail the build instead of producing an APK
-      # that would force users to uninstall and lose app-private data.
-      - name: Restore MultiSynth update signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: multisynth-android-debug-signing-v1
-          fail-on-cache-miss: true
+      - name: Prepare stable MultiSynth development signing key
+        run: |
+          mkdir -p .signing
+          base64 -d .github/multisynth-dev.keystore.b64 > .signing/multisynth-dev.jks
+          keytool -list -keystore .signing/multisynth-dev.jks -storepass multisynth-dev -alias multisynth >/dev/null
 
       - run: gradle assembleDebug --stacktrace
       - name: Rename APK with build number
