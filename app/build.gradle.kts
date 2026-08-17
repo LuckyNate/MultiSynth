@@ -6,12 +6,20 @@ android {
     namespace = "audio.multisynth.app"
     compileSdk = 35
 
-    signingConfigs {
-        create("multisynthDev") {
-            storeFile = rootProject.file(".signing/multisynth-dev.jks")
-            storePassword = "multisynth-dev"
-            keyAlias = "multisynth"
-            keyPassword = "multisynth-dev"
+    val signingStore = System.getenv("MULTISYNTH_KEYSTORE_PATH")
+    val signingStorePassword = System.getenv("MULTISYNTH_KEYSTORE_PASSWORD")
+    val signingAlias = System.getenv("MULTISYNTH_KEY_ALIAS")
+    val signingKeyPassword = System.getenv("MULTISYNTH_KEY_PASSWORD")
+    val hasCiSigning = listOf(signingStore, signingStorePassword, signingAlias, signingKeyPassword).all { !it.isNullOrBlank() }
+
+    if (hasCiSigning) {
+        signingConfigs {
+            create("multisynthRelease") {
+                storeFile = file(signingStore!!)
+                storePassword = signingStorePassword
+                keyAlias = signingAlias
+                keyPassword = signingKeyPassword
+            }
         }
     }
 
@@ -27,7 +35,11 @@ android {
 
     buildTypes {
         getByName("debug") {
-            signingConfig = signingConfigs.getByName("multisynthDev")
+            if (hasCiSigning) signingConfig = signingConfigs.getByName("multisynthRelease")
+        }
+        getByName("release") {
+            isMinifyEnabled = false
+            if (hasCiSigning) signingConfig = signingConfigs.getByName("multisynthRelease")
         }
     }
 
