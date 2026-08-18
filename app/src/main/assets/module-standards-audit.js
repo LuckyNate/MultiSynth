@@ -5,7 +5,8 @@
  for(const id of I.ALL){
   const meta=M.get(id);if(!meta){errors.push("manifest missing "+id);continue;}
   const cap=K?.validate(meta.capabilities);if(cap&&!cap.ok)errors.push(id+" unknown capabilities: "+cap.unknown.join(", "));
-  if(!S?.versionFor(id))errors.push(id+" missing state schema version");
+  if(!S?.declared||!Object.prototype.hasOwnProperty.call(S.declared,id))errors.push(id+" missing explicit state schema declaration");
+  else if(!S.versionFor(id))errors.push(id+" invalid state schema version");
   try{
    const def=C.getDefinition(id);
    if(def.displayName!==meta.displayName)errors.push(id+" displayName not manifest-owned");
