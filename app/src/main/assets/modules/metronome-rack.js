@@ -43,5 +43,5 @@ function setState({runtime,state,patch}){
     }
 }
 function destroy({runtime}){for(const n of [runtime.user?.input,runtime.user?.output])try{n?.disconnect()}catch(_){}}
-C.define({type:"metronome",displayName:"Father Time",category:"clock",version:"rack-clock-11",editorUrl:"rack-module-editor.html",color:"#8d6b45",selectorClass:"metronome",description:"SILENT 4/4 MASTER CLOCK · BPM · SWING · USB-C CV MASTER/SLAVE",defaults:defaults(),resources:["midi","storage"],create,setState,clockTick,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>Object.assign(defaults(),saved||{})})
+C.define({type:"father-time",displayName:"Father Time",category:"clock",version:"rack-clock-11",editorUrl:"rack-module-editor.html",color:"#8d6b45",selectorClass:"father-time",description:"SILENT 4/4 MASTER CLOCK · BPM · SWING · USB-C CV MASTER/SLAVE",defaults:defaults(),resources:["midi","storage"],create,setState,clockTick,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>Object.assign(defaults(),saved||{})})
 })(window);
