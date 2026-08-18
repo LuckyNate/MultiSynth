@@ -1,0 +1,9 @@
+"use strict";
+(function(global){
+function getPath(obj,path){return String(path||"").split(".").filter(Boolean).reduce((v,k)=>v?.[/^\d+$/.test(k)?Number(k):k],obj)}
+function setPlain(el,v){if(typeof el.setRackValue==="function"){el.setRackValue(v);return}if(el instanceof HTMLInputElement){if(el.type==="checkbox"||el.type==="radio")el.checked=!!v;else if(v!=null)el.value=String(v);const o=el.parentElement?.querySelector?.("output");if(o)o.textContent=el.value;return}if(el instanceof HTMLSelectElement||el instanceof HTMLTextAreaElement){if(v!=null)el.value=String(v);return}if(el instanceof HTMLButtonElement&&typeof v==="boolean"){el.classList.toggle("active",v);const base=(el.dataset.syncLabel||el.textContent.split(":")[0]||"").trim();if(base){el.dataset.syncLabel=base;el.textContent=base+": "+(v?"ON":"OFF")}}}
+function sync(doc,state){if(!doc||!state)return;doc.querySelectorAll("[data-state-key]").forEach(el=>{const v=getPath(state,el.dataset.stateKey);if(v!==undefined)setPlain(el,v)});doc.querySelectorAll("input[id],select[id],textarea[id],button[id]").forEach(el=>{if(el.dataset.stateKey)return;if(Object.prototype.hasOwnProperty.call(state,el.id))setPlain(el,state[el.id])});try{doc.defaultView?.dispatchEvent(new CustomEvent("multisynth-state-sync",{detail:state}))}catch(_){}}
+function openFrame(){return document.getElementById("moduleEditorFrame")}
+global.addEventListener("multisynth-rack-engine",e=>{if(e.detail?.type!=="module-state")return;const p=e.detail.payload||{},frame=openFrame();if(!frame?.contentDocument)return;let iid=null;try{iid=new URL(frame.src,location.href).searchParams.get("instance")}catch(_){}if(iid!==p.moduleId)return;sync(frame.contentDocument,p.state)});
+global.MultiSynth=global.MultiSynth||{};global.MultiSynth.EditorStateBridge=Object.freeze({sync});
+})(window);
