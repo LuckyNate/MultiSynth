@@ -1,7 +1,7 @@
 "use strict";
 (()=>{
 const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.RackEngine,A=P.RackAudioGraph,L=P.UnifiedLibrary||P.PCMLibrary,U=window.RackUI;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module||module.type!=="granulator")return;
+let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module||module.type!=="big-deal")return;
 const root=document.getElementById("controls");if(!root)return;let state=module.state||{};root.innerHTML="";
 const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
 const group=name=>{const s=document.createElement("section");s.className="group";const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
