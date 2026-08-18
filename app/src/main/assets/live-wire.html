@@ -1,1 +1,57 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Live Wire</title><link rel="stylesheet" href="live-wire.css"></head><body><main class="wire"><header><div class="bolt">ϟ</div><div><small>MULTISYNTH DEVICE TAP</small><h1>LIVE WIRE</h1></div><div id="lamp" class="lamp"></div></header><section class="scope"><canvas id="scope"></canvas></section><div id="status" class="status">TOUCH LIVE TO CONNECT DEVICE AUDIO</div><button id="record" type="button">HOLD TO RECORD</button><div class="note">LIVE DEVICE AUDIO FLOWS TO THE RACK · RELEASE SAVES PCM</div></main><script src="pcm-library.js"></script><script src="native-live-wire.js"></script><script src="live-wire.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Live Wire</title>
+<link rel="stylesheet" href="live-wire.css">
+</head>
+<body>
+<main class="wire">
+<header class="wireHead">
+  <div class="bolt">ϟ</div>
+  <div class="brand"><small>MULTISYNTH SOURCE MODULE</small><h1>LIVE WIRE</h1></div>
+  <div id="lamp" class="lamp" aria-label="signal lamp"></div>
+</header>
+
+<section class="crtShell" aria-label="Live Wire CRT">
+  <div class="crtBezel">
+    <div class="crtGlass">
+      <div id="player"></div>
+      <div class="scanlines"></div>
+      <div class="crtShade"></div>
+      <div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>SEARCH OR RANDOM</small></div>
+    </div>
+  </div>
+  <div class="crtBadge">LW-5 VIDEO RECEIVER</div>
+</section>
+
+<form id="searchForm" class="searchStrip" autocomplete="off">
+  <input id="search" type="search" inputmode="search" placeholder="SEARCH" aria-label="Search YouTube">
+</form>
+
+<section class="switchRow">
+  <button id="randomToggle" class="toggle" type="button" aria-pressed="false"><span>RANDOM</span><b>OFF</b></button>
+  <button id="liveToggle" class="toggle" type="button" aria-pressed="false"><span>LIVE</span><b>OFF</b></button>
+  <button id="next" class="next" type="button">NEXT</button>
+</section>
+
+<section class="queuePanel" aria-label="video queue">
+  <div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div>
+  <div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div>
+  <div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div>
+  <div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div>
+  <div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div>
+</section>
+
+<div id="status" class="status">READY</div>
+<button id="record" type="button">HOLD TO RECORD</button>
+<div class="note">RELEASE SAVES PCM · LIVE AND RANDOM ARE INDEPENDENT</div>
+</main>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="pcm-library.js"></script>
+<script src="native-live-wire.js"></script>
+<script src="live-wire.js"></script>
+</body>
+</html>
