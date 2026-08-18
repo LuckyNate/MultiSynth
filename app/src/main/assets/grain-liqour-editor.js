@@ -1,7 +1,7 @@
 "use strict";
 (()=>{
 const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.RackEngine,A=P.RackAudioGraph,C=P.ModuleContract,G=P.GrainLibrary,U=window.RackUI;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module||module.type!=="grainliqour")return;
+let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module||module.type!=="grain-liqour")return;
 let state=module.state||{};const root=document.getElementById("controls"),title=document.getElementById("title"),desc=document.getElementById("desc");if(!root)return;root.innerHTML="";title.textContent="GRAIN LIQOUR";desc.textContent="SAVED-GRAIN CARRIER SOURCE · GRAIN RETRIGGERED AT NOTE FREQUENCY";document.documentElement.style.setProperty("--accent","#c8904d");
 const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
 const group=name=>{const s=document.createElement("section");s.className="group";const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
