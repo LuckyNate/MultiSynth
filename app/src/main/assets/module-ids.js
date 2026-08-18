@@ -1,6 +1,14 @@
 "use strict";
 (function(global){
-  const entry=(id,displayName,themeKey=id)=>Object.freeze({id,displayName,themeKey});
+  // One authoritative identity row per module.
+  // id is the canonical filename/reference stem used everywhere.
+  const entry=(id,displayName)=>Object.freeze({
+    id,
+    displayName,
+    themeKey:id,
+    editorUrl:id+".html",
+    moduleScript:"modules/"+id+".js"
+  });
   const CATALOG=Object.freeze({
     LIVE_WIRE:entry("live-wire","Live Wire"),
     BEAT_RED:entry("beat-red","Beat Red"),
@@ -54,8 +62,10 @@
     keyFor,
     forDisplayName:name=>BY_DISPLAY_NAME[String(name||"")]||NORMALIZED_NAMES.get(norm(name))||null,
     displayNameFor:id=>identityFor(id)?.displayName||String(id||""),
-    themeFor:id=>identityFor(id)?.themeKey||canonicalId(id),
-    canonicalDefinition:def=>{const id=canonicalId(String(def?.type||""));if(!SET.has(id))throw new Error("Module identity is not registered: "+String(def?.type||"UNKNOWN"));const ident=identityFor(id);return{...def,type:id,displayName:ident.displayName,selectorClass:ident.themeKey};}
+    themeFor:id=>identityFor(id)?.id||canonicalId(id),
+    editorFor:id=>identityFor(id)?.editorUrl||canonicalId(id)+".html",
+    scriptFor:id=>identityFor(id)?.moduleScript||"modules/"+canonicalId(id)+".js",
+    canonicalDefinition:def=>{const id=canonicalId(String(def?.type||""));if(!SET.has(id))throw new Error("Module identity is not registered: "+String(def?.type||"UNKNOWN"));const ident=identityFor(id);return{...def,type:id,displayName:ident.displayName,selectorClass:id,editorUrl:ident.editorUrl};}
   });
   global.MultiSynth=global.MultiSynth||{};
   global.MultiSynth.ModuleIds=api;
