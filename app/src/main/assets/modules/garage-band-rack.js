@@ -20,8 +20,8 @@ function apply(u,s){
 }
 function destroy({runtime}){const u=runtime.user;if(!u)return;for(const n of [u.input,u.low,u.mid,u.high,u.output])try{n.disconnect();}catch(_){}}
 C.define({
-  type:"garageband",displayName:"Garage Band",category:"filter",version:"rack-2-avocado",
-  editorUrl:"garage-band.html",color:"#7f9334",selectorClass:"garageband",
+  type:"garage-band",displayName:"Garage Band",category:"filter",version:"rack-2-avocado",
+  editorUrl:"garage-band.html",color:"#7f9334",selectorClass:"garage-band",
   description:"70S AVOCADO THREE-BAND FILTER · LOW / MID / HIGH",
   defaults:{low:0,mid:0,high:0},create,
   setState({runtime,state}){if(runtime.user?.ctx)apply(runtime.user,state);},
