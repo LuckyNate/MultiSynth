@@ -3,7 +3,7 @@
   const MS=global.MultiSynth=global.MultiSynth||{};
 
   const CONTROL=Object.freeze({
-    KNOB:"knob", DIAL:"dial", FADER:"fader", RIBBON:"ribbon",
+    KNOB:"knob", DIAL:"dial", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", KEY:"key", XY:"xy",
     SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack"
   });
@@ -20,12 +20,15 @@
     BEGIN_AUTOMATION:"beginAutomation", END_AUTOMATION:"endAutomation",
     HOLD_AUTOMATION:"holdAutomation", RESUME_AUTOMATION:"resumeAutomation",
     RESET_VALUE:"resetValue", AUDITION:"audition", SELECT:"select", OPEN_SELECTOR:"openSelector",
-    PAN:"pan", ZOOM:"zoom", ZOOM_TIME:"zoomTime", NOOP:"noop"
+    PAN:"pan", ZOOM:"zoom", ZOOM_TIME:"zoomTime",
+    SCRUB:"scrub", SET_RATE:"setRate", START_TRANSPORT:"startTransport", STOP_TRANSPORT:"stopTransport",
+    NOOP:"noop"
   });
 
   const DEFAULT_GESTURES=Object.freeze({
     [CONTROL.KNOB]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
     [CONTROL.DIAL]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
+    [CONTROL.TURNTABLE]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.FADER]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.RIBBON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.PAD]:Object.freeze([GESTURE.TAP,GESTURE.PRESS]),
