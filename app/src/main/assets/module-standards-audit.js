@@ -6,6 +6,7 @@
  if(!Q)errors.push("state-key registry missing");else for(const key of ["RUNNING","LEVEL","BPM","STEPS","DIV_INPUT"])if(!Q[key])errors.push("shared state key missing "+key);
  if(!D)errors.push("control descriptor registry missing");else for(const type of ["KNOB","TOGGLE","SELECT","RANGE"])if(!D[type])errors.push("control descriptor type missing "+type);
  if(!K)errors.push("capability registry missing");else for(const cap of requiredCaps)if(!K.ALL?.includes(cap))errors.push("capability missing "+cap);
+ const capHas=(meta,flag)=>!!K?.has(meta,flag);
  for(const id of I.ALL){
   const meta=M.get(id);if(!meta){errors.push("manifest missing "+id);continue;}
   const cap=K?.validate(meta.capabilities);if(cap&&!cap.ok)errors.push(id+" unknown capabilities: "+cap.unknown.join(", "));
@@ -20,6 +21,9 @@
    if(def.selectorClass!==meta.themeKey)errors.push(id+" theme not manifest-owned");
    if((def.color??null)!==(meta.color??null))errors.push(id+" color not manifest-owned");
    if(!sameList(def.resources,meta.resources))errors.push(id+" resources not manifest-owned");
+   if((def.noteOn||def.noteOff||def.panic)&&!capHas(meta,K.NOTE_INPUT))errors.push(id+" exposes note handlers without noteInput capability");
+   if(def.cv&&!capHas(meta,K.CV_INPUT))errors.push(id+" exposes CV handler without cvInput capability");
+   if((def.clockTick||def.clockStart||def.clockStop)&&!(capHas(meta,K.CLOCK_SOURCE)||capHas(meta,K.CLOCK_FOLLOWER)))errors.push(id+" exposes clock handlers without clock capability");
   }catch(e){errors.push(id+" not registered in ModuleContract");}
  }
  for(const def of C.listDefinitions())if(!I.has(def.type))errors.push("unregistered module id "+def.type);
