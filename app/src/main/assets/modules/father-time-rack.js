@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const C=global.MultiSynth?.ModuleContract;if(!C)return;
+const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;if(!C||!I)return;
 function defaults(){return{bpm:120,swing:0,running:false,cvTrigger:false}}
 function create(api){const c=api.context,input=c.createGain(),output=c.createGain();input.connect(output);api.setInput(input);api.setOutput(output);return{ctx:c,input,output,state:api.state}}
 function fatherTick(runtime,state,tick,external){
@@ -43,5 +43,5 @@ function setState({runtime,state,patch}){
     }
 }
 function destroy({runtime}){for(const n of [runtime.user?.input,runtime.user?.output])try{n?.disconnect()}catch(_){}}
-C.define({type:"father-time",displayName:"Father Time",category:"clock",version:"rack-clock-11",editorUrl:"rack-module-editor.html",color:"#8d6b45",selectorClass:"father-time",description:"SILENT 4/4 MASTER CLOCK · BPM · SWING · USB-C CV MASTER/SLAVE",defaults:defaults(),resources:["midi","storage"],create,setState,clockTick,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>Object.assign(defaults(),saved||{})})
+C.define({type:I.FATHER_TIME,displayName:"Father Time",category:"clock",version:"rack-clock-11",editorUrl:"rack-module-editor.html",color:"#8d6b45",selectorClass:I.FATHER_TIME,description:"SILENT 4/4 MASTER CLOCK · BPM · SWING · USB-C CV MASTER/SLAVE",defaults:defaults(),resources:["midi","storage"],create,setState,clockTick,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>Object.assign(defaults(),saved||{})})
 })(window);
