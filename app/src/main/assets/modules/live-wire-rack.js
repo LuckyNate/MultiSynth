@@ -1,9 +1,9 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract;
-if(!C)return;
+const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;
+if(!C||!I)return;
 C.define({
- type:"live-wire",displayName:"Live Wire",category:"source",version:"3",color:"#ffd21f",selectorClass:"live-wire",
+ type:I.LIVE_WIRE,displayName:"Live Wire",category:"source",version:"3",color:"#ffd21f",selectorClass:I.LIVE_WIRE,
  description:"YOUTUBE CARRIER · LIVE · VALVE · HOLD TO SAMPLE",editorUrl:"live-wire.html",defaults:{live:false,valve:false},
  create(api){
   const ctx=api.context;if(!ctx)return{};
