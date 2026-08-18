@@ -5,7 +5,7 @@
   const CONTROL=Object.freeze({
     KNOB:"knob", DIAL:"dial", FADER:"fader", RIBBON:"ribbon",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", KEY:"key", XY:"xy",
-    SCREEN:"screen", METER:"meter", LED:"led", JACK:"jack"
+    SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack"
   });
 
   const GESTURE=Object.freeze({
@@ -20,7 +20,7 @@
     BEGIN_AUTOMATION:"beginAutomation", END_AUTOMATION:"endAutomation",
     HOLD_AUTOMATION:"holdAutomation", RESUME_AUTOMATION:"resumeAutomation",
     RESET_VALUE:"resetValue", AUDITION:"audition", SELECT:"select", OPEN_SELECTOR:"openSelector",
-    PAN:"pan", ZOOM:"zoom", NOOP:"noop"
+    PAN:"pan", ZOOM:"zoom", ZOOM_TIME:"zoomTime", NOOP:"noop"
   });
 
   const DEFAULT_GESTURES=Object.freeze({
@@ -34,6 +34,7 @@
     [CONTROL.KEY]:Object.freeze([GESTURE.PRESS,GESTURE.RELEASE]),
     [CONTROL.XY]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.SCREEN]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.DRAG,GESTURE.SWIPE]),
+    [CONTROL.OSCILLOSCOPE]:Object.freeze([GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.METER]:Object.freeze([GESTURE.TAP]),
     [CONTROL.LED]:Object.freeze([GESTURE.TAP]),
     [CONTROL.JACK]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE])
