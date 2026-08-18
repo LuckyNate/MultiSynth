@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract;if(!C)return;const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0)),freq=n=>440*Math.pow(2,(Number(n)-69)/12);
+const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;if(!C||!I)return;const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0)),freq=n=>440*Math.pow(2,(Number(n)-69)/12);
 async function load(u,id){u.grainId=id||"";u.grain=null;u.buffer=null;if(!id||!MS.GrainLibrary)return false;const r=await MS.GrainLibrary.get(id);if(!r?.data?.length)return false;u.grain=r;const b=u.ctx.createBuffer(1,r.data.length,r.sampleRate);b.getChannelData(0).set(r.data instanceof Float32Array?r.data:new Float32Array(r.data));u.buffer=b;for(const v of u.voices.values()){for(const s of v.sources)try{s.stop()}catch(_){}v.sources.clear();v.nextTime=u.ctx.currentTime+.01}return true}
 function voiceLevel(u,v){return clamp(u.state.level??.8,0,1)*(v.velocity/127)}
 function pulseHz(u,v){return Math.max(1,freq(v.note)*Math.pow(2,Number(u.state.octave||0)+Number(u.state.detune||0)/1200))}
@@ -14,5 +14,5 @@ function panic({runtime}){const u=runtime.user;if(!u)return true;for(const v of 
 function setState({runtime,state,patch}){const u=runtime.user;if(!u)return;u.state=state;if("grainId" in patch)load(u,state.grainId).catch(console.error);if("level" in patch)for(const v of u.voices.values())v.gain?.gain.setTargetAtTime(voiceLevel(u,v),u.ctx.currentTime,.01)}
 function cv({runtime,state},packet){if(packet?.kind!=="trigger"||packet.gate===false)return packet;const note=Number.isFinite(Number(packet.note))?Number(packet.note):60,vel=clamp(packet.velocity??127,1,127),ms=clamp(packet.gateMs??100,8,4000);noteOn({runtime,state},note,vel);setTimeout(()=>noteOff({runtime},note),ms);return packet}
 function destroy({runtime}){panic({runtime});try{runtime.user?.output?.disconnect()}catch(_){}}
-C.define({type:"grain-liqour",displayName:"Grain Liqour",category:"generator",version:"grain-carrier-3",editorUrl:"rack-module-editor.html",color:"#c8904d",selectorClass:"grain-liqour",description:"SAVED-GRAIN CARRIER SOURCE · AUDIO-CLOCK GRAIN RETRIGGER",defaults:{grainId:"",level:.8,octave:0,detune:0},resources:["storage"],create,setState,noteOn,noteOff,panic,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>({grainId:"",level:.8,octave:0,detune:0,...(saved||{})})})
+C.define({type:I.GRAIN_LIQOUR,displayName:"Grain Liqour",category:"generator",version:"grain-carrier-3",editorUrl:"rack-module-editor.html",color:"#c8904d",selectorClass:I.GRAIN_LIQOUR,description:"SAVED-GRAIN CARRIER SOURCE · AUDIO-CLOCK GRAIN RETRIGGER",defaults:{grainId:"",level:.8,octave:0,detune:0},resources:["storage"],create,setState,noteOn,noteOff,panic,cv,destroy,serialize:({state})=>({...state}),restore:({saved})=>({grainId:"",level:.8,octave:0,detune:0,...(saved||{})})})
 })(window);
