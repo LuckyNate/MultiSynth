@@ -33,8 +33,11 @@
 <section class="switchRow">
   <button id="randomToggle" class="toggle" type="button" aria-pressed="false"><span>RANDOM</span><b>OFF</b></button>
   <button id="liveToggle" class="toggle" type="button" aria-pressed="false"><span>LIVE</span><b>OFF</b></button>
+  <button id="valveToggle" class="toggle valve" type="button" aria-pressed="true"><span>VALVE</span><b>ON</b></button>
   <button id="next" class="next" type="button">NEXT</button>
 </section>
+<input id="live" type="checkbox" hidden>
+<input id="valve" type="checkbox" hidden checked>
 
 <section class="queuePanel" aria-label="video queue">
   <div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div>
@@ -46,7 +49,7 @@
 
 <div id="status" class="status">READY</div>
 <button id="record" type="button">HOLD TO RECORD</button>
-<div class="note">RELEASE SAVES PCM · LIVE AND RANDOM ARE INDEPENDENT</div>
+<div class="note">RANDOM · LIVE · VALVE ARE INDEPENDENT · RELEASE SAVES PCM</div>
 </main>
 
 <script src="https://www.youtube.com/iframe_api"></script>
