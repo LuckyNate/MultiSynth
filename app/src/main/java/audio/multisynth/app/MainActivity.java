@@ -64,6 +64,7 @@ public final class MainActivity extends Activity {
     private static final String APP_START = "https://" + APP_HOST + APP_PREFIX + "index.html";
 
     private WebView webView;
+    private LiveWireBridge liveWireBridge;
     private MidiManager midiManager;
     private BluetoothAdapter bluetoothAdapter;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -168,6 +169,8 @@ public final class MainActivity extends Activity {
             }
         });
         webView.addJavascriptInterface(new Bridge(), "AndroidMidi");
+        liveWireBridge = new LiveWireBridge(this, webView);
+        webView.addJavascriptInterface(liveWireBridge, "LiveWireAndroid");
     }
 
     private WebResourceResponse localAssetResponse(Uri uri) {
@@ -236,7 +239,7 @@ public final class MainActivity extends Activity {
             if(webView!=null&&webView.canGoBack())webView.goBack();else MainActivity.super.onBackPressed();
         });
     }
-    @Override protected void onDestroy(){stopNativeMic();closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
+    @Override protected void onDestroy(){stopNativeMic();LiveWireProjectionService.stop(this);closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){if(liveWireBridge!=null){liveWireBridge.destroy();liveWireBridge=null;}webView.removeJavascriptInterface("LiveWireAndroid");webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
 
     private static final class Choice{final MidiDeviceInfo info;final int port;final BluetoothDevice bluetooth;final String label;private Choice(MidiDeviceInfo i,int p,BluetoothDevice b,String l){info=i;port=p;bluetooth=b;label=l;}static Choice port(MidiDeviceInfo i,int p,String l){return new Choice(i,p,null,l);}static Choice bluetooth(BluetoothDevice b,String l){return new Choice(null,-1,b,l);}}
 }
