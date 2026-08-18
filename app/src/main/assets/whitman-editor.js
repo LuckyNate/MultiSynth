@@ -10,9 +10,9 @@ const toggle=(sec,id,label)=>U.toggle(sec,{value:!!state[id],label,onChange:v=>p
 const transport=group("SAMPLER");
 U.hold(transport,{idleText:"HOLD TO RECORD RACK INPUT",activeText:"RECORDING RACK — RELEASE",onDown:()=>patch({recording:true}),onUp:()=>patch({recording:false})});
 toggle(transport,"running","SEQUENCER RUN");toggle(transport,"previewPlaying","PLAY SELECTED");toggle(transport,"cvTrigger","CV TRIGGER");range(transport,"bpm","BPM",30,300,1);range(transport,"steps","LENGTH",1,32,1);
-const bank=group("16 SAMPLE PADS"),pads=document.createElement("div");pads.className="samplePads";bank.appendChild(pads);
 const library=group("PCM LIBRARY"),libraryScreen=document.createElement("div");libraryScreen.className="pcmLibraryScreen";library.appendChild(libraryScreen);const refresh=document.createElement("button");refresh.textContent="REFRESH LIBRARY";library.appendChild(refresh);
 const paramsGroup=group("SELECTED SAMPLE"),params=document.createElement("div");paramsGroup.appendChild(params);
+const bank=group("16 SAMPLE PADS"),pads=document.createElement("div");pads.className="samplePads";bank.appendChild(pads);
 const stepsGroup=group("32 STEPS");
 let previewSource=null;
 function selected(){return Math.max(0,Math.min(15,Number(state.selectedSample)||0))}
