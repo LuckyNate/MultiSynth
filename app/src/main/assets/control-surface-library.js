@@ -3,7 +3,7 @@
   const MS=global.MultiSynth=global.MultiSynth||{};
 
   const CONTROL=Object.freeze({
-    KNOB:"knob", DIAL:"dial", WHEEL:"wheel", FADER:"fader", RIBBON:"ribbon",
+    KNOB:"knob", DIAL:"dial", FADER:"fader", RIBBON:"ribbon",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", KEY:"key", XY:"xy",
     SCREEN:"screen", METER:"meter", LED:"led", JACK:"jack"
   });
@@ -23,11 +23,9 @@
     PAN:"pan", ZOOM:"zoom", NOOP:"noop"
   });
 
-  // Recommended interaction vocabulary for each control. These are defaults, not hard limits.
   const DEFAULT_GESTURES=Object.freeze({
     [CONTROL.KNOB]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
     [CONTROL.DIAL]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
-    [CONTROL.WHEEL]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.FADER]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.RIBBON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.PAD]:Object.freeze([GESTURE.TAP,GESTURE.PRESS]),
