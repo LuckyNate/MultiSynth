@@ -1,11 +1,12 @@
 /* Shared hard stop against controls/text escaping instrument panels on phone screens. */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
-body,main,header,section,footer,form,nav,aside,div,label{min-width:0;max-width:100%}
+main{min-width:0;max-width:100%}
 button,input,select,textarea,canvas,svg,img{max-width:100%;box-sizing:border-box}
-button,input,select,textarea{min-width:0}
+input,select,textarea{min-width:0}
 h1,h2,h3,p,strong,small,span,label,output,button{overflow-wrap:anywhere;word-break:break-word}
 .deviceScreen,.pcmTouchscreen,.screen,.ward,.library,.controls,.controlGroup,.group,.row,.screenRow,.sample,.libItem,.libraryBar,.selectedReadout,.mapperBar,.mapperParam,.queueCell,.seekCopy{min-width:0;max-width:100%}
 .deviceScreen>*,.pcmTouchscreen>*,.screenRow>*,.libItem>*,.sample>*,.row>*,.group>*,.controls>*,.selectedReadout>*,.mapperBar>*,.mapperParam>*,.queueCell>*{min-width:0;max-width:100%}
 .screenSample strong,.screenSample small,.sample strong,.sample small,.libItem strong,.libItem small,.selectedReadout strong,.mapperBar strong,.mapperParam strong,.queueCell strong{white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 input[type=text],input[type=search],input[type=number],input[type=range],select,textarea{width:100%}
-@media(max-width:700px){button{min-width:0!important}.choiceBank,.fileButtons,.toolRow,.buttons{max-width:100%}.screenRow{grid-template-columns:minmax(0,1fr) auto}.screenSample{grid-column:1/-1}.deviceKnob{max-width:min(100%,96px)}}
+.deviceScreen button,.pcmTouchscreen button,.group button,.controls button,.toolRow button,.buttons button,.library button,.mapper button,.switchRow button,.searchStrip button{min-width:0;max-width:100%}
+@media(max-width:700px){.choiceBank,.fileButtons,.toolRow,.buttons{max-width:100%}.screenRow{grid-template-columns:minmax(0,1fr) auto}.screenSample{grid-column:1/-1}.deviceKnob{max-width:min(100%,96px)}}
