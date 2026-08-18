@@ -11,6 +11,7 @@ android {
     val signingAlias = System.getenv("MULTISYNTH_KEY_ALIAS")
     val signingKeyPassword = System.getenv("MULTISYNTH_KEY_PASSWORD")
     val hasCiSigning = listOf(signingStore, signingStorePassword, signingAlias, signingKeyPassword).all { !it.isNullOrBlank() }
+    // Live Wire public-video discovery key is injected by GitHub Actions at build time.
     val youtubeApiKey = (System.getenv("YOUTUBE_API_KEY") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
 
     if (hasCiSigning) {
