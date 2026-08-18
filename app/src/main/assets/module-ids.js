@@ -29,15 +29,25 @@
     TAPEWORM:"tapeworm",
     TAIL_GATOR:"tail-gator"
   });
+  const NAMES=Object.freeze({
+    "Live Wire":IDS.LIVE_WIRE,"Beat Red":IDS.BEAT_RED,"Father Time":IDS.FATHER_TIME,Whitman:IDS.WHITMAN,"Time Divider":IDS.TIME_DIVIDER,
+    "The Chopper":IDS.THE_CHOPPER,"Sample Surgery":IDS.SAMPLE_SURGERY,"Sample Library":IDS.SAMPLE_LIBRARY,"Big Deal":IDS.BIG_DEAL,"Grain Liqour":IDS.GRAIN_LIQOUR,
+    "Been Served":IDS.BEEN_SERVED,"Garage Band":IDS.GARAGE_BAND,"Master of Levels":IDS.MASTER_OF_LEVELS,"Denzel's Equalizer":IDS.DENZELS_EQUALIZER,"Echo Canyon":IDS.ECHO_CANYON,
+    "Control Freak":IDS.CONTROL_FREAK,PureSynth:IDS.PURE_SYNTH,QuadSynth:IDS.QUAD_SYNTH,Pulsynth:IDS.PULSYNTH,SinLadder:IDS.SIN_LADDER,Razorback:IDS.RAZORBACK,
+    Stinger:IDS.STINGER,"No Quarter":IDS.NO_QUARTER,Randrone:IDS.RANDRONE,Hookworm:IDS.HOOKWORM,Tapeworm:IDS.TAPEWORM,"Tail Gator":IDS.TAIL_GATOR
+  });
   const VALUES=Object.freeze(Object.values(IDS));
   const SET=new Set(VALUES);
   const api=Object.freeze({
     ...IDS,
     ALL:VALUES,
+    BY_DISPLAY_NAME:NAMES,
     has:id=>SET.has(String(id||"")),
     is:(id,key)=>String(id||"")===IDS[key],
     any:(id,keys)=>Array.isArray(keys)&&keys.some(k=>String(id||"")===IDS[k]),
-    require:key=>{const id=IDS[key];if(!id)throw new Error("Unknown module identity key: "+key);return id;}
+    require:key=>{const id=IDS[key];if(!id)throw new Error("Unknown module identity key: "+key);return id;},
+    forDisplayName:name=>NAMES[String(name||"")]||null,
+    canonicalDefinition:def=>{const id=NAMES[String(def?.displayName||"")]||String(def?.type||"");if(!SET.has(id))throw new Error("Module identity is not registered: "+String(def?.displayName||def?.type||"UNKNOWN"));return{...def,type:id,selectorClass:id};}
   });
   global.MultiSynth=global.MultiSynth||{};
   global.MultiSynth.ModuleIds=api;
