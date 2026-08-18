@@ -23,17 +23,21 @@ public final class LiveWireProjectionService extends Service {
     private static final String CHANNEL = "live-wire-capture";
     private static final int NOTIFICATION_ID = 4701;
     private static volatile boolean active;
+    private static volatile boolean desiredValve;
 
     private final LiveWireCapture capture = new LiveWireCapture();
 
     static boolean isActive() { return active; }
 
     static void stop(Context context) {
+        if (!active) return;
         try { context.startService(new Intent(context, LiveWireProjectionService.class).setAction(ACTION_STOP)); }
         catch (Exception ignored) {}
     }
 
     static void setValve(Context context, boolean open) {
+        desiredValve = open;
+        if (!active) return;
         try { context.startService(new Intent(context, LiveWireProjectionService.class).setAction(ACTION_VALVE).putExtra(EXTRA_VALVE, open)); }
         catch (Exception ignored) {}
     }
@@ -54,7 +58,8 @@ public final class LiveWireProjectionService extends Service {
             return START_NOT_STICKY;
         }
         if (ACTION_VALVE.equals(action)) {
-            capture.setValve(intent.getBooleanExtra(EXTRA_VALVE, false));
+            desiredValve = intent.getBooleanExtra(EXTRA_VALVE, false);
+            capture.setValve(desiredValve);
             return START_NOT_STICKY;
         }
         if (!ACTION_START.equals(action)) return START_NOT_STICKY;
@@ -74,6 +79,7 @@ public final class LiveWireProjectionService extends Service {
             MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
             MediaProjection projection = manager.getMediaProjection(resultCode, resultData);
             active = capture.start(this, projection);
+            capture.setValve(desiredValve);
             if (!active) stopSelf();
         } catch (Exception e) {
             active = false;
