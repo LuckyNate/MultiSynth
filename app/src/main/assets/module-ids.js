@@ -47,16 +47,12 @@
   const norm=v=>String(v||"").trim().toLowerCase().replace(/[_\s]+/g,"-");
   const NORMALIZED_IDS=new Map(VALUES.map(v=>[norm(v),v]));
   const NORMALIZED_NAMES=new Map(Object.entries(NAMES).map(([name,id])=>[norm(name),id]));
-  const LEGACY_SAVED_ALIASES=Object.freeze({"sample-chopper":IDS.THE_CHOPPER});
   const canonicalId=value=>{const raw=String(value||"");if(SET.has(raw))return raw;const n=norm(raw);return NORMALIZED_IDS.get(n)||NORMALIZED_NAMES.get(n)||raw;};
-  const migrateSavedId=value=>{const raw=String(value||"");const n=norm(raw);return LEGACY_SAVED_ALIASES[n]||canonicalId(raw);};
   const api=Object.freeze({
     ...IDS,
     ALL:VALUES,
     BY_DISPLAY_NAME:NAMES,
-    LEGACY_SAVED_ALIASES,
     canonicalId,
-    migrateSavedId,
     has:id=>SET.has(canonicalId(id)),
     is:(id,key)=>canonicalId(id)===IDS[key],
     any:(id,keys)=>Array.isArray(keys)&&keys.some(k=>canonicalId(id)===IDS[k]),
