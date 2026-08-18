@@ -2,7 +2,7 @@
 (function(global){
 const MS=global.MultiSynth||{};const I=MS.ModuleIds,E=MS.RackEngine,B=MS.RackBuilder,C=MS.ModuleContract,A=MS.RackAudioGraph,V=MS.Events;
 const STORAGE="multisynth.rack.project.v1";
-const grid=document.getElementById("rackGrid"),rackList=document.getElementById("rackList"),cascadePanel=document.getElementById("cascadePanel"),cascadeList=document.getElementById("cascadeList"),cascadeTitle=document.getElementById("cascadeTitle"),neighborhoodText=document.getElementById("neighborhoodText"),toast=document.getElementById("toast"),chooser=document.getElementById("moduleChooser"),choices=document.getElementById("moduleChoices"),keyboard=document.getElementById("keyboardKeys"),editor=document.getElementById("moduleEditor"),editorFrame=document.getElementById("moduleEditorFrame"),editorTitle=document.getElementById("editorTitle");
+const grid=document.getElementById("rackGrid"),rackList=document.getElementById("rackList"),cascadePanel=document.getElementById("cascadePanel"),cascadeList=document.getElementById("cascadeList"),cascadeTitle=document.getElementById("cascadeTitle"),neighborhoodText=document.getElementById("neighborhoodText"),toast=document.getElementById("toast"),chooser=document.getElementById("moduleChooser"),choices=document.getElementById("moduleChoices"),keyboard=document.getElementById("keyboardKeys"),editor=document.getElementById("moduleEditor"),editorFrame=document.getElementById("moduleEditorFrame"),editorTitle=document.getElementById("moduleEditorTitle");
 let selected=null,audioStarted=false,restoring=true,editing=null;
 const FRONTIER_RADIUS=2;
 function persist(){if(restoring)return;try{localStorage.setItem(STORAGE,E.serialize({selectedRack:selected,at:Date.now()}));}catch(e){console.error("Rack persistence",e);}}
