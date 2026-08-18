@@ -8,17 +8,21 @@
  if(!K)errors.push("capability registry missing");else for(const cap of requiredCaps)if(!K.ALL?.includes(cap))errors.push("capability missing "+cap);
  const capHas=(meta,flag)=>!!K?.has(meta,flag);
  for(const id of I.ALL){
+  const ident=I.identityFor(id);if(!ident){errors.push("identity catalog missing "+id);continue;}
   const meta=M.get(id);if(!meta){errors.push("manifest missing "+id);continue;}
+  if(meta.id!==ident.id)errors.push(id+" manifest id not identity-owned");
+  if(meta.displayName!==ident.displayName)errors.push(id+" manifest displayName not identity-owned");
+  if(meta.themeKey!==ident.themeKey)errors.push(id+" manifest theme not identity-owned");
   const cap=K?.validate(meta.capabilities);if(cap&&!cap.ok)errors.push(id+" unknown capabilities: "+cap.unknown.join(", "));
   if(!S?.declared||!Object.prototype.hasOwnProperty.call(S.declared,id))errors.push(id+" missing explicit state schema declaration");
   else if(!S.versionFor(id))errors.push(id+" invalid state schema version");
   if(meta.editorUrl&&!/\.html(?:$|[?#])/.test(meta.editorUrl))errors.push(id+" invalid editor URL "+meta.editorUrl);
   try{
    const def=C.getDefinition(id);
-   if(def.displayName!==meta.displayName)errors.push(id+" displayName not manifest-owned");
+   if(def.displayName!==ident.displayName)errors.push(id+" definition displayName not identity-owned");
    if(def.category!==meta.category)errors.push(id+" category not manifest-owned");
    if(def.editorUrl!==meta.editorUrl)errors.push(id+" editorUrl not manifest-owned");
-   if(def.selectorClass!==meta.themeKey)errors.push(id+" theme not manifest-owned");
+   if(def.selectorClass!==ident.themeKey)errors.push(id+" definition theme not identity-owned");
    if((def.color??null)!==(meta.color??null))errors.push(id+" color not manifest-owned");
    if(!sameList(def.resources,meta.resources))errors.push(id+" resources not manifest-owned");
    if((def.noteOn||def.noteOff||def.panic)&&!capHas(meta,K.NOTE_INPUT))errors.push(id+" exposes note handlers without noteInput capability");
@@ -28,6 +32,6 @@
  }
  for(const def of C.listDefinitions())if(!I.has(def.type))errors.push("unregistered module id "+def.type);
  const report=Object.freeze({ok:errors.length===0,errors:Object.freeze(errors),warnings:Object.freeze(warnings),checked:I.ALL.length});
- MS.ModuleStandards=Object.freeze({report,metadata:id=>M.require(id),definition:id=>C.getDefinition(id),describe:id=>Object.freeze({metadata:M.require(id),definition:C.getDefinition(id),stateSchemaVersion:S?.versionFor(id,1)||1})});
+ MS.ModuleStandards=Object.freeze({report,metadata:id=>M.require(id),identity:id=>I.identityFor(id),definition:id=>C.getDefinition(id),describe:id=>Object.freeze({identity:I.identityFor(id),metadata:M.require(id),definition:C.getDefinition(id),stateSchemaVersion:S?.versionFor(id,1)||1})});
  if(errors.length)console.error("MultiSynth standards audit",report);else if(warnings.length)console.warn("MultiSynth standards audit",report);
 })(window);
