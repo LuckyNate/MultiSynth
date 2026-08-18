@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const C=global.MultiSynth?.ModuleContract;if(!C)return;
+const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;if(!C||!I)return;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
 function create(api){
   const c=api.context,input=c.createGain(),normalizer=c.createDynamicsCompressor(),lift=c.createGain(),output=c.createGain();
@@ -25,13 +25,13 @@ function apply(u,s){
 }
 function destroy({runtime}){const u=runtime.user;if(!u)return;for(const n of [u.input,u.normalizer,u.lift,u.output])try{n.disconnect();}catch(_){}}
 C.define({
-  type:"tail-gator",
+  type:I.TAIL_GATOR,
   displayName:"Tail Gator",
   category:"output",
   version:"tail-gator-2",
   editorUrl:"tail-gator.html",
   color:"#667b2f",
-  selectorClass:"tail-gator",
+  selectorClass:I.TAIL_GATOR,
   description:"TERMINAL CAR / EXTERNAL OUTPUT · NORMALIZED PARTY LEVEL",
   defaults:{armed:false,sinkId:"",normalize:true,tailLift:160},
   create,
