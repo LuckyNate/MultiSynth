@@ -7,7 +7,7 @@
   api.define=def=>{
     const canonical=I.canonicalDefinition(def),meta=M?.get(canonical.type);
     if(!meta)return base.define(canonical);
-    return base.define({...canonical,displayName:meta.displayName,category:meta.category,color:meta.color??canonical.color,selectorClass:meta.themeKey||canonical.selectorClass,editorUrl:meta.editorUrl??canonical.editorUrl,resources:meta.resources?.length?Array.from(meta.resources):canonical.resources});
+    return base.define({...canonical,displayName:meta.displayName,category:meta.category,color:meta.color??canonical.color,selectorClass:meta.themeKey||canonical.selectorClass,editorUrl:meta.editorUrl??canonical.editorUrl,resources:Array.from(meta.resources||[])});
   };
   MS.ModuleContract=Object.freeze(api);
 })(window);
