@@ -40,6 +40,8 @@ jobs:
           echo "MULTISYNTH_KEY_PASSWORD=$MULTISYNTH_KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - run: gradle assembleDebug --stacktrace
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
       - name: Rename APK with build number
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MultiSynth-build-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
