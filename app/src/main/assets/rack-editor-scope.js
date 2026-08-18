@@ -5,7 +5,7 @@ const C=global.MultiSynth?.ModuleContract;
 if(!frame||!C)return;
 let cleanup=null;
 function stop(){if(cleanup){try{cleanup();}catch(_){}cleanup=null;}}
-function mappedColor(type){return type==="randrone"?"#e5ff70":type==="hookworm"?"#e98232":type==="tapeworm"?"#fff4ef":type==="stinger"?"#ffe64a":type==="razorback"?"#ff3d42":type==="pulsynth"?"#58ff78":type==="sinladder"?"#36eaff":type==="noquarter"?"#77a4ff":type==="quadsynth"?"#ffb000":"#e9e9e9";}
+function mappedColor(type){return type==="randrone"?"#e5ff70":type==="hookworm"?"#e98232":type==="tapeworm"?"#fff4ef":type==="stinger"?"#ffe64a":type==="razorback"?"#ff3d42":type==="pulsynth"?"#58ff78":type==="sinladder"?"#36eaff":type==="no-quarter"?"#77a4ff":type==="quadsynth"?"#ffb000":"#e9e9e9";}
 function attach(){
  stop();
  let doc,win;try{doc=frame.contentDocument;win=frame.contentWindow;}catch(_){return;}if(!doc||!win)return;
