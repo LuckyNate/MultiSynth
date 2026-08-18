@@ -1,2 +1,0 @@
-"use strict";
-(()=>{const ids=["pre","gain","overdrive","level"],fmt=(id,v)=>id==="overdrive"?Math.round(v*100)+"%":Number(v).toFixed(2)+"×";for(const id of ids){const el=document.getElementById(id),out=document.getElementById(id+"Value");if(!el)continue;const sync=()=>{if(out)out.value=fmt(id,el.value)};el.addEventListener("input",sync);sync();}})();
