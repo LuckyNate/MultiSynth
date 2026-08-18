@@ -13,48 +13,13 @@
   <div class="brand"><small>MULTISYNTH SOURCE MODULE</small><h1>LIVE WIRE</h1></div>
   <div id="lamp" class="lamp" aria-label="signal lamp"></div>
 </header>
-
-<section class="crtShell" aria-label="Live Wire CRT">
-  <div class="crtBezel">
-    <div class="crtGlass">
-      <div id="player"></div>
-      <div class="scanlines"></div>
-      <div class="crtShade"></div>
-      <div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>SEARCH OR RANDOM</small></div>
-    </div>
-  </div>
-  <div class="crtBadge">LW-5 VIDEO RECEIVER</div>
-</section>
-
-<form id="searchForm" class="searchStrip" autocomplete="off">
-  <input id="search" type="search" inputmode="search" placeholder="SEARCH" aria-label="Search YouTube">
-</form>
-
-<section class="switchRow">
-  <button id="randomToggle" class="toggle" type="button" aria-pressed="false"><span>RANDOM</span><b>OFF</b></button>
-  <button id="liveToggle" class="toggle" type="button" aria-pressed="false"><span>LIVE</span><b>OFF</b></button>
-  <button id="valveToggle" class="toggle valve" type="button" aria-pressed="false"><span>VALVE</span><b>OFF</b></button>
-  <button id="next" class="next" type="button">NEXT</button>
-</section>
-<input id="live" type="checkbox" hidden>
-<input id="valve" type="checkbox" hidden>
-
-<section class="queuePanel" aria-label="video queue">
-  <div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div>
-  <div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div>
-  <div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div>
-  <div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div>
-  <div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div>
-</section>
-
-<div id="status" class="status">READY</div>
-<button id="record" type="button">HOLD TO RECORD</button>
-<div class="note">RANDOM · LIVE · VALVE ARE INDEPENDENT · RELEASE SAVES PCM</div>
+<section class="crtShell" aria-label="Live Wire CRT"><div class="crtBezel"><div class="crtGlass"><div id="player"></div><div class="scanlines"></div><div class="crtShade"></div><div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>SEARCH OR RANDOM</small></div></div></div><div class="crtBadge">LW-5 VIDEO RECEIVER</div></section>
+<form id="searchForm" class="searchStrip" autocomplete="off"><input id="search" type="search" inputmode="search" placeholder="SEARCH" aria-label="Search YouTube"></form>
+<section class="seekPanel" aria-label="precision seek"><div class="seekCopy"><small>PRECISION SEEK</small><strong id="seekReadout">0:00 / 0:00</strong><span>DRAG · 1 SECOND STEPS · TAP DIAL TO RESUME</span></div><button id="seekDial" class="seekDial" type="button" aria-label="Precision seek dial"><i></i><b id="seekValue">0</b></button></section>
+<section class="switchRow"><button id="randomToggle" class="toggle" type="button" aria-pressed="false"><span>RANDOM</span><b>OFF</b></button><button id="liveToggle" class="toggle" type="button" aria-pressed="false"><span>LIVE</span><b>OFF</b></button><button id="valveToggle" class="toggle valve" type="button" aria-pressed="false"><span>VALVE</span><b>OFF</b></button><button id="next" class="next" type="button">NEXT</button></section>
+<input id="live" type="checkbox" hidden><input id="valve" type="checkbox" hidden>
+<section class="queuePanel" aria-label="video queue"><div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div><div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div><div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div><div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div><div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div></section>
+<div id="status" class="status">READY</div><button id="record" type="button">HOLD TO RECORD</button><div class="note">RANDOM · LIVE · VALVE ARE INDEPENDENT · RELEASE SAVES PCM</div>
 </main>
-
-<script src="https://www.youtube.com/iframe_api"></script>
-<script src="pcm-library.js"></script>
-<script src="native-live-wire.js"></script>
-<script src="live-wire.js"></script>
-</body>
-</html>
+<script src="https://www.youtube.com/iframe_api"></script><script src="pcm-library.js"></script><script src="native-live-wire.js"></script><script src="live-wire.js"></script>
+</body></html>
