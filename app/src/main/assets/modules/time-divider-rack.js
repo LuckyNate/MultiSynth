@@ -1,5 +1,5 @@
 "use strict";
-(function(global){const C=global.MultiSynth?.ModuleContract,S=global.MultiSynth?.RackStandard;if(!C||!S)return;
+(function(global){const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,S=MS.RackStandard;if(!C||!I||!S)return;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
 const defaults=()=>({division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"});
 function drum(u,t){const c=u.ctx,o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter(),now=Math.max(c.currentTime,Number(t)||c.currentTime),d=Math.max(.025,clamp(u.state.decay,25,1500)/1000);o.type="triangle";o.frequency.setValueAtTime(clamp(u.state.pitch,30,800),now);o.frequency.exponentialRampToValueAtTime(Math.max(25,clamp(u.state.pitch,30,800)*.45),now+d);f.type="lowpass";f.frequency.value=300+clamp(u.state.tone,0,100)*90;g.gain.setValueAtTime(Math.max(.0001,clamp(u.state.level,0,100)/100),now);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(f).connect(g).connect(u.voice);o.start(now);o.stop(now+d+.03)}
@@ -11,5 +11,5 @@ function create(api){const c=api.context,input=c.createGain(),voice=c.createGain
 function setState({runtime,state,patch}){const u=runtime.user;if(!u)return;u.state=state;if("pcmKey" in patch)load(u,state.pcmKey)}
 function cv({runtime},packet){const u=runtime.user;if(packet?.kind==="trigger"&&u)divide(u,packet);return packet}
 function destroy({runtime}){const u=runtime.user;if(!u)return;for(const n of [u.input,u.voice,u.mix,u.output])try{n.disconnect()}catch(_){}}
-C.define({type:"time-divider",displayName:"Time Divider",category:"rhythm",version:"1",editorUrl:"rack-module-editor.html",color:"#c98bff",selectorClass:"time-divider",description:"PRIVATE DIV CLOCK · RANDOM ONE-SOUND RHYTHM · CV PASSES UNCHANGED",defaults:defaults(),resources:["storage"],create,setState,cv,destroy});
+C.define({type:I.TIME_DIVIDER,displayName:"Time Divider",category:"rhythm",version:"1",editorUrl:"rack-module-editor.html",color:"#c98bff",selectorClass:I.TIME_DIVIDER,description:"PRIVATE DIV CLOCK · RANDOM ONE-SOUND RHYTHM · CV PASSES UNCHANGED",defaults:defaults(),resources:["storage"],create,setState,cv,destroy});
 })(window);
