@@ -17,7 +17,7 @@ function metaFor(m){try{return M()?.get(m.type)||null}catch(_){return null}}
 function hasCap(m,flag){const meta=metaFor(m),caps=K();return !!(meta&&caps?.has(meta,flag))}
 function clockAware(m){const caps=K();return hasCap(m,caps?.CLOCK_SOURCE)||hasCap(m,caps?.CLOCK_FOLLOWER)}
 function orderedModules(g){const out=[];for(const r of [...g.racks].sort((a,b)=>a.row-b.row||a.col-b.col))for(let i=0;i<r.modules.length;i++){const m=r.modules[i];if(m.enabled===false)continue;const d=defFor(m);if(!d)continue;out.push({rack:r,module:m,def:d,index:i})}return out}
-function clockCandidates(g){const caps=K(),all=orderedModules(g),dedicated=all.filter(x=>hasCap(x.module,caps?.CLOCK_SOURCE)&&x.module.state?.running===true);if(dedicated.length)return dedicated;return all.filter(x=>hasCap(x.module,caps?.CLOCK_SOURCE)&&x.module.state?.running===true)}
+function clockCandidates(g){const caps=K(),all=orderedModules(g);return all.filter(x=>hasCap(x.module,caps?.CLOCK_SOURCE)&&(x.module.type===MS.ModuleIds?.TIME_BANDITS||x.module.state?.running===true))}
 function descendants(g,rid){const s=new Set([rid]),q=[rid];while(q.length){const x=q.shift();for(const e of g.edges)if(e.from===x&&!s.has(e.to)){s.add(e.to);q.push(e.to)}}return s}
 function chooseClock(g){const c=clockCandidates(g);return c.length?c[0]:null}
 function makeClockPlan(g,masterInfo){if(!masterInfo)return null;const scope=descendants(g,masterInfo.rack.id),targets=[];for(const r of g.racks)if(scope.has(r.id))for(const m of r.modules)if(m.enabled!==false&&clockAware(m))targets.push({rack:r,module:m});return{targets}}
