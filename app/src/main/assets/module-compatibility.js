@@ -1,11 +1,12 @@
 "use strict";
 (function(global){
- const MS=global.MultiSynth=global.MultiSynth||{};
+ const MS=global.MultiSynth=global.MultiSynth||{},PROJECT="multisynth.rack.project.v1";
  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
  const replacements=new Map([
   ["time-divider",Object.freeze({to:"time-bandits",mapState(state={}){const keep=["bpm","division","probability","pitch","decay","tone","level","pcmKey","sampleName"],out={};for(const k of keep)if(Object.prototype.hasOwnProperty.call(state,k))out[k]=clone(state[k]);return out;}})]
  ]);
  function resolve(type,state={}){const from=MS.ModuleIds?.canonicalId?.(type)||String(type||""),rule=replacements.get(from);if(!rule)return{type:from,state:clone(state),replaced:false,from,to:from};const to=MS.ModuleIds?.canonicalId?.(rule.to)||rule.to;return{type:to,state:rule.mapState?rule.mapState(state):clone(state),replaced:true,from,to};}
  function isRetired(type){const id=MS.ModuleIds?.canonicalId?.(type)||String(type||"");return replacements.has(id)}
- MS.ModuleCompatibility=Object.freeze({resolve,isRetired,replacements:Object.freeze([...replacements.keys()])});
+ function repairSavedProject(){let raw;try{raw=localStorage.getItem(PROJECT)}catch(_){return{changed:false,replaced:0,removed:0}}if(!raw)return{changed:false,replaced:0,removed:0};let data;try{data=JSON.parse(raw)}catch(_){return{changed:false,replaced:0,removed:0}}if(data?.format!=="multisynth-spatial-rack"||!Array.isArray(data.racks))return{changed:false,replaced:0,removed:0};let changed=false,replaced=0,removed=0;const contract=MS.ModuleContract;for(const rack of data.racks){if(!Array.isArray(rack.modules)){rack.modules=[];changed=true;continue}const next=[];for(const saved of rack.modules){const r=resolve(saved?.type||saved?.displayName,saved?.state||{});let valid=true;try{contract?.getDefinition?.(r.type)}catch(_){valid=false}if(!valid){removed++;changed=true;continue}const out={...saved,type:r.type,state:r.state};if(r.replaced){delete out.displayName;delete out.category;delete out.kind;delete out.version;delete out.stateSchemaVersion;replaced++;changed=true}next.push(out)}if(next.length!==rack.modules.length)changed=true;rack.modules=next}if(changed)try{localStorage.setItem(PROJECT,JSON.stringify(data))}catch(e){console.error("Module compatibility save",e)}const report={changed,replaced,removed};MS.lastCompatibilityRepair=Object.freeze(report);if(changed)console.info("MultiSynth compatibility repair",report);return report}
+ MS.ModuleCompatibility=Object.freeze({resolve,isRetired,repairSavedProject,replacements:Object.freeze([...replacements.keys()])});
 })(window);
