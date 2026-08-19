@@ -13,7 +13,9 @@ function divide(u,p={}){const n=[1,2,4,8,16,32].includes(Number(u.state.division
 function internalTick(u){if(performance.now()<u.externalUntil)return;const c=u.ctx,span=60/bpm(u),now=c.currentTime;if(u.nextInternalAt==null||u.nextInternalAt<now-.05)u.nextInternalAt=now+.01;while(u.nextInternalAt<=now+.08){divide(u,{kind:"internal-clock",source:u.id,time:u.nextInternalAt,period:span,bpm:bpm(u)});u.nextInternalAt+=span}}
 function create(api){const c=api.context,input=c.createGain(),voice=c.createGain(),mix=c.createGain(),output=c.createGain();input.connect(mix);voice.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,lastTime:null,period:null,sampleBuffer:null,onDiv:null,externalUntil:0,nextInternalAt:null,timer:null};u.onDiv=p=>{markExternal(u,p);return divide(u,p)};u.timer=setInterval(()=>internalTick(u),25);if(api.state.pcmKey)load(u,api.state.pcmKey);return u}
 function setState({runtime,state,patch}){const u=runtime.user;if(!u)return;u.state=state;if("bpm" in patch)u.nextInternalAt=null;if("pcmKey" in patch)load(u,state.pcmKey)}
+function clockStart({runtime}){const u=runtime.user;if(!u)return;u.externalUntil=0;u.nextInternalAt=null}
+function clockStop({runtime}){const u=runtime.user;if(!u)return;u.nextInternalAt=null}
 function cv({runtime},packet){const u=runtime.user;if(packet?.kind==="trigger"&&u){markExternal(u,packet);divide(u,packet)}return packet}
 function destroy({runtime}){const u=runtime.user;if(!u)return;if(u.timer)clearInterval(u.timer);for(const n of [u.input,u.voice,u.mix,u.output])try{n.disconnect()}catch(_){}}
-C.define({type:I.TIME_BANDITS,version:"2",description:"MODULE BUILDER CLOCK · INTERNAL BPM FALLBACK · EXTERNAL CV/DIV PRIORITY",defaults:defaults(),resources:["storage"],create,setState,cv,destroy,moduleBuilder:model});
+C.define({type:I.TIME_BANDITS,version:"2",description:"MODULE BUILDER CLOCK · INTERNAL BPM FALLBACK · EXTERNAL CV/DIV PRIORITY",defaults:defaults(),resources:["storage"],create,setState,clockStart,clockStop,cv,destroy,moduleBuilder:model});
 })(window);
