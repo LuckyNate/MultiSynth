@@ -8,7 +8,7 @@
     [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput","midi"],["midi","storage"]),
     [I.WHITMAN]:row(I.WHITMAN,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockFollower","cvInput","pcm","mic"],["pcm","mic","storage"]),
     [I.TIME_DIVIDER]:row(I.TIME_DIVIDER,"clock","#7b78d4",["audioInput","audioOutput","clockFollower","divInput","cvInput","cvOutput"],[]),
-    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"clock","#c89b52",["audioInput","audioOutput","clockFollower","divInput","cvInput","cvOutput"],[]),
+    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"clock","#c89b52",["audioInput","audioOutput","clockSource","clockFollower","divInput","cvInput","cvOutput"],[]),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
     [I.SAMPLE_SURGERY]:row(I.SAMPLE_SURGERY,"utility","#7fc9b2",["pcm"],["pcm","storage"]),
     [I.SAMPLE_LIBRARY]:row(I.SAMPLE_LIBRARY,"utility","#c8b57a",["pcm"],["pcm","storage"]),
