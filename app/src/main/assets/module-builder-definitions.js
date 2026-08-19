@@ -22,7 +22,8 @@
       {id:"decay",control:"knob",state:"decay",label:"DECAY",value:{default:180,min:25,max:1500,step:5},meta:{unit:"ms"},node:"controller.decay"},
       {id:"tone",control:"knob",state:"tone",label:"TONE",value:{default:55,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.tone"},
       {id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:75,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.level"},
-      {id:"soundSource",control:"screen",state:"pcmKey",label:"SOUND SOURCE",node:"controller.soundSource"}
+      {id:"soundSource",control:"screen",state:"pcmKey",label:"SOUND SOURCE",node:"controller.soundSource"},
+      {id:"pilferSample",control:"button",label:"PILFER SAMPLE",node:"controller.pilferSample"}
     ],
     sources:[
       {id:"source.internalClock",type:"clock",mode:"fallback",state:"bpm"},
@@ -38,7 +39,8 @@
       {id:"action.setDecay",type:"setState",state:"decay"},
       {id:"action.setTone",type:"setState",state:"tone"},
       {id:"action.setLevel",type:"setState",state:"level"},
-      {id:"action.selectPcm",type:"setState",state:"pcmKey"}
+      {id:"action.selectPcm",type:"setState",state:"pcmKey"},
+      {id:"action.pilferSample",type:"saveInternalPcm",source:"internalBuffer"}
     ],
     nodes:{
       connections:[
@@ -46,7 +48,8 @@
         ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
         ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
         ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
-        ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"]
+        ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"],
+        ["controller.pilferSample","action.pilferSample"]
       ]
     }
   });
