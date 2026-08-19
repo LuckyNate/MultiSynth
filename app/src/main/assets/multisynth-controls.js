@@ -11,13 +11,13 @@
   const TYPES=Object.freeze({KNOB:"knob",DIAL:"dial",RIBBON:"ribbon",FADER:"fader",XY:"xy",JOYSTICK:"joystick",PAD:"pad",BUTTON:"button",KEYBOARD:"keyboard",TURNTABLE:"turntable",SCOPE:"scope",LED:"led",DISPLAY:"display",TOUCHSCREEN:"touchscreen"});
   const BUTTON_TYPES=Object.freeze({ACTION:"action",SELECTOR:"selector",SWITCH:"switch"});
   const ORIENTATION=Object.freeze({HORIZONTAL:"horizontal",VERTICAL:"vertical"});
-  const SIZE=Object.freeze({KNOB:.25,PAD:.50,DIAL:1,SELECTOR:.125}); // fractions of short axis
+  const SIZE=Object.freeze({KNOB:.25,PAD:.50,DIAL:1,SELECTOR:.125});
 
   function emitter(){const listeners=new Map();return{on(n,f){if(typeof f!=="function")return()=>{};if(!listeners.has(n))listeners.set(n,new Set());listeners.get(n).add(f);return()=>listeners.get(n)?.delete(f)},emit(n,d){listeners.get(n)?.forEach(f=>f(d));listeners.get("change")?.forEach(f=>n==="change"?null:f({type:n,detail:d}))}}}
   function base(type,opts={}){const e=emitter(),s={type,label:String(opts.label||""),disabled:!!opts.disabled,dirty:true,version:0};return Object.assign(s,e,{touch(){s.dirty=true;s.version++;return s},consumeDirty(){const d=s.dirty;s.dirty=false;return d}})}
   function ranged(type,opts={}){const s=base(type,opts);s.min=Number.isFinite(opts.min)?opts.min:0;s.max=Number.isFinite(opts.max)?opts.max:1;s.step=Number.isFinite(opts.step)?opts.step:0;s.value=clamp(opts.value??s.min,s.min,s.max);s.set=v=>{v=clamp(v,s.min,s.max);if(s.step>0)v=Math.round((v-s.min)/s.step)*s.step+s.min;if(v!==s.value){s.value=v;s.touch();s.emit("input",v)}return s.value};s.norm=()=>s.max===s.min?0:(s.value-s.min)/(s.max-s.min);return s}
 
-  function knob(opts={}){const s=ranged(TYPES.KNOB,opts);s.size=SIZE.KNOB;s.gestures=Object.freeze(["drag"]);s.drag=(dx,dy,sensitivity=.005)=>s.set(s.value+(dx-dy)*(s.max-s.min)*sensitivity);return s}
+  function knob(opts={}){const s=ranged(TYPES.KNOB,opts);s.size=SIZE.KNOB;s.gestures=Object.freeze(["drag"]);s.maxTravelPerSecond=Number.isFinite(opts.maxTravelPerSecond)?Math.max(.05,opts.maxTravelPerSecond):.65;s._dragAt=0;s.beginDrag=()=>{s._dragAt=performance.now();return s};s.endDrag=()=>{s._dragAt=0;return s};s.drag=(dx,dy,sensitivity=.005)=>{const now=performance.now(),dt=s._dragAt?clamp((now-s._dragAt)/1000,.001,.05):.016;s._dragAt=now;const requested=(Number(dx||0)-Number(dy||0))*Number(sensitivity||0),maxDelta=s.maxTravelPerSecond*dt,normDelta=clamp(requested,-maxDelta,maxDelta);return s.set(s.value+normDelta*(s.max-s.min))};return s}
   function dial(opts={}){const s=ranged(TYPES.DIAL,opts);s.size=SIZE.DIAL;s.cyclical=!!opts.cyclical;s.turns=0;s.gestures=Object.freeze(["circular-drag"]);s.rotate=turnDelta=>{s.turns+=Number(turnDelta)||0;const v=s.value+(Number(turnDelta)||0)*(s.max-s.min);if(s.cyclical){s.value=wrap(v,s.min,s.max);s.touch();s.emit("input",s.value);return s.value}return s.set(v)};return s}
   function ribbon(opts={}){const s=ranged(TYPES.RIBBON,opts);s.orientation=opts.orientation===ORIENTATION.VERTICAL?ORIENTATION.VERTICAL:ORIENTATION.HORIZONTAL;s.gestures=Object.freeze(["tap","drag"]);s.at=n=>s.set(s.min+clamp(n)*(s.max-s.min));return s}
   function fader(opts={}){const s=ranged(TYPES.FADER,opts);s.orientation=opts.orientation===ORIENTATION.VERTICAL?ORIENTATION.VERTICAL:ORIENTATION.HORIZONTAL;s.overlap=clamp(opts.overlap??.08,0,.49);s.gestures=Object.freeze(["tap","drag"]);s.at=n=>s.set(s.min+clamp(n)*(s.max-s.min));return s}
@@ -34,7 +34,5 @@
   function fingerReadout(opts={}){const s={visible:false,x:0,y:0,text:"",offsetCm:Number.isFinite(opts.offsetCm)?opts.offsetCm:1};s.show=(x,y,text)=>{s.visible=true;s.x=x;s.y=y;s.text=String(text);return s};s.hide=()=>{s.visible=false;return s};return s}
   function frameWatch(controls,draw){let raf=0,running=false;const list=Array.isArray(controls)?controls:[controls];function frame(t){if(!running)return;for(const c of list)if(c?.consumeDirty?.())draw?.(c,t);raf=requestAnimationFrame(frame)}return{start(){if(!running){running=true;raf=requestAnimationFrame(frame)}},stop(){running=false;if(raf)cancelAnimationFrame(raf)}}}
 
-  // Turntable remains in control-turntable.js because it includes transport/beat recovery math.
-  // This library deliberately contains no jack/port primitive: routing belongs to the cascade.
-  MS.Controls=Object.freeze({version:"1.0.0",TYPES,BUTTON_TYPES,ORIENTATION,SIZE,clamp,wrap,lerp,knob,dial,ribbon,fader,xy,joystick,pad,button,led,display,touchscreen,keyboard,scope,fingerReadout,frameWatch,turntable:()=>MS.TurntableControl});
+  MS.Controls=Object.freeze({version:"1.1.0",TYPES,BUTTON_TYPES,ORIENTATION,SIZE,clamp,wrap,lerp,knob,dial,ribbon,fader,xy,joystick,pad,button,led,display,touchscreen,keyboard,scope,fingerReadout,frameWatch,turntable:()=>MS.TurntableControl});
 })(window);
