@@ -11,17 +11,17 @@
   define({
     id:"time-bandits",
     model:"module-builder",
-    version:4,
+    version:5,
     package:{
       id:"time-bandits",
-      version:4,
+      version:5,
       replaces:[{from:"time-divider",copyState:["bpm","division","probability","pitch","decay","tone","level","pcmKey","sampleName"]}],
-      behavior:{timingPriority:["dv","clock","internal"],dvMode:"consume-current-and-emit-subdivided",audioMode:"additive-pass-through"}
+      behavior:{timingPriority:["dv","clock","internal"],dvMode:"consume-current-and-emit-speed-scaled",audioMode:"additive-pass-through",speedRibbon:"left-slower-right-faster"}
     },
     faceplate:{livery:"clockwork",primary:"#24162f",secondary:"#c98bff",tertiary:"#f2ddff"},
     defaults:{bpm:120,division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"},
     controls:[
-      {id:"division",control:"dial",state:"division",label:"RESOLUTION",value:{default:1,options:[1,2,4,8,16,32]},meta:{unit:"×/÷"},node:"controller.division"},
+      {id:"division",control:"ribbon",state:"division",label:"SPEED",value:{default:1,options:[0.03125,0.0625,0.125,0.25,0.5,1,2,4,8,16,32],labels:["÷32","÷16","÷8","÷4","÷2","×1","×2","×4","×8","×16","×32"]},meta:{unit:" speed"},node:"controller.division"},
       {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1},meta:{unit:" BPM"},node:"controller.bpm"},
       {id:"probability",control:"knob",state:"probability",label:"PROBABILITY",value:{default:100,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.probability"},
       {id:"pitch",control:"knob",state:"pitch",label:"PITCH",value:{default:90,min:30,max:800,step:1},meta:{unit:"Hz"},node:"controller.pitch"},
@@ -38,7 +38,7 @@
       {id:"source.cv",type:"cvInput",priority:50,passthrough:true}
     ],
     actions:[
-      {id:"action.divide",type:"triggerSubdivision",state:"division"},
+      {id:"action.divide",type:"scaleTiming",state:"division"},
       {id:"action.setBpm",type:"setState",state:"bpm"},
       {id:"action.setDivision",type:"setState",state:"division"},
       {id:"action.setProbability",type:"setState",state:"probability"},
