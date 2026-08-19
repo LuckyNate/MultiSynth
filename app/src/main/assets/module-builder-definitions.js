@@ -27,7 +27,7 @@
     ],
     sources:[
       {id:"source.internalClock",type:"clock",mode:"fallback",state:"bpm"},
-      {id:"source.div",type:"divInput",priority:100},
+      {id:"source.dv",type:"dvInput",priority:100},
       {id:"source.cv",type:"cvInput",priority:100}
     ],
     actions:[
@@ -40,11 +40,11 @@
       {id:"action.setTone",type:"setState",state:"tone"},
       {id:"action.setLevel",type:"setState",state:"level"},
       {id:"action.selectPcm",type:"setState",state:"pcmKey"},
-      {id:"action.pilferSample",type:"saveInternalPcm",source:"internalBuffer"}
+      {id:"action.pilferSample",type:"saveGeneratedPcm"}
     ],
     nodes:{
       connections:[
-        ["source.internalClock","action.divide"],["source.div","action.divide"],["source.cv","action.divide"],
+        ["source.internalClock","action.divide"],["source.dv","action.divide"],["source.cv","action.divide"],
         ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
         ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
         ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
