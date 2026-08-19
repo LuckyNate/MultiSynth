@@ -5,19 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>The Rearranger · MultiSynth</title>
 <link rel="stylesheet" href="rearranger.css">
+<link rel="stylesheet" href="rackbuilder.css">
 </head>
 <body>
 <main class="rearrangerApp">
   <header class="hero">
-    <div class="eyebrow">MULTISYNTH META TOOL</div>
-    <h1>THE REARRANGER</h1>
-    <p>Cascades are persistent instruments. Tap one to build or edit it.</p>
+    <div><div class="eyebrow">MULTISYNTH META TOOL</div><h1>THE REARRANGER</h1><p>Build arrangements from saved cascades and nested arrangements.</p></div>
+    <div class="heroActions"><button id="arrangementUpBtn" type="button">↑ ARRANGEMENTS</button><button id="addCascadeBtn" type="button">+ ADD CASCADE</button></div>
   </header>
   <section class="cascadeBank">
-    <div class="bankHead"><strong>CASCADE BANK</strong><span>ALWAYS SAVED</span></div>
+    <div class="bankHead"><strong>ARRANGEMENT</strong><span>ALWAYS SAVED</span></div>
     <div id="cascadeSlots" class="cascadeSlots"></div>
   </section>
 </main>
+<div id="cascadeChooser" class="moduleChooser hidden"><div class="moduleChooserPanel"><div class="moduleChooserHead"><strong>ADD CASCADE</strong><button id="closeCascadeChooser" type="button">CLOSE</button></div><div id="cascadeChoices" class="moduleChoices"></div></div></div>
+<script src="hierarchy-library.js"></script>
 <script src="rearranger.js"></script>
 </body>
 </html>
