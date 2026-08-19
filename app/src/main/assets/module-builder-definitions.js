@@ -11,7 +11,12 @@
   define({
     id:"time-bandits",
     model:"module-builder",
-    version:1,
+    version:2,
+    package:{
+      id:"time-bandits",
+      version:2,
+      replaces:[{from:"time-divider",copyState:["bpm","division","probability","pitch","decay","tone","level","pcmKey","sampleName"]}]
+    },
     faceplate:{livery:"clockwork",primary:"#24162f",secondary:"#c98bff",tertiary:"#f2ddff"},
     defaults:{bpm:120,division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"},
     controls:[
@@ -42,15 +47,13 @@
       {id:"action.selectPcm",type:"setState",state:"pcmKey"},
       {id:"action.pilferSample",type:"saveGeneratedPcm"}
     ],
-    nodes:{
-      connections:[
-        ["source.internalClock","action.divide"],["source.dv","action.divide"],["source.cv","action.divide"],
-        ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
-        ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
-        ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
-        ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"],
-        ["controller.pilferSample","action.pilferSample"]
-      ]
-    }
+    nodes:{connections:[
+      ["source.internalClock","action.divide"],["source.dv","action.divide"],["source.cv","action.divide"],
+      ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
+      ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
+      ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
+      ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"],
+      ["controller.pilferSample","action.pilferSample"]
+    ]}
   });
 })(window);
