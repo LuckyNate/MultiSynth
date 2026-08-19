@@ -4,11 +4,10 @@
   const row=(id,category,color,capabilities=[],resources=[])=>{const ident=I.identityFor(id);if(!ident)throw new Error("Missing module identity: "+id);return Object.freeze({id:ident.id,displayName:ident.displayName,editorUrl:ident.editorUrl,moduleScript:ident.moduleScript,themeKey:ident.id,category,color,capabilities:Object.freeze(capabilities.slice()),resources:Object.freeze(resources.slice())});};
   const M=Object.freeze({
     [I.LIVE_WIRE]:row(I.LIVE_WIRE,"input","#72d7ff",["audioOutput","generator"],["nativeAudio"]),
-    [I.BEAT_RED]:row(I.BEAT_RED,"rhythm","#d64b4b",["audioInput","audioOutput","clockFollower","cvInput"],[]),
+    [I.BEAT_RED]:row(I.BEAT_RED,"rhythm","#d64b4b",["audioInput","audioOutput","clockFollower","dvInput","cvInput"],[]),
     [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput","midi"],["midi","storage"]),
-    [I.WHITMAN]:row(I.WHITMAN,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockFollower","cvInput","pcm","mic"],["pcm","mic","storage"]),
-    [I.TIME_DIVIDER]:row(I.TIME_DIVIDER,"clock","#7b78d4",["audioInput","audioOutput","clockFollower","divInput","cvInput","cvOutput"],[]),
-    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"clock","#c89b52",["audioInput","audioOutput","clockSource","clockFollower","divInput","cvInput","cvOutput"],[]),
+    [I.WHITMAN]:row(I.WHITMAN,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockFollower","dvInput","cvInput","pcm","mic"],["pcm","mic","storage"]),
+    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"clock","#c89b52",["audioInput","audioOutput","clockSource","clockFollower","dvInput","cvInput","cvOutput"],[]),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
     [I.SAMPLE_SURGERY]:row(I.SAMPLE_SURGERY,"utility","#7fc9b2",["pcm"],["pcm","storage"]),
     [I.SAMPLE_LIBRARY]:row(I.SAMPLE_LIBRARY,"utility","#c8b57a",["pcm"],["pcm","storage"]),
