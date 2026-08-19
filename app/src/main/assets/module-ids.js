@@ -14,7 +14,7 @@
     BEAT_RED:entry("beat-red","Beat Red"),
     FATHER_TIME:entry("father-time","Father Time"),
     WHITMAN:entry("whitman","Whitman"),
-    TIME_DIVIDER:entry("time-divider","Time Divider"),
+    TIME_BANDITS:entry("time-bandits","Time Bandits"),
     THE_CHOPPER:entry("the-chopper","The Chopper"),
     SAMPLE_SURGERY:entry("sample-surgery","Sample Surgery"),
     SAMPLE_LIBRARY:entry("sample-library","Sample Library"),
