@@ -225,7 +225,7 @@ public final class MainActivity extends Activity {
     private void reconnectRememberedMidi(){int id=preferences.getInt("device",-1),port=preferences.getInt("port",-1);if(id<0||port<0)return;for(MidiDeviceInfo info:midiManager.getDevices())if(info.getId()==id){openMidiDevice(info,port,"MIDI ON");return;}}
     private void disconnectMidi(){closeOpenMidi(true);}
     private void closeOpenMidi(boolean notify){try{if(openPort!=null)openPort.disconnect(midiReceiver);}catch(Exception ignored){}try{if(openPort!=null)openPort.close();}catch(IOException ignored){}try{if(sendPort!=null)sendPort.close();}catch(IOException ignored){}try{if(openDevice!=null)openDevice.close();}catch(IOException ignored){}openPort=null;sendPort=null;openDevice=null;if(notify)status("MIDI INPUT",false);}
-    private JSONArray midiChoicesJson(){rebuildChoices();JSONArray result=new JSONArray();for(Choice c:choices){JSONObject o=new JSONObject();try{o.put("name",c.label);}catch(Exception ignored){}result.put(o);return result;}
+    private JSONArray midiChoicesJson(){rebuildChoices();JSONArray result=new JSONArray();for(Choice c:choices){JSONObject o=new JSONObject();try{o.put("name",c.label);}catch(Exception ignored){}result.put(o);}return result;}
     private void publishDeviceChange(){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.devicesChanged("+midiChoicesJson()+");");}
     private void status(String text,boolean connected){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status("+JSONObject.quote(text)+","+connected+");");}
     private void runJs(String script){main.post(()->{if(webView!=null)webView.evaluateJavascript(script,null);});}
