@@ -4,11 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>MultiSynth</title>
-<meta http-equiv="refresh" content="0;url=rearranger.html">
-<script>location.replace("rearranger.html");</script>
+<link rel="stylesheet" href="main-menu.css">
 </head>
 <body>
-<!-- Stable Android entry asset. The Rearranger is the top-level MultiSynth workspace. -->
-<a href="rearranger.html">Open The Rearranger</a>
+<main class="menu">
+  <header class="brand"><small>MULTISYNTH</small><h1>START HERE</h1><p>Choose the level you want to work at. Everything uses the same persistent project state.</p></header>
+  <section class="choices" aria-label="MultiSynth workspaces">
+    <a class="choice" href="rackbuilder.html"><strong>Rack Builder</strong><span>Build and arrange racks on the spatial grid.</span></a>
+    <a class="choice" href="rackbuilder.html?mode=cascade"><strong>Cascade Builder</strong><span>Open the cascade-building workflow directly and work on a single saved cascade.</span></a>
+    <a class="choice" href="rearranger.html"><strong>The Rearranger</strong><span>Build arrangements from explicit cascade references and nested arrangements.</span></a>
+  </section>
+</main>
 </body>
 </html>
