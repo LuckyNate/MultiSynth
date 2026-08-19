@@ -1,0 +1,53 @@
+"use strict";
+(function(global){
+  const MS=global.MultiSynth=global.MultiSynth||{};
+  const defs=new Map();
+  const freezeDeep=v=>{if(!v||typeof v!=="object"||Object.isFrozen(v))return v;Object.values(v).forEach(freezeDeep);return Object.freeze(v)};
+  function define(spec){if(!spec?.id)throw new Error("Module Builder definition requires id");const out=freezeDeep({...spec});defs.set(String(out.id),out);return out}
+  function get(id){return defs.get(String(id||""))||null}
+  function requireDef(id){const d=get(id);if(!d)throw new Error("Missing Module Builder definition: "+id);return d}
+  MS.ModuleBuilderDefinitions=Object.freeze({define,get,require:requireDef,all:()=>Object.freeze([...defs.values()])});
+
+  define({
+    id:"time-bandits",
+    model:"module-builder",
+    version:1,
+    faceplate:{livery:"clockwork",primary:"#24162f",secondary:"#c98bff",tertiary:"#f2ddff"},
+    defaults:{bpm:120,division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"},
+    controls:[
+      {id:"division",control:"dial",state:"division",label:"RESOLUTION",value:{default:1,options:[1,2,4,8,16,32]},meta:{unit:"×/÷"},node:"controller.division"},
+      {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1},meta:{unit:" BPM"},node:"controller.bpm"},
+      {id:"probability",control:"knob",state:"probability",label:"PROBABILITY",value:{default:100,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.probability"},
+      {id:"pitch",control:"knob",state:"pitch",label:"PITCH",value:{default:90,min:30,max:800,step:1},meta:{unit:"Hz"},node:"controller.pitch"},
+      {id:"decay",control:"knob",state:"decay",label:"DECAY",value:{default:180,min:25,max:1500,step:5},meta:{unit:"ms"},node:"controller.decay"},
+      {id:"tone",control:"knob",state:"tone",label:"TONE",value:{default:55,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.tone"},
+      {id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:75,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.level"},
+      {id:"soundSource",control:"screen",state:"pcmKey",label:"SOUND SOURCE",node:"controller.soundSource"}
+    ],
+    sources:[
+      {id:"source.internalClock",type:"clock",mode:"fallback",state:"bpm"},
+      {id:"source.div",type:"divInput",priority:100},
+      {id:"source.cv",type:"cvInput",priority:100}
+    ],
+    actions:[
+      {id:"action.divide",type:"triggerSubdivision",state:"division"},
+      {id:"action.setBpm",type:"setState",state:"bpm"},
+      {id:"action.setDivision",type:"setState",state:"division"},
+      {id:"action.setProbability",type:"setState",state:"probability"},
+      {id:"action.setPitch",type:"setState",state:"pitch"},
+      {id:"action.setDecay",type:"setState",state:"decay"},
+      {id:"action.setTone",type:"setState",state:"tone"},
+      {id:"action.setLevel",type:"setState",state:"level"},
+      {id:"action.selectPcm",type:"setState",state:"pcmKey"}
+    ],
+    nodes:{
+      connections:[
+        ["source.internalClock","action.divide"],["source.div","action.divide"],["source.cv","action.divide"],
+        ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
+        ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
+        ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
+        ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"]
+      ]
+    }
+  });
+})(window);
