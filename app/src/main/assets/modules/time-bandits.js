@@ -1,16 +1,19 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,S=MS.RackStandard;if(!C||!I||!S)return;
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
-const defaults=()=>({division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"});
+const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,S=MS.RackStandard,Defs=MS.ModuleBuilderDefinitions;if(!C||!I||!S||!Defs)return;
+const model=Defs.require(I.TIME_BANDITS),clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
+const defaults=()=>({...model.defaults});
 function drum(u,t){const c=u.ctx,o=c.createOscillator(),g=c.createGain(),f=c.createBiquadFilter(),now=Math.max(c.currentTime,Number(t)||c.currentTime),d=Math.max(.025,clamp(u.state.decay,25,1500)/1000);o.type="triangle";o.frequency.setValueAtTime(clamp(u.state.pitch,30,800),now);o.frequency.exponentialRampToValueAtTime(Math.max(25,clamp(u.state.pitch,30,800)*.45),now+d);f.type="lowpass";f.frequency.value=300+clamp(u.state.tone,0,100)*90;g.gain.setValueAtTime(Math.max(.0001,clamp(u.state.level,0,100)/100),now);g.gain.exponentialRampToValueAtTime(.0001,now+d);o.connect(f).connect(g).connect(u.voice);o.start(now);o.stop(now+d+.03)}
 function hit(u,t){if(Math.random()*100>clamp(u.state.probability,0,100))return;if(u.sampleBuffer){const s=u.ctx.createBufferSource(),g=u.ctx.createGain();s.buffer=u.sampleBuffer;g.gain.value=clamp(u.state.level,0,100)/100;s.connect(g).connect(u.voice);s.start(Math.max(u.ctx.currentTime,Number(t)||u.ctx.currentTime));return}drum(u,t)}
 async function load(u,key){u.sampleBuffer=null;if(!key)return;const L=global.MultiSynth?.PCMLibrary;try{const r=await L?.get?.(key);if(!r?.data?.length)return;const b=u.ctx.createBuffer(1,r.data.length,r.sampleRate);b.getChannelData(0).set(r.data);u.sampleBuffer=b}catch(e){console.error(I.displayNameFor(I.TIME_BANDITS)+" sample",e)}}
-function period(u,p){const now=Number(p.time)||u.ctx.currentTime,last=u.lastTime;u.lastTime=now;if(last!=null&&now>last+.005)u.period=now-last;return Math.max(.02,Number(p.period)||u.period||60/Math.max(30,Math.min(300,Number(p.bpm)||120)))}
-function divide(u,p){const n=[1,2,4,8,16,32].includes(Number(u.state.division))?Number(u.state.division):1,span=period(u,p);for(let i=0;i<n;i++){const time=(Number(p.time)||u.ctx.currentTime)+span*i/n;hit(u,time);global.MultiSynth?.DivBus?.send(u.id,{kind:"div",time,period:span/n,bpm:p.bpm,division:n,parent:p.source||null,substep:i})}return p}
-function create(api){const c=api.context,input=c.createGain(),voice=c.createGain(),mix=c.createGain(),output=c.createGain();input.connect(mix);voice.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,lastTime:null,period:null,sampleBuffer:null,onDiv:null};u.onDiv=p=>divide(u,p);if(api.state.pcmKey)load(u,api.state.pcmKey);return u}
-function setState({runtime,state,patch}){const u=runtime.user;if(!u)return;u.state=state;if("pcmKey" in patch)load(u,state.pcmKey)}
-function cv({runtime},packet){const u=runtime.user;if(packet?.kind==="trigger"&&u)divide(u,packet);return packet}
-function destroy({runtime}){const u=runtime.user;if(!u)return;for(const n of [u.input,u.voice,u.mix,u.output])try{n.disconnect()}catch(_){}}
-C.define({type:I.TIME_BANDITS,version:"1",description:"PRIVATE DIV CLOCK · RANDOM ONE-SOUND RHYTHM · CV PASSES UNCHANGED",defaults:defaults(),resources:["storage"],create,setState,cv,destroy});
+function bpm(u){return clamp(u.state.bpm??model.defaults.bpm,30,300)}
+function markExternal(u,p={}){const span=Math.max(.02,Number(p.period)||u.period||60/bpm(u));u.externalUntil=performance.now()+Math.max(250,span*2500);u.nextInternalAt=null}
+function period(u,p){const now=Number(p.time)||u.ctx.currentTime,last=u.lastTime;u.lastTime=now;if(last!=null&&now>last+.005)u.period=now-last;return Math.max(.02,Number(p.period)||u.period||60/bpm(u))}
+function divide(u,p={}){const n=[1,2,4,8,16,32].includes(Number(u.state.division))?Number(u.state.division):1,span=period(u,p),base=Number(p.time)||u.ctx.currentTime;for(let i=0;i<n;i++){const time=base+span*i/n;hit(u,time);global.MultiSynth?.DivBus?.send(u.id,{kind:"div",time,period:span/n,bpm:Number(p.bpm)||bpm(u),division:n,parent:p.source||null,substep:i})}return p}
+function internalTick(u){if(performance.now()<u.externalUntil)return;const c=u.ctx,span=60/bpm(u),now=c.currentTime;if(u.nextInternalAt==null||u.nextInternalAt<now-.05)u.nextInternalAt=now+.01;while(u.nextInternalAt<=now+.08){divide(u,{kind:"internal-clock",source:u.id,time:u.nextInternalAt,period:span,bpm:bpm(u)});u.nextInternalAt+=span}}
+function create(api){const c=api.context,input=c.createGain(),voice=c.createGain(),mix=c.createGain(),output=c.createGain();input.connect(mix);voice.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,lastTime:null,period:null,sampleBuffer:null,onDiv:null,externalUntil:0,nextInternalAt:null,timer:null};u.onDiv=p=>{markExternal(u,p);return divide(u,p)};u.timer=setInterval(()=>internalTick(u),25);if(api.state.pcmKey)load(u,api.state.pcmKey);return u}
+function setState({runtime,state,patch}){const u=runtime.user;if(!u)return;u.state=state;if("bpm" in patch)u.nextInternalAt=null;if("pcmKey" in patch)load(u,state.pcmKey)}
+function cv({runtime},packet){const u=runtime.user;if(packet?.kind==="trigger"&&u){markExternal(u,packet);divide(u,packet)}return packet}
+function destroy({runtime}){const u=runtime.user;if(!u)return;if(u.timer)clearInterval(u.timer);for(const n of [u.input,u.voice,u.mix,u.output])try{n.disconnect()}catch(_){}}
+C.define({type:I.TIME_BANDITS,version:"2",description:"MODULE BUILDER CLOCK · INTERNAL BPM FALLBACK · EXTERNAL CV/DIV PRIORITY",defaults:defaults(),resources:["storage"],create,setState,cv,destroy,moduleBuilder:model});
 })(window);
