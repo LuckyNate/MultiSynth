@@ -14,13 +14,14 @@ final class LiveWirePlayerHost {
     private final Activity activity;
     private final WebView player;
 
-    LiveWirePlayerHost(Activity activity) {
+    LiveWirePlayerHost(Activity activity, Object bridge) {
         this.activity = activity;
         player = new WebView(activity);
         player.setBackgroundColor(Color.TRANSPARENT);
         player.getSettings().setJavaScriptEnabled(true);
         player.getSettings().setDomStorageEnabled(true);
         player.getSettings().setMediaPlaybackRequiresUserGesture(false);
+        player.addJavascriptInterface(bridge, "LiveWireAndroid");
         player.setWebChromeClient(new WebChromeClient());
         player.setWebViewClient(new WebViewClient());
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(2, 2, Gravity.TOP | Gravity.START);
