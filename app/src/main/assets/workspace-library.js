@@ -1,9 +1,9 @@
 "use strict";
 (function(){
 const H=window.MultiSynth?.HierarchyLibrary,PROJECT="multisynth.rack.project.v1",items=document.getElementById("items");
-function blankProject(){return{format:"multisynth-spatial-rack",version:3,routing:"explicit-nodes",meta:{},racks:[],connections:[]}}
+function blankProject(){return{format:"multisynth-node-graph",version:4,routing:"explicit-nodes",meta:{},racks:[],connections:[]}}
 function loadProject(){try{const d=JSON.parse(localStorage.getItem(PROJECT)||"null");return d&&Array.isArray(d.racks)?d:blankProject()}catch(_){return blankProject()}}
-function saveProject(d){localStorage.setItem(PROJECT,JSON.stringify(d))}
+function saveProject(d){d.format="multisynth-node-graph";d.version=4;d.routing="explicit-nodes";localStorage.setItem(PROJECT,JSON.stringify(d))}
 const uid=p=>`${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
 function openRack(id){const p=loadProject();p.meta=Object.assign({},p.meta,{selectedRack:id,workspaceType:"rack",routing:"explicit-nodes"});saveProject(p);location.href=`rackbuilder.html?selected=${encodeURIComponent(id)}`}
 function createRack(){const p=loadProject(),id=uid("rack");p.racks=p.racks||[];let col=900000;const used=new Set(p.racks.map(r=>`${r.row}:${r.col}`));while(used.has(`900000:${col}`))col++;p.racks.push({id,row:900000,col,enabled:true,gain:1,modules:[]});p.connections=p.connections||[];p.meta=Object.assign({},p.meta,{selectedRack:id,workspaceType:"rack",routing:"explicit-nodes"});saveProject(p);H?.registerRack?.(id,`Rack ${(H?.list?.("rack")||[]).length+1}`);openRack(id)}
