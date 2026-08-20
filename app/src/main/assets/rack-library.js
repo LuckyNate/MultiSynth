@@ -8,5 +8,5 @@ function get(id){return clone(load().racks.find(x=>String(x.id)===String(id))||n
 function registerRack(id,name){const d=load();id=String(id);let r=d.racks.find(x=>String(x.id)===id);if(!r){r={id,name:String(name||`Rack ${d.racks.length+1}`)};d.racks.push(r)}else if(name)r.name=String(name);save(d);return clone(r)}
 function rename(id,name){const d=load(),r=d.racks.find(x=>String(x.id)===String(id));if(!r)return false;r.name=String(name||r.name);save(d);return clone(r)}
 function remove(id){const d=load(),n=d.racks.length;d.racks=d.racks.filter(x=>String(x.id)!==String(id));if(d.racks.length===n)return false;save(d);return true}
-const api=Object.freeze({load,list,get,registerRack,rename,remove});MS.RackLibrary=api;MS.HierarchyLibrary=Object.freeze({list:kind=>kind==="rack"?list():[],get:(kind,id)=>kind==="rack"?get(id):null,registerRack,rename:(kind,id,name)=>kind==="rack"?rename(id,name):false});
+MS.RackLibrary=Object.freeze({load,list,get,registerRack,rename,remove});
 })(window);

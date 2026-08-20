@@ -1,12 +1,18 @@
 # MultiSynth
 
-MultiSynth is an Android-hosted HTML5 modular audio workstation. A small plain-Java Android shell hosts the app in a WebView and provides native MIDI, USB/Bluetooth MIDI transport, microphone capture, file picking, and Android lifecycle/back-navigation integration. The instrument and rack interfaces live in `app/src/main/assets/`.
+MultiSynth is an Android-hosted HTML5 modular audio workstation. A plain-Java Android shell hosts the WebView and provides native MIDI, USB/Bluetooth MIDI transport, microphone capture, file picking, and Android lifecycle/back-navigation integration. The instrument, rack, and node-graph interfaces live in `app/src/main/assets/`.
 
-The current application entry point is the rack system. `index.html` is intentionally retained as a tiny compatibility launcher and redirects immediately to `rackbuilder.html`.
+## Application structure
 
-## Current architecture
+`index.html` is the main menu and exposes three current workspaces:
 
-### Android shell
+- **Test Modules** — instantiate and verify individual registered modules.
+- **Build Racks** — assemble reusable top-to-bottom internal module chains.
+- **Node Graph** — place modules and saved racks on a freeform plane and connect explicit OUT → IN ports.
+
+The node graph is the authoritative external routing model. There is no parent/child rack hierarchy, neighborhood routing, cascade grid, or position-derived signal relationship.
+
+## Android shell
 
 `MainActivity` owns Android-specific services only:
 
@@ -18,88 +24,71 @@ The current application entry point is the rack system. `index.html` is intentio
 - Android permission and lifecycle handling
 - Android Back integration
 
-The Android application namespace is `audio.multisynth.app` and the application is branded MultiSynth. Instrument names such as QuadSynth and Pulsynth remain instrument identities, not app-shell names.
+The current Android application namespace is `audio.multisynth.app`.
 
-### Rack application
+## Module architecture
 
-`rackbuilder.html` is the main interface. The rack grid is a constrained spatial signal graph:
+Every active module has one canonical identity in `module-ids.js`, metadata in `module-manifest.js`, an explicit state-schema declaration, and a runtime definition registered through `ModuleContract`.
 
-- modules inside one rack execute top-to-bottom
-- side-by-side racks are parallel branches
-- racks above are parents and racks below are children
-- each rack can receive from up to three local parents and feed up to three local children
-- sibling relationships are limited to the immediate horizontal neighbors
-- terminal rack outputs are mixed into the unified output pool
-- the rack keyboard plays the pool through the active rack graph
+Module Builder definitions are owned by the module implementation files under `assets/modules/`. `module-builder-definitions.js` is only the shared registry; it does not maintain duplicate module specifications.
 
-Routing is determined by rack position rather than patch cables. Do not introduce arbitrary cross-rack wiring as a cleanup shortcut; the neighborhood topology is part of the project design.
+Shared control surfaces, state keys, capabilities, events, and faceplate metadata are centralized. New modules should use the standard control descriptors and choose controls according to their actual job rather than reproducing module-specific UI infrastructure unnecessarily.
 
-### Module contract
+## Racks
 
-`module-contract.js` is the shared runtime contract for rack modules. Module definitions register themselves through `MultiSynth.ModuleContract` and may provide state, lifecycle, audio input/output, note, trigger, clock, CV, serialization, and editor behavior.
+A rack is a reusable unit containing an ordered module chain. Internal rack signal order is top-to-bottom. The rack itself exposes IN and OUT on the node graph and may be patched like any other node.
 
-Shared rack helpers currently live alongside the contract as `MultiSynth.RackStandard`. They cover PCM capture, transport scheduling, sampler playback, hold-button interaction, and scope painting. They remain in the same file for compatibility with existing module/editor loading paths.
+Rack names are stored through `RackLibrary`. The obsolete hierarchy abstraction is not part of the current architecture.
 
-### Rack engine and UI
+## Node graph
 
-The rack implementation is intentionally split by responsibility:
+The node graph is a freeform workspace. Visual position does not imply routing. Connections exist only when an explicit node connection is stored.
 
-- `rack-engine.js` — rack/project graph and module instance state
-- `rack-audio-graph.js` — audio/CV/clock routing and pool output
-- `rack-builder.js` — rack and cascade interaction helpers
-- `rackbuilder-app.js` — application orchestration, persistence, module editor hosting, chooser, and rack keyboard integration
-- `rack-grid-overview.js` — grid presentation and navigation
-- `rack-keyboard.js` — rack keyboard behavior
-- `rack-ui-controls.js` — direct rack/module UI behavior
-- `rack-editor-scope.js` — embedded module scope support
+Current project serialization uses:
 
-Individual rack implementations live under `assets/modules/`. Standalone instrument/editor pages remain available because rack instances can embed them and because they are useful independently.
+- format: `multisynth-node-graph`
+- version: `4`
+- routing: `explicit-nodes`
 
-## Persistence
+Old spatial/grid project formats are not automatically interpreted by the development build.
 
-Rack projects use `multisynth.rack.project.v1` and serialize the complete rack graph plus module state. Rack-module editors synchronize their controls back into the corresponding rack runtime.
+## Persistence and compatibility
 
-The Android shell also provides generic form persistence for standalone pages. The rack builder opts out of that generic layer because the rack serializer is the authoritative source for rack/module state. Existing storage keys are intentionally preserved for backward compatibility.
+Current development persistence uses `multisynth.rack.project.v1` for the node/rack project container and `multisynth.racks.v1` for rack names.
 
-Do not rename or delete persistence keys merely as cleanup; doing so would discard saved user state.
+The generic module compatibility registry remains available for future released-version migrations. Compatibility migrations must be explicit and intentionally enabled; development startup does not automatically repair or reinterpret obsolete project formats.
+
+Once external users depend on persisted data, migrations should be added deliberately and tested on an experimental branch before release.
 
 ## Audio and performance rules
 
-MultiSynth requests interactive Web Audio latency, keeps important audio graphs warm where appropriate, and uses hardware-rendered WebView output. Bluetooth A2DP buffering is controlled by Android and the receiving device and cannot be eliminated entirely by the web audio graph.
+Modules should preserve these project rules:
 
-Rack modules should preserve these project rules:
+- incoming carrier audio remains usable unless the module is intentionally generator-only
+- neutral processing should not unexpectedly destroy the carrier
+- CV, DV, trigger, and clock behavior remain independent of audible audio unless explicitly designed otherwise
+- oscilloscopes represent the relevant post-process signal
+- modules clean up audio nodes, timers, microphone subscriptions, and other resources when destroyed
+- state changes remain serializable and restorable
+- modules using the universal performance keyboard inherit its shared keyboard behavior and velocity control
 
-- incoming carrier audio remains usable unless the module is intentionally a generator-only source
-- zero/neutral processing should not unexpectedly destroy the carrier
-- CV/trigger/clock behavior must remain independent of audible audio unless the module explicitly generates sound
-- oscilloscopes should represent the relevant post-process signal
-- modules must clean up audio nodes, timers, microphone subscriptions, and other resources when destroyed
-- state changes must remain serializable and restorable
+## Module loading
 
-## Standalone instruments and editors
-
-The repository retains standalone HTML/CSS/JS interfaces for instruments and processors including QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, PureSynth, No Quarter, samplers, loopers, processors, and editors. These files are not assumed dead merely because the rack builder is now the main entry point; rack definitions may use them as embedded editors.
-
-The selector/list of rack modules is generated from registered module definitions rather than maintained as a separate hard-coded product list.
+`module-loader.js` loads the canonical catalog from `module-ids.js`. Module scripts are authoritative for their Module Builder definitions and runtime behavior. A module should not have a second parallel implementation or duplicate specification elsewhere.
 
 ## Build
 
-GitHub Actions builds the Android APK through **Build MultiSynth APK**. The uploaded debug artifact is named `MultiSynth-debug-apk`. Minimum Android version is Android 6.0 / API 23.
-
-The project can also be opened in Android Studio.
-
-## MIDI
-
-MultiSynth supports native Android USB/Bluetooth MIDI. The app remembers the selected MIDI device and port and attempts to reconnect when Android exposes the same device again. Native handling includes note on/off, velocity, sustain, all-notes-off behavior, multi-channel note identity, and bidirectional MIDI transport used by rack clock/CV features.
+GitHub Actions builds the Android APK. Minimum Android version is Android 6.0 / API 23.
 
 ## Cleanup policy
 
-This repository has evolved rapidly, so cleanup should be conservative:
+The forward architecture is intentionally strict:
 
-1. preserve every working module and editor unless it is proven unreachable
-2. preserve storage keys and serialized schemas unless a migration exists
-3. distinguish old app-shell names from valid instrument names before renaming anything
-4. avoid combining cleanup with DSP, routing, clock, CV, sampler, or latency behavior changes
-5. prefer small behavior-neutral refactors that can be validated independently
-
-Historical-looking filenames may still be compatibility paths. Verify references and module registration before deleting or renaming them.
+1. one canonical identity per active module
+2. one authoritative runtime/Module Builder definition per module
+3. explicit node connections for external routing
+4. ordered chains only inside racks
+5. no cascade/grid/hierarchy routing aliases
+6. no automatic interpretation of obsolete development save formats
+7. retain generic migration infrastructure for future public releases, but enable migrations explicitly
+8. remove obsolete aliases rather than allowing them to become permanent architecture
