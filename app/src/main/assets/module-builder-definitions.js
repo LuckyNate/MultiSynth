@@ -1,61 +1,6 @@
 "use strict";
 (function(global){
-  const MS=global.MultiSynth=global.MultiSynth||{};
-  const defs=new Map();
-  const freezeDeep=v=>{if(!v||typeof v!=="object"||Object.isFrozen(v))return v;Object.values(v).forEach(freezeDeep);return Object.freeze(v)};
-  function define(spec){if(!spec?.id)throw new Error("Module Builder definition requires id");const out=freezeDeep({...spec});defs.set(String(out.id),out);return out}
-  function get(id){return defs.get(String(id||""))||null}
-  function requireDef(id){const d=get(id);if(!d)throw new Error("Missing Module Builder definition: "+id);return d}
-  MS.ModuleBuilderDefinitions=Object.freeze({define,get,require:requireDef,all:()=>Object.freeze([...defs.values()])});
-
-  define({
-    id:"time-bandits",
-    model:"module-builder",
-    version:5,
-    package:{
-      id:"time-bandits",
-      version:5,
-      replaces:[{from:"time-divider",copyState:["bpm","division","probability","pitch","decay","tone","level","pcmKey","sampleName"]}],
-      behavior:{timingPriority:["dv","clock","internal"],dvMode:"consume-current-and-emit-speed-scaled",audioMode:"additive-pass-through",speedRibbon:"left-slower-right-faster"}
-    },
-    faceplate:{livery:"clockwork",primary:"#24162f",secondary:"#c98bff",tertiary:"#f2ddff"},
-    defaults:{bpm:120,division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"},
-    controls:[
-      {id:"division",control:"ribbon",state:"division",label:"SPEED",value:{default:1,options:[0.03125,0.0625,0.125,0.25,0.5,1,2,4,8,16,32],labels:["÷32","÷16","÷8","÷4","÷2","×1","×2","×4","×8","×16","×32"]},meta:{unit:" speed"},node:"controller.division"},
-      {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1},meta:{unit:" BPM"},node:"controller.bpm"},
-      {id:"probability",control:"knob",state:"probability",label:"PROBABILITY",value:{default:100,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.probability"},
-      {id:"pitch",control:"knob",state:"pitch",label:"PITCH",value:{default:90,min:30,max:800,step:1},meta:{unit:"Hz"},node:"controller.pitch"},
-      {id:"decay",control:"knob",state:"decay",label:"DECAY",value:{default:180,min:25,max:1500,step:5},meta:{unit:"ms"},node:"controller.decay"},
-      {id:"tone",control:"knob",state:"tone",label:"TONE",value:{default:55,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.tone"},
-      {id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:75,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.level"},
-      {id:"soundSource",control:"screen",state:"pcmKey",label:"SOUND SOURCE",node:"controller.soundSource"},
-      {id:"pilferSample",control:"button",label:"PILFER SAMPLE",node:"controller.pilferSample"}
-    ],
-    sources:[
-      {id:"source.internalClock",type:"clock",mode:"fallback",priority:10,state:"bpm"},
-      {id:"source.clock",type:"clockFollower",priority:50},
-      {id:"source.dv",type:"dvInput",priority:100,consume:true},
-      {id:"source.cv",type:"cvInput",priority:50,passthrough:true}
-    ],
-    actions:[
-      {id:"action.divide",type:"scaleTiming",state:"division"},
-      {id:"action.setBpm",type:"setState",state:"bpm"},
-      {id:"action.setDivision",type:"setState",state:"division"},
-      {id:"action.setProbability",type:"setState",state:"probability"},
-      {id:"action.setPitch",type:"setState",state:"pitch"},
-      {id:"action.setDecay",type:"setState",state:"decay"},
-      {id:"action.setTone",type:"setState",state:"tone"},
-      {id:"action.setLevel",type:"setState",state:"level"},
-      {id:"action.selectPcm",type:"setState",state:"pcmKey"},
-      {id:"action.pilferSample",type:"saveGeneratedPcm"}
-    ],
-    nodes:{connections:[
-      ["source.internalClock","action.divide"],["source.clock","action.divide"],["source.dv","action.divide"],["source.cv","action.divide"],
-      ["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],
-      ["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],
-      ["controller.decay","action.setDecay"],["controller.tone","action.setTone"],
-      ["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"],
-      ["controller.pilferSample","action.pilferSample"]
-    ]}
-  });
+  const MS=global.MultiSynth=global.MultiSynth||{};const defs=new Map();const freezeDeep=v=>{if(!v||typeof v!=="object"||Object.isFrozen(v))return v;Object.values(v).forEach(freezeDeep);return Object.freeze(v)};function define(spec){if(!spec?.id)throw new Error("Module Builder definition requires id");const out=freezeDeep({...spec});defs.set(String(out.id),out);return out}function get(id){return defs.get(String(id||""))||null}function requireDef(id){const d=get(id);if(!d)throw new Error("Missing Module Builder definition: "+id);return d}MS.ModuleBuilderDefinitions=Object.freeze({define,get,require:requireDef,all:()=>Object.freeze([...defs.values()])});
+  define({id:"time-bandits",model:"module-builder",version:5,package:{id:"time-bandits",version:5,replaces:[{from:"time-divider",copyState:["bpm","division","probability","pitch","decay","tone","level","pcmKey","sampleName"]}],behavior:{timingPriority:["dv","clock","internal"],dvMode:"consume-current-and-emit-speed-scaled",audioMode:"additive-pass-through",speedRibbon:"left-slower-right-faster"}},faceplate:{livery:"clockwork",primary:"#24162f",secondary:"#c98bff",tertiary:"#f2ddff"},defaults:{bpm:120,division:1,probability:100,pitch:90,decay:180,tone:55,level:75,pcmKey:null,sampleName:"INTERNAL DRUM"},controls:[{id:"division",control:"ribbon",state:"division",label:"SPEED",value:{default:1,options:[0.03125,0.0625,0.125,0.25,0.5,1,2,4,8,16,32],labels:["÷32","÷16","÷8","÷4","÷2","×1","×2","×4","×8","×16","×32"]},meta:{unit:" speed"},node:"controller.division"},{id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1},meta:{unit:" BPM"},node:"controller.bpm"},{id:"probability",control:"knob",state:"probability",label:"PROBABILITY",value:{default:100,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.probability"},{id:"pitch",control:"knob",state:"pitch",label:"PITCH",value:{default:90,min:30,max:800,step:1},meta:{unit:"Hz"},node:"controller.pitch"},{id:"decay",control:"knob",state:"decay",label:"DECAY",value:{default:180,min:25,max:1500,step:5},meta:{unit:"ms"},node:"controller.decay"},{id:"tone",control:"knob",state:"tone",label:"TONE",value:{default:55,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.tone"},{id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:75,min:0,max:100,step:1},meta:{unit:"%"},node:"controller.level"},{id:"soundSource",control:"screen",state:"pcmKey",label:"SOUND SOURCE",node:"controller.soundSource"},{id:"pilferSample",control:"button",label:"PILFER SAMPLE",node:"controller.pilferSample"}],sources:[{id:"source.internalClock",type:"clock",mode:"fallback",priority:10,state:"bpm"},{id:"source.clock",type:"clockFollower",priority:50},{id:"source.dv",type:"dvInput",priority:100,consume:true},{id:"source.cv",type:"cvInput",priority:50,passthrough:true}],actions:[{id:"action.divide",type:"scaleTiming",state:"division"},{id:"action.setBpm",type:"setState",state:"bpm"},{id:"action.setDivision",type:"setState",state:"division"},{id:"action.setProbability",type:"setState",state:"probability"},{id:"action.setPitch",type:"setState",state:"pitch"},{id:"action.setDecay",type:"setState",state:"decay"},{id:"action.setTone",type:"setState",state:"tone"},{id:"action.setLevel",type:"setState",state:"level"},{id:"action.selectPcm",type:"setState",state:"pcmKey"},{id:"action.pilferSample",type:"saveGeneratedPcm"}],nodes:{connections:[["source.internalClock","action.divide"],["source.clock","action.divide"],["source.dv","action.divide"],["source.cv","action.divide"],["controller.bpm","action.setBpm"],["controller.division","action.setDivision"],["controller.probability","action.setProbability"],["controller.pitch","action.setPitch"],["controller.decay","action.setDecay"],["controller.tone","action.setTone"],["controller.level","action.setLevel"],["controller.soundSource","action.selectPcm"],["controller.pilferSample","action.pilferSample"]]}});
+  define({id:"txrxr",model:"module-builder",version:1,package:{id:"txrxr",version:1,behavior:{description:"Wireless patch cable porting",role:"seniority-auto-tx-rx",sourceScope:"direct-parents",destinationScope:"all-direct-children",mappingCapacity:{minimum:1,initial:3,expandable:true},pairing:"shared-link-id",audio:"virtual-audio-bridge",events:["clock","dv","cv","note"],automation:"declared-modulatable-controls"}},faceplate:{livery:"radio-transceiver",primary:"#151515",secondary:"#ffd400",tertiary:"#f7f7e8"},defaults:{linkId:"A",enabled:true,mappings:[{enabled:false,source:"audio",destination:"audio"},{enabled:false,source:"clock",destination:"clock"},{enabled:false,source:"cv",destination:"cv"}]},controls:[{id:"linkId",control:"screen",state:"linkId",label:"LINK",node:"controller.linkId"},{id:"enabled",control:"switch",state:"enabled",label:"WIRELESS",node:"controller.enabled"},{id:"mappings",control:"screen",state:"mappings",label:"PATCHES",node:"controller.mappings"},{id:"addMapping",control:"button",label:"+ PATCH",node:"controller.addMapping"}],sources:[{id:"source.parents",type:"directParentDiscovery",maximumParents:3},{id:"source.audio",type:"audioInput",scope:"directParents"},{id:"source.clock",type:"clockFollower",scope:"directParents"},{id:"source.dv",type:"dvInput",scope:"directParents"},{id:"source.cv",type:"cvInput",scope:"directParents"},{id:"source.automation",type:"automationDiscovery",scope:"directParents",declaration:"modulatable"}],actions:[{id:"action.role",type:"deriveRoleBySeniority"},{id:"action.pair",type:"pairByLinkId"},{id:"action.map",type:"dynamicMappings",minimum:1,initial:3,expandable:true},{id:"action.transmit",type:"txrxrTransmit"},{id:"action.receive",type:"txrxrReceive",scope:"allDirectChildren"},{id:"action.automationOwnership",type:"claimAutomationTargets"}],nodes:{connections:[["source.parents","action.role"],["controller.linkId","action.pair"],["controller.enabled","action.pair"],["controller.mappings","action.map"],["controller.addMapping","action.map"],["source.audio","action.transmit"],["source.clock","action.transmit"],["source.dv","action.transmit"],["source.cv","action.transmit"],["source.automation","action.transmit"],["action.transmit","action.receive"],["action.receive","action.automationOwnership"]]}});
 })(window);
