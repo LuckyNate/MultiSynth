@@ -1,0 +1,1 @@
+.nodeCard.rackVisualNode .rackDragProxy{position:absolute;z-index:5;left:0;right:0;top:0;height:38px;margin:0;padding:0;border:0;background:transparent!important;opacity:0;cursor:grab;touch-action:none}.nodeCard.rackVisualNode.dragging .rackDragProxy{cursor:grabbing}.nodeBrowserRackChoice{width:100%;display:block}.nodeBrowserRackChoice>.rackFaceplateVisual{pointer-events:none}
