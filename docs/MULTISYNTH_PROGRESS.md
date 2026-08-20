@@ -60,6 +60,10 @@ Status labels:
 - Big Mouth — **BROKEN/PARTIAL**. Mic input was reportedly repaired, but speech recording still failed in last test; reverse-vocoder behavior is therefore unverified.
 - Unstable Diffusion — **PARTIAL**. Faceplate now exists, but runtime still does not yet implement the specified primary behavior of resolving live upstream audio with white-noise fallback.
 
+### Recently repaired / verify on device
+
+- Tapeworm loop time and playback speed were incorrectly independent — **REPAIRED**. They are now one coupled tape-motion parameter with `lengthSeconds = 2 / speed`; 0.1× = 20.0 s, 1× = 2.0 s, and 10× = 0.2 s. Both controls update each other immediately. The worklet no longer runs an independent read-head speed. Device/audio verification pending.
+
 ### Requires targeted verification
 
 - Father Time downstream timer/CV authority through loose modules and rack nodes.
@@ -72,7 +76,7 @@ Status labels:
 - Time Bandits stacked-rack probability drum-machine behavior.
 - RanDrone single random event per CV/DV click.
 - Hookworm granular echo-loop behavior.
-- Tapeworm tape-loop echo behavior.
+- Tapeworm tape-loop echo behavior after coupled-speed repair.
 - Tail Gator Bluetooth blocking vs Tailgate Mode behavior.
 - Android Back behavior on physical device for Node Graph module editor and embedded rack editor.
 - Saved Racks row faceplates and Rack Name editing on physical device.
@@ -87,10 +91,11 @@ Status labels:
 
 ## Current next actions
 
-1. Verify the four repaired Module Test catalog cards on device.
-2. Trace the actual DV routing/bus implementation and verify it matches temporary child-CV semantics.
-3. Trace Father Time propagation through node edges and rack-contained modules.
-4. Implement Unstable Diffusion live upstream-audio analysis/resynthesis with white-noise fallback.
-5. Repair Big Mouth recording path and validate reverse-vocoder behavior.
-6. Audit remaining manifest capabilities/categories against the canonical module jobs.
-7. Run module-by-module regression verification without touching LOCKED modules unless a fault is observed.
+1. Verify Tapeworm coupled loop-time/tape-speed behavior on device.
+2. Verify the four repaired Module Test catalog cards on device.
+3. Trace the actual DV routing/bus implementation and verify it matches temporary child-CV semantics.
+4. Trace Father Time propagation through node edges and rack-contained modules.
+5. Implement Unstable Diffusion live upstream-audio analysis/resynthesis with white-noise fallback.
+6. Repair Big Mouth recording path and validate reverse-vocoder behavior.
+7. Audit remaining manifest capabilities/categories against the canonical module jobs.
+8. Run module-by-module regression verification without touching LOCKED modules unless a fault is observed.
