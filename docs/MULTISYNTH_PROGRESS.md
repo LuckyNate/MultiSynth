@@ -19,11 +19,11 @@ Status labels:
 - Canonical architecture documentation — **UPDATED** to explicit node graph.
 - Android Back from a loose-module editor on Node Graph returns to Node Graph — **IMPLEMENTED**, device verification pending.
 - Android Back from an embedded rack editor on Node Graph returns to Node Graph — **IMPLEMENTED**, device verification pending.
-- Rack Builder module editor already exposes the Android-back interception hook — **IMPLEMENTED**.
-- Module Tester Android-back interception — **IMPLEMENTED** from earlier fix.
-- Saved Racks now render using the same rack faceplate language as Node Graph, arranged as touchable rows — **IMPLEMENTED**.
-- Rack player-facing identity is **Name**; immutable engine rack ID remains separate and continues to own routing/persistence references — **IMPLEMENTED**.
-- Rack Name editing is integrated into Rack Builder and propagates to Saved Racks and Node Graph faceplates — **IMPLEMENTED**, UI/device verification pending.
+- Rack Builder module editor Android-back interception — **IMPLEMENTED**.
+- Module Tester Android-back interception — **IMPLEMENTED**.
+- Saved Racks render with Node Graph rack faceplates in touchable rows — **IMPLEMENTED**.
+- Rack player-facing identity is **Name**; immutable engine rack ID remains separate and owns routing/persistence references — **IMPLEMENTED**.
+- Rack Name appears in selectors and above rack faceplates; unnamed racks display their engine ID as Name — **IMPLEMENTED**, UI/device verification pending.
 
 ## Timing and control
 
@@ -38,8 +38,15 @@ Status labels:
 ## Module metadata alignment
 
 - Time Bandits category changed from clock-first to rhythm — **IMPLEMENTED**.
-- Unstable Diffusion manifest now declares audio input and processor/fallback-generator intent — **IMPLEMENTED metadata only**.
+- Unstable Diffusion manifest declares audio input and processor/fallback-generator intent — **IMPLEMENTED metadata only**.
 - Remaining manifest/runtime capability audit against canonical module jobs — **TODO**.
+
+## Module Test catalog repairs
+
+- Time Bandits runtime registration failure caused by missing Module Builder definition after the authoritative-definition refactor — **REPAIRED**, device verification pending.
+- RanDrone runtime registration failure caused by the same missing Module Builder definition — **REPAIRED**, device verification pending.
+- Echo Canyon runtime registration failure caused by a JavaScript brace/parse error in `modules/echo-canyon.js` — **REPAIRED**, device verification pending.
+- Unstable Diffusion `FACEPLATE NOT FOUND` caused by missing `unstable-diffusion.html` — **REPAIRED** with an immediate touch-dial faceplate, device verification pending.
 
 ## Known module status
 
@@ -51,7 +58,7 @@ Status labels:
 ### Broken / incomplete
 
 - Big Mouth — **BROKEN/PARTIAL**. Mic input was reportedly repaired, but speech recording still failed in last test; reverse-vocoder behavior is therefore unverified.
-- Unstable Diffusion — **PARTIAL**. Current runtime generates seeded/noise-derived synthesis but does not yet implement its specified primary behavior of resolving from live upstream audio with white-noise fallback.
+- Unstable Diffusion — **PARTIAL**. Faceplate now exists, but runtime still does not yet implement the specified primary behavior of resolving live upstream audio with white-noise fallback.
 
 ### Requires targeted verification
 
@@ -69,6 +76,7 @@ Status labels:
 - Tail Gator Bluetooth blocking vs Tailgate Mode behavior.
 - Android Back behavior on physical device for Node Graph module editor and embedded rack editor.
 - Saved Racks row faceplates and Rack Name editing on physical device.
+- Module Test audit cards for Time Bandits, Echo Canyon, RanDrone, and Unstable Diffusion after the repair pass.
 
 ## Documentation and maintenance
 
@@ -79,9 +87,10 @@ Status labels:
 
 ## Current next actions
 
-1. Trace the actual DV routing/bus implementation and verify it matches temporary child-CV semantics.
-2. Trace Father Time propagation through node edges and rack-contained modules.
-3. Implement Unstable Diffusion live upstream-audio input analysis/resynthesis with white-noise fallback, preserving its existing playable fallback behavior.
-4. Repair Big Mouth recording path and validate reverse-vocoder behavior.
-5. Audit remaining manifest capabilities/categories against the canonical module jobs.
-6. Run module-by-module regression verification without touching LOCKED modules unless a fault is observed.
+1. Verify the four repaired Module Test catalog cards on device.
+2. Trace the actual DV routing/bus implementation and verify it matches temporary child-CV semantics.
+3. Trace Father Time propagation through node edges and rack-contained modules.
+4. Implement Unstable Diffusion live upstream-audio analysis/resynthesis with white-noise fallback.
+5. Repair Big Mouth recording path and validate reverse-vocoder behavior.
+6. Audit remaining manifest capabilities/categories against the canonical module jobs.
+7. Run module-by-module regression verification without touching LOCKED modules unless a fault is observed.
