@@ -17,7 +17,7 @@ final class LiveWireBridge {
         this.activity = activity;
         this.webView = webView;
         LiveWireHub.attach(webView);
-        playerHost = new LiveWirePlayerHost(activity);
+        playerHost = new LiveWirePlayerHost(activity, this);
     }
 
     @JavascriptInterface public boolean startLiveWire() {
@@ -34,14 +34,11 @@ final class LiveWireBridge {
     @JavascriptInterface public void stopLiveWire() { LiveWireProjectionService.stop(activity); }
     @JavascriptInterface public void setLiveWireValve(boolean open) { LiveWireProjectionService.setValve(activity, open); }
     @JavascriptInterface public void youtubeSearch(String query, int requestId, boolean random, int max) { YouTubeSearch.execute(query, requestId, random, max); }
-
     @JavascriptInterface public void liveWirePlay(String id) { playerHost.play(id); }
     @JavascriptInterface public void liveWirePause() { playerHost.pause(); }
     @JavascriptInterface public void liveWireResume() { playerHost.resume(); }
     @JavascriptInterface public void liveWireSeek(double seconds) { playerHost.seek(seconds); }
-    @JavascriptInterface public void liveWirePlayerEvent(String type, String json) {
-        activity.runOnUiThread(() -> webView.evaluateJavascript("window.MultiSynthLiveWire&&window.MultiSynthLiveWire.playerEvent(" + org.json.JSONObject.quote(type) + "," + org.json.JSONObject.quote(json) + ");", null));
-    }
+    @JavascriptInterface public void liveWirePlayerEvent(String type, String json) { activity.runOnUiThread(() -> webView.evaluateJavascript("window.MultiSynthLiveWire&&window.MultiSynthLiveWire.playerEvent(" + org.json.JSONObject.quote(type) + "," + org.json.JSONObject.quote(json) + ");", null)); }
 
     void destroy() { LiveWireHub.detach(webView); playerHost.destroy(); }
 }
