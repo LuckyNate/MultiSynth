@@ -105,13 +105,12 @@ function create(api){
   const c=api.context,input=c.createGain(),voice=c.createGain(),mix=c.createGain(),output=c.createGain();
   input.connect(mix);voice.connect(mix);mix.connect(output);
   api.setInput(input);api.setOutput(output);
-  const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,sampleBuffer:null,internalBuffer:null,onDv:null,onDiv:null,source:null,divideCount:0,externalKind:null,externalUntil:0,followClock:false};
+  const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,sampleBuffer:null,internalBuffer:null,onDv:null,source:null,divideCount:0,externalKind:null,externalUntil:0,followClock:false};
   buildInternalSample(u);
   u.onDv=p=>{
     processPulse(u,p,"dv");
     return null;
   };
-  u.onDiv=u.onDv;
   if(api.state.pcmKey)load(u,api.state.pcmKey);
   return u;
 }
