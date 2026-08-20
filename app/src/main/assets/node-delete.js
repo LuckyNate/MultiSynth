@@ -35,7 +35,8 @@
     x.className="nodeRemove";
     x.setAttribute("aria-label","Remove node");
     x.textContent="×";
-    x.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation()});
+    x.addEventListener("pointerdown",e=>e.stopPropagation());
+    x.addEventListener("pointerup",e=>e.stopPropagation());
     x.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();removeNode(card)});
     card.appendChild(x);
   }
