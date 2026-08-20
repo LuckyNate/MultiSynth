@@ -1,8 +1,9 @@
 class TapewormTapeProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
-    this.maxFrames=Math.ceil(sampleRate*20);
-    this.tape=new Float32Array(this.maxFrames);
+    this.referenceSeconds=2;
+    this.tapeFrames=Math.max(2,Math.floor(sampleRate*this.referenceSeconds));
+    this.tape=new Float32Array(this.tapeFrames);
     this.writePos=0;
     this.readPos=0;
     this.state={running:false,length:4,speed:.5,erase:1};
@@ -23,19 +24,23 @@ class TapewormTapeProcessor extends AudioWorkletProcessor {
     if(!input){out.fill(0);return true;}
     const s=this.state;
     if(!s.running){out.set(input);return true;}
-    const len=this.clamp(s.length??4,.2,20);
+    const speed=this.clamp(s.speed??.5,.1,10);
     const erase=this.clamp(s.erase??1,0,1);
-    const N=Math.max(2,Math.min(this.maxFrames,Math.floor(len*sampleRate)));
+    const N=this.tapeFrames;
     let w=this.wrap(this.writePos,N),r=this.wrap(this.readPos,N);
     for(let i=0;i<out.length;i++){
       const r0=Math.floor(r)%N,r1=(r0+1)%N,rf=r-Math.floor(r);
       const playback=this.tape[r0]*(1-rf)+this.tape[r1]*rf;
       out[i]=Math.max(-.95,Math.min(.95,playback));
+
+      // Record head is deliberately fixed at normal 1x tape speed.
+      // Playback head is varispeed, so changing speed stretches/compresses
+      // both time and pitch in real time against normally recorded material.
       const wi=Math.floor(w)%N;
       const previous=this.tape[wi];
       this.tape[wi]=Math.max(-.95,Math.min(.95,previous*(1-erase)+input[i]));
       w+=1;
-      r+=1;
+      r+=speed;
       w=this.wrap(w,N);
       r=this.wrap(r,N);
     }
