@@ -26,7 +26,7 @@ final class LiveWirePlayerHost {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(2, 2, Gravity.TOP | Gravity.START);
         player.setAlpha(0.01f);
         activity.addContentView(player, lp);
-        player.loadUrl("https://appassets.androidplatform.net/assets/live-wire-host.html");
+        player.loadUrl("file:///android_asset/live-wire-host.html");
     }
 
     private void js(String code) { activity.runOnUiThread(() -> player.evaluateJavascript(code, null)); }
