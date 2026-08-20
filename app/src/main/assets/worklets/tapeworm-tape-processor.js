@@ -1,7 +1,7 @@
 class TapewormTapeProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
-    this.maxFrames=Math.ceil(sampleRate*20);
+    this.maxFrames=Math.ceil(sampleRate*30);
     this.tape=new Float32Array(this.maxFrames);
     this.writePos=0;
     this.readPos=0;
@@ -23,7 +23,7 @@ class TapewormTapeProcessor extends AudioWorkletProcessor {
     if(!input){out.fill(0);return true;}
     const s=this.state;
     if(!s.running){out.set(input);return true;}
-    const len=this.clamp(s.length??4,.25,20);
+    const len=this.clamp(s.length??4,.1,30);
     const speed=this.clamp(s.speed??1,.25,4);
     const erase=this.clamp(s.erase??1,0,1);
     const N=Math.max(2,Math.min(this.maxFrames,Math.floor(len*sampleRate)));
@@ -32,14 +32,9 @@ class TapewormTapeProcessor extends AudioWorkletProcessor {
       const r0=Math.floor(r)%N,r1=(r0+1)%N,rf=r-Math.floor(r);
       const playback=this.tape[r0]*(1-rf)+this.tape[r1]*rf;
       out[i]=Math.max(-.95,Math.min(.95,playback));
-
-      // The record head always advances at real time (1 sample per sample), regardless
-      // of playback speed. Falloff controls how much of the previous loop survives
-      // when the record head comes around again.
       const wi=Math.floor(w)%N;
       const previous=this.tape[wi];
       this.tape[wi]=Math.max(-.95,Math.min(.95,previous*(1-erase)+input[i]));
-
       w+=1;
       r+=speed;
       w=this.wrap(w,N);
