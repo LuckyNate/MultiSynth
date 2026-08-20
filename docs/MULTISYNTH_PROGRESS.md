@@ -21,6 +21,9 @@ Status labels:
 - Android Back from an embedded rack editor on Node Graph returns to Node Graph — **IMPLEMENTED**, device verification pending.
 - Rack Builder module editor already exposes the Android-back interception hook — **IMPLEMENTED**.
 - Module Tester Android-back interception — **IMPLEMENTED** from earlier fix.
+- Saved Racks now render using the same rack faceplate language as Node Graph, arranged as touchable rows — **IMPLEMENTED**.
+- Rack player-facing identity is **Name**; immutable engine rack ID remains separate and continues to own routing/persistence references — **IMPLEMENTED**.
+- Rack Name editing is integrated into Rack Builder and propagates to Saved Racks and Node Graph faceplates — **IMPLEMENTED**, UI/device verification pending.
 
 ## Timing and control
 
@@ -65,6 +68,7 @@ Status labels:
 - Tapeworm tape-loop echo behavior.
 - Tail Gator Bluetooth blocking vs Tailgate Mode behavior.
 - Android Back behavior on physical device for Node Graph module editor and embedded rack editor.
+- Saved Racks row faceplates and Rack Name editing on physical device.
 
 ## Documentation and maintenance
 
