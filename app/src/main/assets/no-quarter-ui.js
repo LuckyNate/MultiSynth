@@ -12,7 +12,13 @@
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const quant=(v,min,step)=>min+Math.round((v-min)/step)*step;
   const paint=(node,d,v)=>{const min=Number(d.value?.min??0),max=Number(d.value?.max??1),pct=(v-min)/(max-min||1),angle=-135+clamp(pct,0,1)*270;const p=node.querySelector(".ms-control-pointer");if(p)p.style.transform=`translateX(-50%) rotate(${angle}deg)`;const out=node.querySelector(".ms-control-value");if(out){const unit=d.meta?.unit||"";out.textContent=(Number.isInteger(Number(d.value?.step))?Math.round(v):Number(v).toFixed(2))+unit}};
-  for(const d0 of def.controls){if(d0.control!=="knob"&&d0.control!=="dial")continue;const d={...d0,meta:{...(d0.meta||{}),visual:{variant:"large",size:86,valueReadout:true}}};const node=R.mount(grid,d);const key=d.state||d.id,min=Number(d.value?.min??0),max=Number(d.value?.max??1),step=Number(d.value?.step??.01);let value=Number(state[key]??d.value?.default??min);paint(node,d,value);let startY=0,startValue=value,active=false;
+  for(const d0 of def.controls){
+    if(d0.control!=="knob"&&d0.control!=="dial")continue;
+    const variant=d0.control==="dial"?"rotary":"cap";
+    const d={...d0,meta:{...(d0.meta||{}),visual:{variant,size:86,valueReadout:true}}};
+    let node;
+    try{node=R.mount(grid,d)}catch(e){console.error("NO QUARTER CONTROL RENDER",d.id,e);continue}
+    const key=d.state||d.id,min=Number(d.value?.min??0),max=Number(d.value?.max??1),step=Number(d.value?.step??.01);let value=Number(state[key]??d.value?.default??min);paint(node,d,value);let startY=0,startValue=value,active=false;
     node.addEventListener("pointerdown",e=>{active=true;startY=e.clientY;startValue=value;node.setPointerCapture?.(e.pointerId);node.dataset.active="1";e.preventDefault()});
     node.addEventListener("pointermove",e=>{if(!active)return;const span=max-min,raw=startValue+(startY-e.clientY)*(span/180);value=clamp(quant(raw,min,step),min,max);paint(node,d,value);patch(key,value);e.preventDefault()});
     const end=e=>{if(!active)return;active=false;node.dataset.active="0";try{node.releasePointerCapture?.(e.pointerId)}catch(_){}};node.addEventListener("pointerup",end);node.addEventListener("pointercancel",end);
