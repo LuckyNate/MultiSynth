@@ -1,11 +1,11 @@
 class TapewormTapeProcessor extends AudioWorkletProcessor {
   constructor(){
     super();
-    this.maxFrames=Math.ceil(sampleRate*30);
+    this.maxFrames=Math.ceil(sampleRate*20);
     this.tape=new Float32Array(this.maxFrames);
     this.writePos=0;
     this.readPos=0;
-    this.state={running:false,length:4,speed:1,erase:1};
+    this.state={running:false,length:4,speed:.5,erase:1};
     this.port.onmessage=e=>{
       if(e.data&&e.data.type==='state')Object.assign(this.state,e.data.state||{});
       if(e.data&&e.data.type==='clear'){
@@ -23,8 +23,7 @@ class TapewormTapeProcessor extends AudioWorkletProcessor {
     if(!input){out.fill(0);return true;}
     const s=this.state;
     if(!s.running){out.set(input);return true;}
-    const len=this.clamp(s.length??4,.1,30);
-    const speed=this.clamp(s.speed??1,.25,4);
+    const len=this.clamp(s.length??4,.2,20);
     const erase=this.clamp(s.erase??1,0,1);
     const N=Math.max(2,Math.min(this.maxFrames,Math.floor(len*sampleRate)));
     let w=this.wrap(this.writePos,N),r=this.wrap(this.readPos,N);
@@ -36,7 +35,7 @@ class TapewormTapeProcessor extends AudioWorkletProcessor {
       const previous=this.tape[wi];
       this.tape[wi]=Math.max(-.95,Math.min(.95,previous*(1-erase)+input[i]));
       w+=1;
-      r+=speed;
+      r+=1;
       w=this.wrap(w,N);
       r=this.wrap(r,N);
     }
