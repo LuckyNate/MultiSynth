@@ -1,8 +1,8 @@
 "use strict";
 (function(global){
 const MS=global.MultiSynth=global.MultiSynth||{};
-const listeners=new Set(),searches=new Map();
-let statusText="LIVE WIRE IDLE",sampleRate=48000,searchSeq=1;
+const listeners=new Set(),playerListeners=new Set(),searches=new Map();
+let statusText="LIVE WIRE IDLE",sampleRate=48000,searchSeq=1,playerState={state:-1,current:0,duration:0};
 function bridge(){return global.LiveWireAndroid||global.AndroidMidi||null}
 function decode(b64){const bin=atob(b64),n=bin.length>>1,out=new Float32Array(n);for(let i=0,j=0;i<n;i++,j+=2){let v=(bin.charCodeAt(j)&255)|((bin.charCodeAt(j+1)&255)<<8);if(v&0x8000)v-=0x10000;out[i]=v/32768}return out}
 const api={
@@ -10,13 +10,19 @@ const api={
  start(){const b=bridge();return b&&typeof b.startLiveWire==="function"?!!b.startLiveWire():false},
  stop(){const b=bridge();if(b&&typeof b.stopLiveWire==="function")b.stopLiveWire()},
  setValve(open){const b=bridge();if(b&&typeof b.setLiveWireValve==="function")b.setLiveWireValve(!!open)},
+ play(id){const b=bridge();if(b&&typeof b.liveWirePlay==="function")b.liveWirePlay(String(id||""))},
+ pause(){const b=bridge();if(b&&typeof b.liveWirePause==="function")b.liveWirePause()},
+ resume(){const b=bridge();if(b&&typeof b.liveWireResume==="function")b.liveWireResume()},
+ seek(seconds){const b=bridge();if(b&&typeof b.liveWireSeek==="function")b.liveWireSeek(Number(seconds)||0)},
+ onPlayer(fn){playerListeners.add(fn);try{fn(playerState)}catch(_){}return()=>playerListeners.delete(fn)},
+ playerEvent(type,json){let data={};try{data=typeof json==="string"?JSON.parse(json):json||{}}catch(_){}playerState={...playerState,...data,type};playerListeners.forEach(fn=>{try{fn(playerState)}catch(e){console.error(e)}});global.dispatchEvent(new CustomEvent("multisynth-live-wire-player",{detail:playerState}))},
  onChunk(fn){listeners.add(fn);return()=>listeners.delete(fn)},
- get status(){return statusText},get sampleRate(){return sampleRate},
+ get status(){return statusText},get sampleRate(){return sampleRate},get playerState(){return playerState},
  receive(b64,rate){sampleRate=Number(rate)||48000;const pcm=decode(b64);listeners.forEach(fn=>{try{fn(pcm,sampleRate)}catch(e){console.error(e)}})},
  status(text){statusText=String(text||"");global.dispatchEvent(new CustomEvent("multisynth-live-wire-status",{detail:statusText}))},
  search(query,{random=false,max=12}={}){return new Promise((resolve,reject)=>{const b=bridge();if(!b||typeof b.youtubeSearch!=="function"){reject(new Error("YOUTUBE SEARCH UNAVAILABLE"));return}const id=searchSeq++;searches.set(id,{resolve,reject});try{b.youtubeSearch(String(query||""),id,!!random,Math.max(5,Math.min(25,Number(max)||12)))}catch(e){searches.delete(id);reject(e)}})},
  searchResult(id,json){const p=searches.get(Number(id));if(!p)return;searches.delete(Number(id));try{const data=typeof json==="string"?JSON.parse(json):json;if(data&&data.error)throw new Error(data.error);p.resolve(Array.isArray(data?.items)?data.items:[])}catch(e){p.reject(e)}}
 };
 MS.LiveWireNative=api;
-global.MultiSynthLiveWire={receive:(b,r)=>api.receive(b,r),status:t=>api.status(t),searchResult:(id,j)=>api.searchResult(id,j)};
+global.MultiSynthLiveWire={receive:(b,r)=>api.receive(b,r),status:t=>api.status(t),searchResult:(id,j)=>api.searchResult(id,j),playerEvent:(t,j)=>api.playerEvent(t,j)};
 })(window);
