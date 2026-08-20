@@ -6,8 +6,8 @@ function save(d){localStorage.setItem(KEY,JSON.stringify({version:1,racks:Array.
 function list(){return clone(load().racks)}
 function get(id){return clone(load().racks.find(x=>String(x.id)===String(id))||null)}
 function cleanName(value){return String(value??"").trim().replace(/[\r\n\t]+/g," ").slice(0,80)}
-function registerRack(id,name){const d=load();id=String(id);let r=d.racks.find(x=>String(x.id)===id);if(!r){r={id,name:cleanName(name)||`Rack ${d.racks.length+1}`};d.racks.push(r)}else if(name)r.name=cleanName(name)||r.name;save(d);return clone(r)}
-function rename(id,name){const d=load(),r=d.racks.find(x=>String(x.id)===String(id));if(!r)return false;const next=cleanName(name);if(next)r.name=next;save(d);return clone(r)}
+function registerRack(id,name){const d=load();id=String(id);let r=d.racks.find(x=>String(x.id)===id);if(!r){r={id,name:cleanName(name)||id};d.racks.push(r)}else if(name)r.name=cleanName(name)||r.name;save(d);return clone(r)}
+function rename(id,name){const d=load(),r=d.racks.find(x=>String(x.id)===String(id));if(!r)return false;const next=cleanName(name);r.name=next||String(r.id);save(d);return clone(r)}
 function remove(id){const d=load(),n=d.racks.length;d.racks=d.racks.filter(x=>String(x.id)!==String(id));if(d.racks.length===n)return false;save(d);return true}
 MS.RackLibrary=Object.freeze({load,list,get,registerRack,rename,remove});
 })(window);
