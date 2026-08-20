@@ -32,7 +32,6 @@ final class LiveWireBridge {
     }
 
     @JavascriptInterface public void stopLiveWire() { LiveWireProjectionService.stop(activity); }
-    @JavascriptInterface public void setLiveWireValve(boolean open) { LiveWireProjectionService.setValve(activity, open); }
     @JavascriptInterface public void youtubeSearch(String query, int requestId, boolean random, int max) { YouTubeSearch.execute(query, requestId, random, max); }
     @JavascriptInterface public void liveWirePlay(String id) { playerHost.play(id); }
     @JavascriptInterface public void liveWirePause() { playerHost.pause(); }
