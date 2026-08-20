@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>html,body,#player{margin:0;width:2px;height:2px;overflow:hidden;background:#000}</style></head><body><div id="player"></div><script src="https://www.youtube.com/iframe_api"></script><script>
+(function(){
+let p=null,ready=false,pending=null;
+function notify(type,data){try{LiveWireAndroid.liveWirePlayerEvent(type,JSON.stringify(data||{}))}catch(_){}}
+window.onYouTubeIframeAPIReady=function(){p=new YT.Player('player',{width:2,height:2,playerVars:{playsinline:1,controls:0,rel:0,autoplay:1,enablejsapi:1},events:{onReady(){ready=true;notify('ready',{});if(pending){const id=pending;pending=null;api.play(id)}},onStateChange(e){let current=0,duration=0;try{current=p.getCurrentTime()||0;duration=p.getDuration()||0}catch(_){}notify('state',{state:e.data,current,duration})},onError(e){notify('error',{code:e.data})}}})};
+const api=window.LiveWireHost={play(id){if(!ready||!p){pending=id;return}try{p.loadVideoById(String(id));p.playVideo()}catch(_){}},pause(){try{p&&p.pauseVideo()}catch(_){}},resume(){try{p&&p.playVideo()}catch(_){}},seek(s){try{p&&p.seekTo(Math.max(0,Number(s)||0),true)}catch(_){}},status(){let current=0,duration=0,state=-1;try{current=p.getCurrentTime()||0;duration=p.getDuration()||0;state=p.getPlayerState()}catch(_){}notify('status',{state,current,duration})}};
+setInterval(()=>{if(ready)api.status()},500);
+})();
+</script></body></html>
