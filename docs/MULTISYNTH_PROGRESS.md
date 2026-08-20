@@ -17,6 +17,10 @@ Status labels:
 - Saved racks as reusable compound nodes with ordered internal chains — **IMPLEMENTED**.
 - Spatial/cascade routing as current architecture — **REMOVED / NOT CURRENT**.
 - Canonical architecture documentation — **UPDATED** to explicit node graph.
+- Android Back from a loose-module editor on Node Graph returns to Node Graph — **IMPLEMENTED**, device verification pending.
+- Android Back from an embedded rack editor on Node Graph returns to Node Graph — **IMPLEMENTED**, device verification pending.
+- Rack Builder module editor already exposes the Android-back interception hook — **IMPLEMENTED**.
+- Module Tester Android-back interception — **IMPLEMENTED** from earlier fix.
 
 ## Timing and control
 
@@ -60,6 +64,7 @@ Status labels:
 - Hookworm granular echo-loop behavior.
 - Tapeworm tape-loop echo behavior.
 - Tail Gator Bluetooth blocking vs Tailgate Mode behavior.
+- Android Back behavior on physical device for Node Graph module editor and embedded rack editor.
 
 ## Documentation and maintenance
 
