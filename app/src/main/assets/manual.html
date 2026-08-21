@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MultiSynth Manual</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark;background:#090b0d;color:#eef3f5}*{box-sizing:border-box}body{margin:0;background:#090b0d;color:#eef3f5}.manual{width:min(860px,100%);margin:0 auto;padding:20px 16px 48px}.top{position:sticky;top:0;z-index:2;margin:-20px -16px 20px;padding:16px;background:rgba(9,11,13,.96);border-bottom:1px solid #2a3135}.top a{color:#9fe7ff;text-decoration:none;font-weight:800}.eyebrow{margin:18px 0 4px;font-size:.75rem;letter-spacing:.2em;color:#9aa8af}.manual h1{margin:0;font-size:clamp(2rem,9vw,4rem);line-height:.9}.intro{color:#b8c2c7;max-width:62ch}.section{margin:14px 0;padding:18px;border:1px solid #2b3438;border-radius:12px;background:#111518}.section h2{margin:0 0 8px;font-size:1.1rem}.section p{margin:0;line-height:1.55;color:#d7dfe2}.empty{color:#ff9f9f}</style>
+</head>
+<body>
+<main class="manual">
+  <div class="top"><a href="index.html">← MULTISYNTH</a></div>
+  <p class="eyebrow">GENERAL SOFTWARE</p>
+  <h1 id="title">MultiSynth Manual</h1>
+  <p class="intro">This manual is driven by shared manual data so the same sections can later power the in-app tutorial without maintaining two different explanations.</p>
+  <div id="sections"></div>
+</main>
+<script src="manual-data.js"></script>
+<script>
+(function(){
+  const manual=window.MultiSynth&&window.MultiSynth.Manual,host=document.getElementById("sections");
+  if(!manual){host.innerHTML='<p class="empty">Manual data unavailable.</p>';return;}
+  document.getElementById("title").textContent=manual.title;
+  for(const item of manual.sections){const section=document.createElement("section");section.className="section";section.id=item.id;const h=document.createElement("h2");h.textContent=item.title;const p=document.createElement("p");p.textContent=item.body;section.append(h,p);host.append(section);}
+})();
+</script>
+</body>
+</html>
