@@ -12,6 +12,7 @@ Governing rules for all sound-engine work:
 - Shared engine handles only routing, graph lifetime, and generic event delivery.
 - Each instrument owns its actual synthesis physics and note behavior.
 - No silent shims. If something is wrong, fix the source rule instead of adding another layer.
+- Fundamental audio sources live at the bottom in `dsp-source-family.js`. Source-family modules must not call oscillator, buffer-source, constant-source, or live-noise constructors directly; they request the primitive source and immediately configure/connect it to their carrier or module DSP.
 
 - [x] Establish one ModuleContract/DSP owner per synth. For the current synth family, `modules/carrier-synth-modules.js` is the temporary single runtime owner while cleanup is in progress.
 - [x] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
@@ -19,6 +20,7 @@ Governing rules for all sound-engine work:
 - [x] Remove `modules/synth-gain-cleanup.js` after confirming no unique required behavior is lost. Its stripping of legitimate `level`/`carrier` state was not preserved.
 - [x] Remove every loader/HTML reference to `modules/synth-gain-cleanup.js`, then delete the file.
 - [x] Preserve duplicate rejection in both Module Builder and ModuleContract registries so duplicate UI specs and duplicate runtime/DSP definitions fail loudly.
+- [x] Add `dsp-source-family.js` as the lowest shared source layer and route the current synthetic-source family through it: carrier synth family (PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, No Quarter), Lowrider, RanDrone, Unstable Diffusion, and Beat Red.
 - [ ] Smoke-test PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, and No Quarter immediately after ownership cleanup. Preserve current sound and controls; do not change DSP equations as part of ownership cleanup.
 - [ ] Audit shared voice lifecycle in the true DSP owner: remove arbitrary timed hard-stop behavior and make note termination signal-correct/click-safe, starting with next-zero-crossing termination where appropriate.
 - [ ] Audit No Quarter note-off specifically as Rhodes damping behavior after the universal click-safe voice-stop rule is correct. Do not add fake ADSR release behavior.
