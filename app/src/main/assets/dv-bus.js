@@ -4,7 +4,7 @@ const MS=global.MultiSynth=global.MultiSynth||{};
 const E=()=>MS.RackEngine,C=()=>MS.ModuleContract,M=()=>MS.ModuleManifest,K=()=>MS.ModuleCapabilities;
 const clone=v=>v==null?v:(typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v)));
 function locate(g,moduleId){for(const r of g.racks||[]){const active=(r.modules||[]).filter(m=>m.enabled!==false),i=active.findIndex(m=>m.id===moduleId);if(i>=0)return{rack:r,index:i}}return null}
-function accepts(m,kind){const meta=M()?.get(m.type),caps=K();if(!meta||!caps)return false;return kind==="cv"?caps.has(meta,caps.CV_INPUT):caps.has(meta,caps.DV_INPUT)}
+function accepts(m,kind){if(kind==="cv")return true;const meta=M()?.get(m.type),caps=K();return !!(meta&&caps&&caps.has(meta,caps.DV_INPUT))}
 function runtime(mid,rack){try{return C().getRuntime(mid)}catch(_){try{return E().createModuleRuntime(rack.id,mid,{audioContext:MS.RackAudioGraph?.context,native:MS.rack?.native||null})}catch(__){return null}}}
 function rackChildren(g,rackId){const out=[];for(const c of g.connections||[]){const a=E().parseNode(c.from),b=E().parseNode(c.to);if(a?.kind==="rack"&&a.id===rackId&&a.port==="out"&&b?.kind==="rack"&&b.port==="in")out.push(b.id)}return[...new Set(out)]}
 function moduleTargets(g,moduleId){const out=[];for(const c of g.connections||[]){const a=E().parseNode(c.from),b=E().parseNode(c.to);if(a?.kind==="module"&&a.id===moduleId&&a.port==="out"&&b?.kind==="module"&&b.port==="in")out.push(b.id)}return[...new Set(out)]}
