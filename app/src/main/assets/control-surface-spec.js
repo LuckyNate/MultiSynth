@@ -18,7 +18,10 @@
     [C.SCREEN]:freeze({variant:"screen",width:240,height:120,touchWidth:240,touchHeight:120,corner:10,labelGap:8,valueReadout:false}),
     [C.METER]:freeze({variant:"bar",width:34,height:132,touchWidth:46,touchHeight:140,corner:5,labelGap:7,valueReadout:true}),
     [C.LED]:freeze({variant:"round",size:18,touch:36,corner:50,labelGap:6,valueReadout:false}),
-    [C.JACK]:freeze({variant:"socket",size:34,touch:50,corner:50,labelGap:6,valueReadout:false})
+    [C.JACK]:freeze({variant:"socket",size:34,touch:50,corner:50,labelGap:6,valueReadout:false}),
+    // Faceplate decal defaults. This primitive is intentionally inert until a module renders one.
+    // Artwork is presentation-only and must never own module state or interaction.
+    [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,opacity:1,rotation:0,fit:"contain",blend:"normal",labelGap:0,valueReadout:false})
   });
   const VARIANTS=freeze({
     knob:freeze(["cap","skirted","pointer","encoder"]),
@@ -29,10 +32,11 @@
     button:freeze(["rect","round","arcade"]),
     switch:freeze(["rocker","slide","toggle"]),
     key:freeze(["key","black-key","pad-key"]),
-    xy:freeze(["pad"]),screen:freeze(["screen"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"])
+    xy:freeze(["pad"]),screen:freeze(["screen"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),
+    decal:freeze(["screenprint","sticker","stencil","plate"])
   });
   function defaults(control){const d=TYPES[control];if(!d)throw new Error("No control visual spec for "+control);return d}
   function resolve(control,overrides={}){const base=defaults(control),r={...base,...overrides};if(VARIANTS[control]&&!VARIANTS[control].includes(r.variant))throw new Error("Unsupported "+control+" variant: "+r.variant);return freeze(r)}
-  function cssVars(control,overrides={}){const s=resolve(control,overrides),out={};for(const [k,v] of Object.entries(s)){if(typeof v==="number"){const unitless=new Set(["travel","startAngle","endAngle","ticks"]);out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=unitless.has(k)?String(v):px(v)}else if(typeof v==="boolean")out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=v?"1":"0";else if(v!=null)out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=String(v)}return freeze(out)}
+  function cssVars(control,overrides={}){const s=resolve(control,overrides),out={};for(const [k,v] of Object.entries(s)){if(typeof v==="number"){const unitless=new Set(["travel","startAngle","endAngle","ticks","opacity","rotation"]);out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=unitless.has(k)?String(v):px(v)}else if(typeof v==="boolean")out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=v?"1":"0";else if(v!=null)out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=String(v)}return freeze(out)}
   MS.ControlSurfaceSpec=freeze({TYPES,VARIANTS,defaults,resolve,cssVars});
 })(window);
