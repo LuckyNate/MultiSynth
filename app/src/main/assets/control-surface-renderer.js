@@ -17,6 +17,15 @@
     case C.METER:{face.appendChild(el("span","ms-meter-track"));face.appendChild(el("span","ms-meter-fill"));break}
     case C.LED:{face.appendChild(el("span","ms-led-lens"));break}
     case C.JACK:{face.appendChild(el("span","ms-jack-ring"));face.appendChild(el("span","ms-jack-hole"));break}
+    case C.DECAL:{
+      // Presentation-only image layer. No pointer handlers or state binding are installed here.
+      const img=el("img","ms-decal-image");
+      const src=d.meta?.src;if(src)img.src=String(src);
+      img.alt=d.meta?.alt?String(d.meta.alt):"";
+      img.draggable=false;
+      face.appendChild(img);
+      break;
+    }
   }return root}
   function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})});return decorate(d,shell(d,visual))}
   function mount(parent,spec,options={}){const node=render(spec,options);parent.appendChild(node);return node}
