@@ -14,7 +14,7 @@ Governing rules for all sound-engine work:
 - No silent shims. If something is wrong, fix the source rule instead of adding another layer.
 
 - [x] Establish one ModuleContract/DSP owner per synth. For the current synth family, `modules/carrier-synth-modules.js` is the temporary single runtime owner while cleanup is in progress.
-- [ ] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
+- [x] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
 - [x] Remove runtime `C.define(...)` redefinitions from individual synth files; individual synth files own Module Builder/control/model definitions only unless that module itself is the sole DSP owner.
 - [x] Remove `modules/synth-gain-cleanup.js` after confirming no unique required behavior is lost. Its stripping of legitimate `level`/`carrier` state was not preserved.
 - [x] Remove every loader/HTML reference to `modules/synth-gain-cleanup.js`, then delete the file.
