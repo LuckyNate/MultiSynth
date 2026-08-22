@@ -5,7 +5,10 @@
   const CONTROL=Object.freeze({
     KNOB:"knob", DIAL:"dial", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", KEY:"key", XY:"xy",
-    SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack"
+    SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack",
+    // DECAL is a silent, non-interactive faceplate styling primitive. It does not bind state,
+    // gestures, routing, or DSP. Modules opt in explicitly when they want printed artwork.
+    DECAL:"decal"
   });
 
   const GESTURE=Object.freeze({
@@ -40,7 +43,8 @@
     [CONTROL.OSCILLOSCOPE]:Object.freeze([GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.METER]:Object.freeze([GESTURE.TAP]),
     [CONTROL.LED]:Object.freeze([GESTURE.TAP]),
-    [CONTROL.JACK]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE])
+    [CONTROL.JACK]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
+    [CONTROL.DECAL]:Object.freeze([])
   });
 
   const ACTIONS=new Set(Object.values(ACTION)),CONTROLS=new Set(Object.values(CONTROL)),GESTURES=new Set(Object.values(GESTURE));
