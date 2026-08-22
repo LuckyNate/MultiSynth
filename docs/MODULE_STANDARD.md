@@ -20,6 +20,21 @@ Rules:
 
 This source-layer rule applies to keyboard synths, LFO/audio-rate oscillators, procedural generators, synthetic drums, noise generators, and future modules that create fundamental audio/control sources.
 
+## Playable source articulation standard
+
+Every playable sound-source module owns a built-in per-voice ADSR-controlled VCA. The standard voice path is:
+
+`source physics -> built-in ADSR/VCA -> module output`
+
+Rules:
+
+- Every playable sound source exposes the same Module Builder ADSR container: Attack, Decay, Sustain, Release, plus the shared envelope display.
+- Note-on gates the built-in envelope on. Note-off starts Release; it does not hard-stop the source as the musical articulation mechanism.
+- The underlying source remains alive through Release and is disposed only after the envelope reaches silence. Click-safe/zero-cross source termination is final cleanup, not articulation.
+- Instrument-specific synthesis physics remain owned by the instrument. A physical-model instrument such as No Quarter may have tine, tone-bar, hammer, damping, and other natural behavior underneath the standard voice VCA.
+- Downstream envelope processors do not reach upstream into source voices. You've Been Served envelopes only the carrier delivered by its rack parent(s) and remains an ordinary rack processor.
+- Every playable sound-source module uses the shared Module Builder performance keyboard and pins that keyboard to the bottom of its editor. Do not implement module-local keyboards.
+
 ## Module identity: one source of truth
 
 `app/src/main/assets/module-ids.js` is the only place that defines a module's symbolic identity, canonical runtime ID, human-facing display name, and stable theme key.
@@ -139,5 +154,6 @@ Every new module has a theme key in the identity catalog and visual metadata in 
 5. Bind visible editor/faceplate identity to the catalog rather than hard-coding the module name.
 6. Define only unique DSP/behavior and state; use `DspSources` for fundamental generated sources and shared infrastructure for common mechanics.
 7. Make the Module Builder `sources/actions/nodes` graph reflect the real DSP source-family path.
-8. Mark standard controls with modulation metadata when external modulation is supported or intended.
-9. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, touch behavior, compound rack I/O, and Node Graph connectivity before considering the module complete.
+8. For playable sound sources, include the shared built-in ADSR container and pinned shared performance keyboard.
+9. Mark standard controls with modulation metadata when external modulation is supported or intended.
+10. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, touch behavior, compound rack I/O, and Node Graph connectivity before considering the module complete.
