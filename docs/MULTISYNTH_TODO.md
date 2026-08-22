@@ -10,6 +10,15 @@ This is the canonical project to-do list. Read this file before answering questi
 
 ## Active
 
+### TOP PRIORITY — MODULE BUILDER RENDERER CLEANUP
+
+- [ ] Remove per-module control whitelists/negative gates. If a Module Builder definition declares a supported component, the editor renders it.
+- [ ] Remove the No Quarter knob/dial-only filter; do not special-case ADSR into No Quarter.
+- [ ] Put ADSR rendering in the shared Module Builder/RackUI component layer and remove the private `renderAdsr()` implementation from `rack-instrument-editor.js`.
+- [ ] Stop filtering declared keyboard/scope components out of instrument definitions merely to remount them through a parallel path; component placement belongs to shared renderer/layout metadata.
+- [ ] Collapse `rack-module-editor.js` away from hard-coded module exclusion/whitelist branching where Module Builder definitions can positively declare their editor/components.
+- [ ] Unknown/unsupported declared Module Builder components must fail visibly/audit loudly; never silently `continue` or disappear.
+
 ### TOP PRIORITY — SYNTHESIS CORE CLEANUP
 
 Governing rules for all sound-engine work:
