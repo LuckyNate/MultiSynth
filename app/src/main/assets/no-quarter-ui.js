@@ -7,7 +7,10 @@
   const def=B.get(I.NO_QUARTER);if(!def)return;
   const root=document.getElementById("controls");if(!root)return;
   const panel=document.createElement("div");panel.className="nq-panel";
-  const grid=document.createElement("div");grid.className="nq-controls";panel.appendChild(grid);root.appendChild(panel);
+  const grid=document.createElement("div");grid.className="nq-controls";panel.appendChild(grid);
+  const crackleBank=document.createElement("section");crackleBank.className="nq-crackle-bank";crackleBank.innerHTML='<div class="nq-crackle-head"><div class="nq-crackle-title">CRACKLE EVENTS</div><div class="nq-crackle-sub">MASTER VOLUME · EVENT DENSITY</div></div>';
+  const crackleGrid=document.createElement("div");crackleGrid.className="nq-crackle-grid";crackleBank.appendChild(crackleGrid);panel.appendChild(crackleBank);root.appendChild(panel);
+  const crackleIds=new Set(["crackle","crackleMicro","crackleTick","cracklePop","crackleDust","crackleArc"]);
   const patch=(key,value)=>{state={...state,[key]:value};if(rackId&&instance)try{E.setModuleState(rackId,instance,{[key]:value});A?.rebuild?.()}catch(e){console.error(e)}};
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const quant=(v,min,step)=>min+Math.round((v-min)/step)*step;
@@ -17,7 +20,9 @@
     const variant=d0.control==="dial"?"rotary":"cap";
     const d={...d0,meta:{...(d0.meta||{}),visual:{variant,size:86,valueReadout:true}}};
     let node;
-    try{node=R.mount(grid,d)}catch(e){console.error("NO QUARTER CONTROL RENDER",d.id,e);continue}
+    const target=crackleIds.has(d.id)?crackleGrid:grid;
+    try{node=R.mount(target,d)}catch(e){console.error("NO QUARTER CONTROL RENDER",d.id,e);continue}
+    if(crackleIds.has(d.id)){node.classList.add("nq-crackle-control");if(d.id==="crackle")node.classList.add("nq-crackle-master")}
     const key=d.state||d.id,min=Number(d.value?.min??0),max=Number(d.value?.max??1),step=Number(d.value?.step??.01);let value=Number(state[key]??d.value?.default??min);paint(node,d,value);let startY=0,startValue=value,active=false;
     node.addEventListener("pointerdown",e=>{active=true;startY=e.clientY;startValue=value;node.setPointerCapture?.(e.pointerId);node.dataset.active="1";e.preventDefault()});
     node.addEventListener("pointermove",e=>{if(!active)return;const span=max-min,raw=startValue+(startY-e.clientY)*(span/180);value=clamp(quant(raw,min,step),min,max);paint(node,d,value);patch(key,value);e.preventDefault()});
