@@ -4,6 +4,22 @@ Core rule: **one feature, one implementation, one contract**.
 
 A rack module should contain only the DSP/behavior that makes that module unique. Shared mechanics belong to framework services or dedicated rack modules and must not be reimplemented locally.
 
+## Bottom-level source architecture
+
+All synthesized source primitives live at the lowest shared DSP layer in `app/src/main/assets/dsp-source-family.js`.
+
+Rules:
+
+- Source-family modules do not call `AudioContext.createOscillator()`, `createBufferSource()`, or `createConstantSource()` directly.
+- Fundamental oscillators, noise colors, shaped buffers, and constant sources are created only by `MultiSynth.DspSources`.
+- A module may configure, tune, modulate, filter, mix, damp, envelope, and route a source according to that instrument's unique synthesis physics, but it does not reimplement the primitive source itself.
+- Every generated source must touch the bottom DSP source layer directly, or connect immediately to the carrier/processing node owned by the module that touches that bottom layer. Do not insert wrapper/redefinition/shim source layers.
+- Module Builder definitions must describe the same source hierarchy used by the runtime. `sources[]`, `actions[]`, and `nodes.connections` must not claim a bespoke or intermediate source implementation that does not exist in the DSP path.
+- Module Builder is the sole standard UI/control-definition path for modules. Do not maintain hard-coded duplicate control banks or alternate editor definitions for Module Builder modules.
+- Shared rack/graph code routes audio and generic events only. It must not synthesize substitute sources or repair module-local DSP state.
+
+This source-layer rule applies to keyboard synths, LFO/audio-rate oscillators, procedural generators, synthetic drums, noise generators, and future modules that create fundamental audio/control sources.
+
 ## Module identity: one source of truth
 
 `app/src/main/assets/module-ids.js` is the only place that defines a module's symbolic identity, canonical runtime ID, human-facing display name, and stable theme key.
@@ -30,6 +46,7 @@ Rules:
 ## Shared infrastructure
 
 - `ModuleContract`: runtime lifecycle, audio I/O, CV I/O, standardized trigger dispatch, default serialization/restoration, analyser tap, automatic selector/theme hook.
+- `DspSources`: lowest-level canonical oscillator, constant-source, buffer-source, shaped-buffer, and noise-family construction.
 - `ModuleIds`: authoritative symbolic key -> canonical ID/display name/theme identity catalog.
 - `ModuleManifest`: centralized editor URL, category, color, capabilities, resources, and cascade behavior.
 - `ModuleCapabilities`: strict routing participation flags.
@@ -97,7 +114,9 @@ This metadata does not automatically modulate existing controls; it defines the 
 
 ## UI and themes
 
-New editors use shared UI primitives for standard controls. Every sound-producing module uses the standard analyser/scope path.
+Module Builder definitions are the canonical control/UI description for Module Builder modules. Editors render those definitions through shared UI primitives; they do not duplicate module-specific control arrays.
+
+Every sound-producing module uses the standard analyser/scope path.
 
 Every new module has a theme key in the identity catalog and visual metadata in the manifest. The theme key remains independent of canonical ID renames.
 
@@ -108,6 +127,7 @@ Every new module has a theme key in the identity catalog and visual metadata in 
 3. Add an explicit state-schema version using the same `I.SYMBOLIC_KEY`.
 4. Register module behavior with `type: I.SYMBOLIC_KEY`; do not introduce literal module IDs.
 5. Bind visible editor/faceplate identity to the catalog rather than hard-coding the module name.
-6. Define only unique DSP/behavior and state; use shared infrastructure for common mechanics.
-7. Mark standard controls with modulation metadata when external modulation is supported or intended.
-8. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, and touch behavior before considering the module complete.
+6. Define only unique DSP/behavior and state; use `DspSources` for fundamental generated sources and shared infrastructure for common mechanics.
+7. Make the Module Builder `sources/actions/nodes` graph reflect the real DSP source-family path.
+8. Mark standard controls with modulation metadata when external modulation is supported or intended.
+9. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, and touch behavior before considering the module complete.
