@@ -13,6 +13,8 @@ Governing rules for all sound-engine work:
 - Each instrument owns its actual synthesis physics and note behavior.
 - No silent shims. If something is wrong, fix the source rule instead of adding another layer.
 - Fundamental audio sources live at the bottom in `dsp-source-family.js`. Source-family modules must not call oscillator, buffer-source, constant-source, or live-noise constructors directly; they request the primitive source and immediately configure/connect it to their carrier or module DSP.
+- Module Builder definitions must mirror the real DSP hierarchy. Their `sources`, `actions`, and `nodes.connections` describe the same `DspSources` primitives and direct carrier/module-DSP connections used at runtime.
+- Module Builder is the canonical control/UI definition path. Do not maintain parallel hard-coded editor control banks for Module Builder modules.
 
 - [x] Establish one ModuleContract/DSP owner per synth. For the current synth family, `modules/carrier-synth-modules.js` is the temporary single runtime owner while cleanup is in progress.
 - [x] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
@@ -21,7 +23,10 @@ Governing rules for all sound-engine work:
 - [x] Remove every loader/HTML reference to `modules/synth-gain-cleanup.js`, then delete the file.
 - [x] Preserve duplicate rejection in both Module Builder and ModuleContract registries so duplicate UI specs and duplicate runtime/DSP definitions fail loudly.
 - [x] Add `dsp-source-family.js` as the lowest shared source layer and route the current synthetic-source family through it: carrier synth family (PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, No Quarter), Lowrider, RanDrone, Unstable Diffusion, and Beat Red.
-- [ ] Smoke-test PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, and No Quarter immediately after ownership cleanup. Preserve current sound and controls; do not change DSP equations as part of ownership cleanup.
+- [x] Align the Module Builder definitions for the current source family with `DspSources`, including explicit bottom-layer source metadata and source-to-action graph connections.
+- [x] Use the generic Module Builder-backed rack instrument editor for PureSynth and QuadSynth; no separate hard-coded PureSynth/QuadSynth control path remains.
+- [ ] Sweep every remaining generator/procedural-audio module for direct Web Audio source construction and move any true fundamental source constructors to `DspSources` before declaring the source-family migration complete.
+- [ ] Smoke-test PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, and No Quarter immediately after ownership/source cleanup. Preserve current sound and controls; do not change DSP equations as part of ownership cleanup.
 - [ ] Audit shared voice lifecycle in the true DSP owner: remove arbitrary timed hard-stop behavior and make note termination signal-correct/click-safe, starting with next-zero-crossing termination where appropriate.
 - [ ] Audit No Quarter note-off specifically as Rhodes damping behavior after the universal click-safe voice-stop rule is correct. Do not add fake ADSR release behavior.
 - [ ] Audit `preserveFedCarrier()` in `rack-audio-graph.js`; determine whether it still has a legitimate target after synth ownership cleanup or is stale compensation for an older voice model.
