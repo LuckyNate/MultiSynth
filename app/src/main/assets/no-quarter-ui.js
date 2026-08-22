@@ -1,6 +1,6 @@
 "use strict";
 (function(){
-  const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,B=P.ModuleBuilderDefinitions,R=window.MultiSynth?.ControlSurfaceRenderer;
+  const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,C=P.ModuleContract,B=P.ModuleBuilderDefinitions,R=window.MultiSynth?.ControlSurfaceRenderer;
   if(!I||!E||!B||!R)return;
   let rackId="",state={};
   if(instance)try{for(const r of E.graph().racks||[]){const m=r.modules?.find?.(x=>x.id===instance);if(m){rackId=r.id;state=m.state||{};break}}}catch(_){}
@@ -28,5 +28,7 @@
     node.addEventListener("pointermove",e=>{if(!active)return;const span=max-min,raw=startValue+(startY-e.clientY)*(span/180);value=clamp(quant(raw,min,step),min,max);paint(node,d,value);patch(key,value);e.preventDefault()});
     const end=e=>{if(!active)return;active=false;node.dataset.active="0";try{node.releasePointerCapture?.(e.pointerId)}catch(_){}};node.addEventListener("pointerup",end);node.addEventListener("pointercancel",end);
   }
-  const keyboardHost=document.getElementById("performanceKeyboard");if(keyboardHost&&window.MultiSynth?.PerformanceKeyboard?.mount)window.MultiSynth.PerformanceKeyboard.mount(keyboardHost,{audio:A});
+  function releaseNote(note){if(!instance||!C)return A?.noteOff?.(note);let rt;try{rt=C.getRuntime(instance)}catch(_){return A?.noteOff?.(note)}const u=rt?.user,v=u?.voices?.get?.(String(note));if(!u?.ctx||!v)return C.noteOff(instance,note);const now=u.ctx.currentTime,release=.24;for(const g of v.gains||[]){const p=g?.gain;if(!p)continue;try{p.cancelScheduledValues(now);p.setValueAtTime(Math.max(.0001,p.value),now);p.exponentialRampToValueAtTime(.0001,now+release)}catch(_){}}setTimeout(()=>{try{if(u.voices?.get?.(String(note))===v)C.noteOff(instance,note)}catch(_){}},Math.ceil((release+.03)*1000));return true}
+  const nqAudio=instance&&C?{resume:()=>A?.resume?.(),noteOn:(n,v)=>{A?.resume?.();return C.noteOn(instance,n,v)},noteOff:releaseNote,panic:()=>C.panic(instance)}:A;
+  const keyboardHost=document.getElementById("performanceKeyboard");if(keyboardHost&&window.MultiSynth?.PerformanceKeyboard?.mount)window.MultiSynth.PerformanceKeyboard.mount(keyboardHost,{audio:nqAudio});
 })();
