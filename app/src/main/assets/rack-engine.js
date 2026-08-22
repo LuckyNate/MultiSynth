@@ -5,6 +5,7 @@ function emit(type,payload){listeners.get(type)?.forEach(fn=>{try{fn(payload)}ca
 function on(type,fn){if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(fn);return()=>listeners.get(type)?.delete(fn)}
 function defineModule(def){if(!Contract())throw new Error("ModuleContract must load before RackEngine");return Contract().define(def).type}
 function statePatch(patch,state){return StateKeys()?.normalizePatch(clone(patch||{}),state)||clone(patch||{})}
+function liveStatePatch(patch,state){return StateKeys()?.normalizePatch(patch||{},state)||patch||{}}
 function canonicalType(type){return Ids()?.canonicalId?.(type)||String(type||"")}
 function moduleInstance(type,state){type=canonicalType(type);const def=Contract().getDefinition(type),initial=statePatch(state||{},def.defaults);return{id:id(type,++moduleSerial),type,displayName:def.displayName,category:def.category,version:def.version,kind:def.category,enabled:true,stateSchemaVersion:Schema()?.versionFor(type,1)||1,state:Object.assign({},clone(def.defaults),initial)}}
 function nodeId(kind,id,port){return`${kind}:${id}:${port}`}
@@ -28,7 +29,11 @@ function graph(){return{standard:"explicit-node-graph",racks:[...racks.values()]
 function addModule(rackId,type,state,index){const r=need(rackId),m=moduleInstance(type,state),i=Number.isInteger(index)?Math.max(0,Math.min(index,r.modules.length)):r.modules.length;r.modules.splice(i,0,m);syncModuleChain(rackId);emit("module-added",{rackId,module:clone(m),index:i});changed();return m.id}
 function removeModule(rackId,moduleId){const r=need(rackId),i=r.modules.findIndex(m=>m.id===moduleId);if(i<0)throw new Error(`Unknown module instance: ${moduleId}`);const[m]=r.modules.splice(i,1);destroyRuntimeIfPresent(m.id);disconnectEndpoint(moduleIn(m.id));disconnectEndpoint(moduleOut(m.id));syncModuleChain(rackId);emit("module-removed",{rackId,moduleId:m.id});changed()}
 function moveModule(rackId,moduleId,index){const r=need(rackId),old=r.modules.findIndex(m=>m.id===moduleId);if(old<0)throw new Error(`Unknown module instance: ${moduleId}`);const[m]=r.modules.splice(old,1),next=Math.max(0,Math.min(index|0,r.modules.length));r.modules.splice(next,0,m);syncModuleChain(rackId);emit("module-moved",{rackId,moduleId,index:next});changed()}
-function setModuleState(rackId,moduleId,patch){const r=need(rackId),m=r.modules.find(x=>x.id===moduleId);if(!m)throw new Error(`Unknown module instance: ${moduleId}`);const normalized=statePatch(patch,m.state);Object.assign(m.state,normalized);try{Contract().update(moduleId,normalized)}catch(_){}emit("module-state",{rackId,moduleId,state:clone(m.state)})}
+/* Live controls are a hot path. Do not JSON-clone the full module state here: large sampler
+   state and PCM-backed metadata make pointer-rate cloning audible. Normalize only the patch,
+   update the existing runtime, and publish the shared state reference. Snapshot/serialize paths
+   still clone when an actual durable snapshot is required. */
+function setModuleState(rackId,moduleId,patch){const r=need(rackId),m=r.modules.find(x=>x.id===moduleId);if(!m)throw new Error(`Unknown module instance: ${moduleId}`);const normalized=liveStatePatch(patch,m.state);Object.assign(m.state,normalized);try{Contract().update(moduleId,normalized)}catch(_){}emit("module-state",{rackId,moduleId,state:m.state,patch:normalized})}
 function createModuleRuntime(rackId,moduleId,options={}){const r=need(rackId),m=r.modules.find(x=>x.id===moduleId);if(!m)throw new Error(`Unknown module instance: ${moduleId}`);const rackContext={rackId,hasUpstream:incomingRackIds(rackId).length>0};rackContext.incoming=()=>incomingRackIds(rackId);rackContext.outgoing=()=>outgoingRackIds(rackId);return Contract().createRuntime(m,Object.assign({},options,{rack:rackContext}))}
 function destroyRuntimeIfPresent(moduleId){try{Contract().destroy(moduleId)}catch(_){}}
 function snapshotRack(r){return{id:r.id,row:r.row,col:r.col,enabled:r.enabled,gain:r.gain,inputNode:rackIn(r.id),outputNode:rackOut(r.id),modules:clone(r.modules).map(m=>({...m,inputNode:moduleIn(m.id),outputNode:moduleOut(m.id)}))}}
