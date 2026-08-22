@@ -22,7 +22,7 @@ This is the canonical project to-do list. Read this file before answering questi
 - [x] Remove the private `renderAdsr()` implementation from `rack-instrument-editor.js`.
 - [x] Source instrument keyboard/scope declarations are no longer filtered out and reimplemented by module-specific code; placement follows declaration metadata/shared rendering.
 - [x] Remove module-name branches from the shared source-instrument editor. No Quarter grouping is declared in its Module Builder metadata.
-- [ ] Collapse `rack-module-editor.js` away from hard-coded module exclusion/whitelist branching where Module Builder definitions can positively declare their editor/components. Do not migrate non-Module-Builder modules blindly.
+- [x] `rack-module-editor.js` now positively uses the shared Module Builder renderer whenever a definition exists; only modules without a Module Builder definition can fall through to their existing dedicated editor path.
 - [x] Shared source-instrument rendering fails visibly on unknown/unsupported declared components instead of silently skipping them.
 
 ### TOP PRIORITY — SYNTHESIS CORE CLEANUP
