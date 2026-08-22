@@ -6,6 +6,13 @@ This file is the canonical project to-do list. Read this file before answering q
 
 ### TOP PRIORITY — SYNTHESIS CORE CLEANUP
 
+Governing rules for all sound-engine work:
+
+- One DSP owner per module. No redefine/wrap/redefine chains.
+- Shared engine handles only routing, graph lifetime, and generic event delivery.
+- Each instrument owns its actual synthesis physics and note behavior.
+- No silent shims. If something is wrong, fix the source rule instead of adding another layer.
+
 - [ ] Establish one ModuleContract/DSP owner per synth. For the current synth family, keep `modules/carrier-synth-modules.js` as the temporary single runtime owner while cleanup is in progress.
 - [ ] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
 - [ ] Remove runtime `C.define(...)` redefinitions from individual synth files; individual synth files should own Module Builder/control/model definitions only unless that module itself is the sole DSP owner.
