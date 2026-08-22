@@ -108,6 +108,7 @@ function create(api){
   const u={id:api.instanceId,ctx:c,input,voice,mix,output,state:api.state,sampleBuffer:null,internalBuffer:null,onDv:null,source:null,divideCount:0,externalKind:null,externalUntil:0,followClock:false};
   buildInternalSample(u);
   u.onDv=p=>{
+    if(u.state.dvEnabled===false)return p;
     processPulse(u,p,"dv");
     return null;
   };
@@ -155,6 +156,7 @@ function clockTick({runtime},tick={}){
 function cv({runtime},packet={}){
   const u=runtime.user;
   if(!u||packet.kind!=="trigger")return packet;
+  if(u.state.cvEnabled===false)return packet;
   clearExpiredExternal(u);
   if(u.externalKind==="dv"&&externalActive(u))return packet;
   processPulse(u,packet,"cv");
