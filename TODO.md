@@ -13,12 +13,12 @@ Governing rules for all sound-engine work:
 - Each instrument owns its actual synthesis physics and note behavior.
 - No silent shims. If something is wrong, fix the source rule instead of adding another layer.
 
-- [ ] Establish one ModuleContract/DSP owner per synth. For the current synth family, keep `modules/carrier-synth-modules.js` as the temporary single runtime owner while cleanup is in progress.
+- [x] Establish one ModuleContract/DSP owner per synth. For the current synth family, `modules/carrier-synth-modules.js` is the temporary single runtime owner while cleanup is in progress.
 - [ ] Fold PureSynth noise-wave behavior (white/pink/red/blue) into the owning PureSynth DSP path instead of redefining the runtime from `modules/puresynth.js`.
-- [ ] Remove runtime `C.define(...)` redefinitions from individual synth files; individual synth files should own Module Builder/control/model definitions only unless that module itself is the sole DSP owner.
-- [ ] Remove `modules/synth-gain-cleanup.js` after confirming no unique required behavior is lost. Do not preserve its stripping of legitimate `level`/`carrier` state.
-- [ ] Remove every loader/HTML reference to `modules/synth-gain-cleanup.js`, then delete the file.
-- [ ] Preserve duplicate rejection in both Module Builder and ModuleContract registries so duplicate UI specs and duplicate runtime/DSP definitions fail loudly.
+- [x] Remove runtime `C.define(...)` redefinitions from individual synth files; individual synth files own Module Builder/control/model definitions only unless that module itself is the sole DSP owner.
+- [x] Remove `modules/synth-gain-cleanup.js` after confirming no unique required behavior is lost. Its stripping of legitimate `level`/`carrier` state was not preserved.
+- [x] Remove every loader/HTML reference to `modules/synth-gain-cleanup.js`, then delete the file.
+- [x] Preserve duplicate rejection in both Module Builder and ModuleContract registries so duplicate UI specs and duplicate runtime/DSP definitions fail loudly.
 - [ ] Smoke-test PureSynth, QuadSynth, Pulsynth, SinLadder, Razorback, Stinger, and No Quarter immediately after ownership cleanup. Preserve current sound and controls; do not change DSP equations as part of ownership cleanup.
 - [ ] Audit shared voice lifecycle in the true DSP owner: remove arbitrary timed hard-stop behavior and make note termination signal-correct/click-safe, starting with next-zero-crossing termination where appropriate.
 - [ ] Audit No Quarter note-off specifically as Rhodes damping behavior after the universal click-safe voice-stop rule is correct. Do not add fake ADSR release behavior.
