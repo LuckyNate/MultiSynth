@@ -10,12 +10,17 @@ This is the canonical project to-do list. Read this file before answering questi
 
 ## Active
 
-### TOP PRIORITY — MODULE BUILDER RENDERER CLEANUP
+### TOP PRIORITY — MAKE MODULE BUILDER AUTHORITATIVE
 
-- [ ] Remove per-module control whitelists/negative gates. If a Module Builder definition declares a supported component, the editor renders it.
-- [ ] Remove the No Quarter knob/dial-only filter; do not special-case ADSR into No Quarter.
-- [ ] Put ADSR rendering in the shared Module Builder/RackUI component layer and remove the private `renderAdsr()` implementation from `rack-instrument-editor.js`.
-- [ ] Stop filtering declared keyboard/scope components out of instrument definitions merely to remount them through a parallel path; component placement belongs to shared renderer/layout metadata.
+- [ ] A Module Builder module declares components, state binding, layout/group metadata, and theme only; module editors must not reimplement shared component behavior.
+- [ ] Every declared supported Module Builder component renders through one shared renderer/component library. No per-module control whitelists, negative gates, silent skips, or duplicated component implementations.
+- [ ] Shared-component change = every module using that component changes automatically. Individual modules must not require repair after a shared ADSR, keyboard, scope, knob, selector, or other component change.
+- [ ] The shared Module Builder performance keyboard honors `meta.pinned:"bottom"` and stays pinned at the bottom everywhere it is declared.
+- [ ] Remove the No Quarter knob/dial-only filter and route No Quarter controls through the same Module Builder renderer as the other source instruments.
+- [ ] Keep the existing ADSR DSP/state contract; render its existing UI through the shared Module Builder/RackUI ADSR component only. No second envelope system.
+- [ ] Remove the private `renderAdsr()` implementation from `rack-instrument-editor.js`.
+- [ ] Stop filtering keyboard/scope out merely to remount them through parallel module-specific paths; placement is renderer/layout metadata.
+- [ ] Remove module-name branches from the shared source-instrument editor. Unique grouping belongs in Module Builder metadata, not renderer code.
 - [ ] Collapse `rack-module-editor.js` away from hard-coded module exclusion/whitelist branching where Module Builder definitions can positively declare their editor/components.
 - [ ] Unknown/unsupported declared Module Builder components must fail visibly/audit loudly; never silently `continue` or disappear.
 
