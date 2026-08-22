@@ -10,9 +10,10 @@ function ensureAudio(){if(!A)throw new Error("Rack audio graph unavailable");if(
 function ensureRuntime(m){try{return C.getRuntime(m.id)}catch(_){return E.createModuleRuntime(rackId,m.id,{audioContext:ensureAudio(),native:MS.rack?.native||null})}}
 function controlValue(el){if(el.type==="checkbox"||el.type==="radio")return!!el.checked;const n=Number(el.value);return el.type==="range"||el.type==="number"?n:el.value}
 function controlPatch(el){if(!D||!el?.id)return{[el.id]:controlValue(el)};const type=el.type==="checkbox"||el.type==="radio"?D.TOGGLE:el.tagName==="SELECT"?D.SELECT:D.RANGE;try{return D.write(D.normalize({type,key:el.id,elementId:el.id,label:el.getAttribute("aria-label")||el.id}),controlValue(el))}catch(_){return{[el.id]:controlValue(el)}}}
-/* Live performance rule: state changes patch the existing module/runtime in place.
-   RackAudioGraph rebuild calls are banned. Structural changes are propagated through
-   RackEngine graph-changed events; controls never reconstruct the live signal graph. */
+/* Live performance rule: control/state changes patch the existing module/runtime in place.
+   Audio-graph reconstruction is allowed only for genuine topology changes, which are already
+   propagated by RackEngine graph-changed events (add/remove/reorder/routing). Never invoke
+   graph reconstruction from knob/button/fader/pad/state-change paths. */
 function patchModule(mid,patch){E.setModuleState(rackId,mid,patch);persist()}
 function bindEditor(doc,m){if(!doc)return;doc.documentElement.dataset.rackEmbedded="1";doc.body?.setAttribute("data-rack-embedded","1");const sync=el=>{if(el?.id)patchModule(m.id,controlPatch(el))};doc.addEventListener("input",e=>sync(e.target),true);doc.addEventListener("change",e=>sync(e.target),true);try{const rt=ensureRuntime(m),state=rt.state||{};doc.querySelectorAll("input[id],select[id],textarea[id]").forEach(el=>{if(!(el.id in state))return;if(el.type==="checkbox"||el.type==="radio")el.checked=!!state[el.id];else el.value=state[el.id]})}catch(e){console.error(e)}}
 function openModule(mid){persist();ensureAudio();const r=E.getRack(rackId),m=r.modules.find(x=>x.id===mid);if(!m)return;const def=C.getDefinition(m.type),meta=metaFor(m.type),url=meta?.editorUrl||def.editorUrl;if(!url){flash("NO MODULE EDITOR");return}ensureRuntime(m);editing=mid;editorTitle.textContent=(meta?.displayName||m.displayName||m.type).toUpperCase();editor.classList.remove("hidden");const params=new URLSearchParams({rack:rackId,instance:m.id,embedded:"1"});editorFrame.onload=()=>{try{bindEditor(editorFrame.contentDocument,m)}catch(e){console.error(e)}};editorFrame.src=url+"?"+params}
