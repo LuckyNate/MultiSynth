@@ -61,11 +61,21 @@ Rules:
 - `PCMLibrary`: permanent sampler-agnostic PCM storage referenced by stable sample IDs.
 - `RackEngine.serialize/restore`: canonical rack-project persistence.
 
-## Cascade-only routing model
+## Rack cascade and Node Graph routing model
 
-MultiSynth does not expose patch ports. Routing is cascade-only. The rack hierarchy determines where signal, timing, CV, and control data flow. Modules declare how they behave inside that cascade rather than declaring arbitrary input/output sockets.
+A rack is internally cascade-routed. Its module hierarchy determines how signal, timing, CV, and control data flow inside that rack. Modules declare their behavior within the cascade rather than implementing private rack-routing systems.
 
-Every active manifest row exposes normalized `cascade` metadata:
+A complete rack acts externally as a **compound instrument**. Its internal module cascade is encapsulated behind the rack's external input/output behavior so the rack can be treated as one playable/processable unit.
+
+The **Node Graph is the higher-level patching topology**. It connects complete racks and supported standalone nodes through explicit IN/OUT connections. Node Graph patching does not replace the rack cascade; it connects compound instruments whose internals remain cascade-ordered.
+
+The architectural signal hierarchy is:
+
+`DspSources -> module DSP -> rack cascade -> compound rack I/O -> Node Graph`
+
+Shared graph code owns graph connections and generic event delivery. Rack code owns internal cascade routing. Neither layer reaches into module DSP internals to repair synthesis behavior.
+
+Every active manifest row exposes normalized `cascade` metadata describing its behavior when used inside a rack:
 
 - `audioRole`: `none`, `generator`, `processor`, `passthrough`, or `terminal`.
 - `carrierBehavior`: `none`, `replace`, `add`, `transform`, `passthrough`, or `moduleSpecific`.
@@ -80,13 +90,13 @@ The manifest supplies conservative defaults from existing capabilities so older 
 
 ## Capabilities and routing
 
-Capabilities answer **whether** a module participates in audio, notes, CV, clocks, DIV, mic, PCM, MIDI, or terminal output. Cascade metadata answers **how** that participation behaves in the rack.
+Capabilities answer **whether** a module participates in audio, notes, CV, clocks, DIV, mic, PCM, MIDI, or terminal output. Cascade metadata answers **how** that participation behaves inside a rack. Node Graph connectivity is a separate higher-level concern operating on node/compound-rack I/O.
 
 Do not infer routing behavior from category names, display names, filenames, or the existence of a handler. If an implementation adds a handler, update its manifest capabilities and cascade semantics in the same coherent change.
 
 ## Audio
 
-Processors with neutral controls must preserve incoming carrier according to their declared `carrierBehavior` and `bypassBehavior`. Generators may create audio where declared. The cascade remains the only routing topology.
+Processors with neutral controls must preserve incoming carrier according to their declared `carrierBehavior` and `bypassBehavior`. Generators may create audio where declared. Inside a rack, the cascade remains the routing topology; outside the rack, the rack presents compound I/O to the Node Graph.
 
 Stereo behavior is explicit metadata so modules that collapse to mono, preserve stereo, or create stereo from mono can be identified without inspecting DSP code.
 
@@ -94,7 +104,7 @@ Stereo behavior is explicit metadata so modules that collapse to mono, preserve 
 
 ## Timing and CV
 
-Sequenced/time-stepped modules use the shared clock/transport contract. Father Time is the dedicated rack clock source. `timingRole` and `cvBehavior` describe source/follower/divider and CV behavior without introducing patch ports.
+Sequenced/time-stepped modules use the shared clock/transport contract. Father Time is the dedicated rack clock source. `timingRole` and `cvBehavior` describe source/follower/divider and CV behavior within rack cascades. Higher-level Node Graph connections may carry supported signal/control relationships between nodes without changing the module's internal timing implementation.
 
 Random or physical-model timing intrinsic to a module remains inside that module's DSP.
 
@@ -130,4 +140,4 @@ Every new module has a theme key in the identity catalog and visual metadata in 
 6. Define only unique DSP/behavior and state; use `DspSources` for fundamental generated sources and shared infrastructure for common mechanics.
 7. Make the Module Builder `sources/actions/nodes` graph reflect the real DSP source-family path.
 8. Mark standard controls with modulation metadata when external modulation is supported or intended.
-9. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, and touch behavior before considering the module complete.
+9. Verify identity audits, manifest audits, cascade metadata audit, rack serialization, editor dispatch, carrier behavior, clock/CV/DIV behavior, scope output, touch behavior, compound rack I/O, and Node Graph connectivity before considering the module complete.
