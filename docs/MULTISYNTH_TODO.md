@@ -13,23 +13,45 @@ This is the canonical project to-do list. Read this file before answering questi
 - MultiSynth uses one vertical module layout only. There is no separate landscape arrangement.
 - Device rotation is allowed. When rotated sideways, the same vertical layout expands to the available width and remains vertically scrollable; controls must not reorganize into a different landscape-specific composition.
 - Shared scope prefab is pinned at the top. Shared performance keyboard prefab is pinned at the bottom when declared with `meta.pinned:"bottom"`.
+- Module selector surfaces use full-width rack-strip presentation rather than card grids.
+- Rack/module selector faces show only module NAME + FAMILY. Tags remain functional metadata for filtering/search rather than visible faceplate clutter.
+
+## Module taxonomy rules
+
+- Every module has exactly one creator-owned FAMILY. Family is not a user-editable preference.
+- Family must be explicitly assigned by the creator in Module Builder / authoring metadata. Do not infer family from category.
+- Missing family metadata resolves visibly to `NULL FAMILY` with canonical primary tag `#nullfamily`.
+- The canonical primary tag is derived from FAMILY and cannot drift from it, e.g. `SIGNAL SOURCE` → `#signalsource`, `TIMED INSTRUMENT` → `#timedinstrument`.
+- Additional `#tags` describe searchable traits such as `#mic`, `#keyboard`, `#sine`, `#pcm`, etc. Test Module authoring may add/remove these extra tags.
+- Module Test, Rack Builder Add Module, and Node Graph insert/browser selectors consume the same shared taxonomy and selector UI.
+- Node-grid module thumbnails use the same minimal NAME + FAMILY faceplate convention.
 
 ## Active
 
 ### TOP PRIORITY — MAKE MODULE BUILDER AUTHORITATIVE
 
-- [ ] A Module Builder module declares components, state binding, layout/group metadata, and theme only; module editors must not reimplement shared component behavior.
+- [ ] A Module Builder module declares components, state binding, layout/group metadata, theme, family, and tags only; module editors must not reimplement shared component behavior.
 - [ ] Every declared supported Module Builder component renders through one shared renderer/component library. No per-module control whitelists, negative gates, silent skips, or duplicated component implementations.
 - [ ] Shared-component change = every module using that component changes automatically. Individual modules must not require repair after a shared ADSR, keyboard, scope, knob, selector, or other component change.
 - [x] Source-instrument family now renders declared controls through shared `RackUI.renderControl()` rather than per-instrument control implementations.
 - [x] Shared Module Builder performance keyboard honors `meta.pinned:"bottom"`, loads from the shared editor when declared, and stays pinned at the bottom.
+- [x] Shared scope prefab pins at the top.
+- [x] Introduce `rack-ui-prefabs.js` as the reusable compound-control layer; keep atomic controls in `rack-ui-primitives.js`.
+- [x] ADSR, performance keyboard host/pinning, and scope host are shared prefabs rather than module-specific composites.
 - [x] Remove the No Quarter knob/dial-only filter from its execution path by routing No Quarter through the same shared Module Builder instrument renderer.
 - [x] Keep the existing ADSR DSP/state contract and render its existing UI through the shared Module Builder/RackUI ADSR component only. No second envelope system.
 - [x] Remove the private `renderAdsr()` implementation from `rack-instrument-editor.js`.
 - [x] Source instrument keyboard/scope declarations are no longer filtered out and reimplemented by module-specific code; placement follows declaration metadata/shared rendering.
 - [x] Remove module-name branches from the shared source-instrument editor. No Quarter grouping is declared in its Module Builder metadata.
-- [x] `rack-module-editor.js` now positively uses the shared Module Builder renderer whenever a definition exists; only modules without a Module Builder definition can fall through to their existing dedicated editor path.
+- [x] `rack-module-editor.js` now positively uses the shared Module Builder renderer whenever a definition exists.
+- [x] Every currently registered module has a Module Builder definition.
+- [x] Shared renderer/library implements every currently declared Module Builder control type.
 - [x] Shared source-instrument rendering fails visibly on unknown/unsupported declared components instead of silently skipping them.
+- [x] Add shared module taxonomy layer with creator FAMILY, primary family hashtag, automatic capability/resource/control tags, and user-added auxiliary tags.
+- [x] Missing creator family is deliberately exposed as `NULL FAMILY` / `#nullfamily` instead of inferred from category.
+- [x] Add shared rack-strip selector UI with family and `#tag` filtering.
+- [x] Apply shared selector/taxonomy behavior to Module Test, Rack Builder Add Module, and Node Graph module insert/browser surfaces.
+- [x] Simplify shared module faceplate/node thumbnail presentation to NAME + FAMILY.
 
 ### TOP PRIORITY — SYNTHESIS CORE CLEANUP
 
