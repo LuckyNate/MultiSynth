@@ -4,294 +4,368 @@
 
 This document defines the target architecture and user-visible behavior for the finished MultiSynth MVP. It is a product contract, not a description of whatever the current implementation happens to do.
 
+It is subordinate to the project's canonical running behavior specification where a specific module behavior is defined, and it consolidates the structural rules from `MULTISYNTH_SPEC.md`, `RACK_ARCHITECTURE.md`, `MODULE_STANDARD.md`, `ARCHITECTURE_RULES.md`, and `MULTISYNTH_TODO.md` into one finished-product architecture.
+
 The governing rule is:
 
-> One concept, one authoritative implementation, reused everywhere.
+> One feature, one implementation, one contract.
 
-MultiSynth is a modular HTML5 audio application. The architecture should remain small enough to understand, predictable enough to test, and centralized enough that fixing a shared component fixes every place that uses it.
+MultiSynth is an Android-hosted HTML5 modular audio workstation. It must remain modular, minimal, user-friendly, centralized, and automated where automation reduces maintenance or user burden.
 
 ## Product hierarchy
 
-The finished product has four structural levels:
+`Project -> Node Graph -> Module Node or Rack Node -> Module Runtime`
 
-`Project -> Node Graph -> Rack or Standalone Module Node -> Module Runtime`
+The Node Graph is the authoritative external routing workspace. A rack is a reusable compound node containing an ordered internal module chain. A loose module may also exist directly on the Node Graph.
 
-A project owns the complete patch. The Node Graph owns external topology. A rack is a reusable compound node containing an ordered internal module chain. A standalone module is the same module runtime used without a rack wrapper.
-
-These are views and compositions of the same underlying objects, not separate implementations of those objects.
+Views are control surfaces over canonical project/rack/module objects. Opening another view of an object must not create a competing runtime, DSP graph, state owner, or duplicate editor implementation.
 
 ## 1. Node Graph
 
-The Node Graph is the authoritative workspace for connecting complete processing units.
+The Node Graph is a freeform explicit-routing workspace.
 
-### Graph behavior
+### Routing contract
 
-- Routing is explicit. A connection exists only when the user connects compatible ports.
-- Screen position never implies routing.
-- Moving a node changes only its visual position.
-- Graph connections are persisted as project data.
-- A saved rack appears as one compound graph node with rack-level input/output behavior.
-- A standalone module appears as one module node with ports derived from its declared capabilities.
-- Graph code routes nodes. It does not reproduce module DSP or rack-internal routing.
+- Signal relationships exist only through explicit stored node connections.
+- Visual position has no routing meaning.
+- There is no parent/child graph hierarchy.
+- There is no neighborhood, grid-derived, or geometry-derived routing.
+- Moving a node changes only presentation state.
+- Loose modules and saved racks expose graph ports appropriate to their declared capabilities.
+- A rack is externally one compound node; the graph does not reconstruct or reinterpret its internal module chain.
+- Shared graph code owns graph connections and generic event delivery only. It does not synthesize substitute sources or repair module-local DSP state.
 
-### Graph node presentation
+### Node presentation
 
-A graph node is a card around the canonical thumbnail/faceplate for the object it represents.
+Node presentation is derived from the same shared identity/taxonomy/faceplate system used by selectors.
 
-For a standalone module, the card uses the canonical full-color module faceplate.
+A loose module node uses the canonical module thumbnail convention: module NAME + FAMILY with the module's canonical identity/theme treatment. Graph-specific chrome may add selection, movement, jacks, and connection interaction, but it must not create a second module identity renderer.
 
-For a rack, the card uses the canonical saved-rack thumbnail: rack identity/header, compact scope, and the rack's ordered module strips using the secondary rack treatment. If the module list exceeds the available card height, the module-list region scrolls inside the card rather than expanding the node beyond its intended bounds.
+A rack node uses the canonical saved-rack thumbnail as its visual body: rack Name, compact rack scope, and the ordered stack of racked module strips. Racked strips use the secondary rack treatment while retaining each module's identity/accent.
 
-The graph card adds graph concerns only: selection, movement, ports, and connection interaction. It must not invent a second visual identity for the contained module or rack.
+If a rack's module stack exceeds the available node/thumbnail height, the module-stack region scrolls internally. The node remains contained within its allocated graph card.
 
-### Opening nodes
+### Graph connectors
 
-Touching/opening a standalone module opens the canonical module editor for that exact module instance.
+The finished connector presentation is physical-patch inspired:
 
-Touching/opening a rack opens the canonical rack editor for that exact rack instance while preserving the Node Graph as the return context.
+- module/rack IN and OUT connectors render on the node face as convincing 3.5 mm audio jacks;
+- patch targets are easy to acquire by touch;
+- graph connections render as physical-style patch cables;
+- each endpoint has a darker circular plug/end-cap that visually reads as plugged into the jack.
 
-The graph must not implement a second module editor or second rack editor. It mounts/invokes the same editor assets used elsewhere.
+Connector appearance does not change routing semantics: connections remain explicit stored graph edges.
+
+### Opening graph nodes
+
+Opening a loose module edits that exact module instance through the canonical Module Builder-backed module editor.
+
+Opening a rack edits that exact rack through the canonical Rack Editor while retaining Node Graph as the return destination.
+
+The Node Graph must not own a second module editor, second Rack Editor, second keyboard, second rack runtime, or second audio runtime. Entry context determines return navigation only.
 
 ## 2. Racks
 
-A rack is a reusable compound instrument/processor containing an ordered top-to-bottom chain of module instances.
+A rack is a reusable compound node containing an ordered top-to-bottom module chain.
 
-### Rack behavior
+### Rack contract
 
-- A rack has one stable internal identity and an optional user-facing name.
-- The user-facing name is semantic only; changing it does not change routing identity.
-- A rack may contain any number of compatible module instances, including repeated instances of the same module type.
-- Each instance owns independent state.
-- Internal signal flow follows the rack's ordered module chain and declared module cascade behavior.
-- The complete rack exposes compound I/O to the Node Graph.
-- External graph routing does not rewrite the rack's internal order.
-- Editing a rack changes that same rack object everywhere it is represented.
+- A rack has an immutable engine identity used for routing/persistence references.
+- A rack has a player-facing `Name`.
+- `Name` is semantic only and may be changed without changing engine identity.
+- An unnamed rack displays its engine ID as its Name.
+- A rack may contain multiple module instances, including repeated instances of the same module type.
+- Every module instance owns independent serializable state.
+- Internal rack routing is sequential according to module order and declared cascade behavior.
+- The rack exposes compound IN/OUT behavior to the Node Graph.
+- External graph branching is expressed with graph connections, not rack geometry.
+- Editing a rack updates the same rack object represented in selectors and on the graph.
 
-### Rack editor
+### Rack Editor
 
 There is one canonical Rack Editor implementation.
 
-It is used whether the rack was opened from the rack workspace, a saved-rack library, or the Node Graph. Context may determine the close/back destination, but must not create a different editor runtime or duplicate control system.
+It is reused whether a rack is entered from Build Racks, a saved-rack surface, or the Node Graph. Context may change Back/Close destination; it must not fork the editor implementation or runtime.
 
-The Rack Editor owns rack-specific operations only:
+The Rack Editor owns only rack concerns required by the MVP:
 
-- rack name
-- ordered module list
-- add/remove/reorder module instances
-- open a module instance for editing
-- rack-level scope/output feedback where applicable
-- rack-level persistence actions that are actually needed by the MVP
+- rack Name;
+- ordered module-instance list;
+- add/remove/reorder module instances;
+- open a module instance for editing;
+- rack-level scope/output feedback;
+- automatic persistence of rack edits.
 
-It does not duplicate Node Graph routing controls inside the rack. External routing remains on the Node Graph.
+External node connections remain a Node Graph concern.
 
 ### Rack visual treatment
 
-Racked module strips use the canonical secondary treatment: predominantly black/secondary face with the module's identity/accent retained. This distinguishes a module as a component of a compound rack without creating a new module theme.
+Saved-rack selectors and rack graph nodes use the same canonical rack-thumbnail renderer.
 
-Saved-rack thumbnails and rack graph-node thumbnails use the same renderer and the same secondary module strips.
+The rack thumbnail contains:
+
+1. rack Name;
+2. compact horizontal rack scope;
+3. ordered module strips.
+
+Racked module strips use the shared secondary treatment: predominantly black/secondary face with the module's canonical accent/identity retained. The thumbnail is width-contained by design and its module-stack region scrolls vertically when necessary.
 
 ## 3. Modules
 
 A module is the smallest user-facing functional audio/control unit.
 
-There is one canonical module definition and one runtime implementation for each active module type.
+Every active module has one canonical identity, one Module Builder definition, one runtime/DSP owner, one state schema, and one manifest/capability description.
 
-### Module identity and metadata
+### Canonical identity
 
-Every module has centrally owned metadata for at least:
+`module-ids.js` is the sole symbolic identity catalog for canonical runtime ID, display name, and stable theme key.
 
-- canonical ID
-- display name
-- stable theme key
-- editor definition/URL
-- family/category
-- color/accent
-- capabilities/resources
-- cascade behavior
-- state schema version
+Implementation code references symbolic `ModuleIds` keys rather than duplicating literal IDs/display names. Filenames are implementation assets, not identity.
 
-Selectors, racks, Node Graph nodes, persistence, routing, and editors consume this metadata. They do not infer it independently from filenames, labels, or duplicated lists.
+### Manifest and runtime metadata
 
-Initial product families are:
+`module-manifest.js` owns editor URL, category/color metadata, capabilities, resources, and cascade semantics derived from canonical identity.
 
-- Signal Source
-- Instrument
-- Timers
-- Samplers
-- File Utilities
-- Signal Processors
-- EFX Processors
+Capabilities answer whether a module participates in audio, notes, CV, clocks, DIV/DV-related timing, microphone, PCM, MIDI, terminal output, and other shared resources. Cascade metadata answers how that participation behaves inside a rack.
 
-Family metadata is descriptive/filtering metadata. It must not be used as a substitute for capability or routing metadata.
+Routing behavior must never be inferred from display name, filename, FAMILY, category, or the mere presence of a handler.
+
+### Creator-owned FAMILY and tags
+
+Every module has exactly one creator-owned FAMILY. FAMILY is explicit authoring metadata and is not inferred from category.
+
+Current taxonomy rules are:
+
+- FAMILY is shown on selector/node faces with NAME;
+- missing FAMILY is visibly `NULL FAMILY`;
+- the canonical primary hashtag is derived from FAMILY and cannot drift from it;
+- additional hashtags describe searchable traits/capabilities and remain filtering/search metadata rather than faceplate clutter.
+
+The current intended family vocabulary includes, as applicable to the catalog:
+
+- SIGNAL SOURCE
+- INSTRUMENT
+- TIMERS
+- SAMPLERS
+- FILE UTILITIES
+- SIGNAL PROCESSORS
+- EFX PROCESSORS
+
+If the active catalog uses a more specific creator-assigned family (for example a timed-instrument family), that explicit creator metadata is authoritative. Do not collapse or infer it merely to fit this list.
 
 ### Module Builder
 
-Module Builder is the canonical UI/control-definition system for modules.
+Module Builder is the canonical module UI/control-definition path.
 
-A module definition declares its unique controls, state bindings, theme information, DSP-specific behavior, and capabilities. Shared controls and prefabs are referenced, not recreated.
+A Module Builder definition declares components, state binding, layout/group metadata, theme, FAMILY, tags, and module-specific behavior/configuration. Shared component behavior is not reimplemented in module editors.
 
-No module may carry a private replacement for a universal control merely to alter its position or appearance.
+Every declared supported component renders through the shared renderer/component library. There are no per-module control whitelists, negative gates, silent skips, or duplicate component implementations.
 
-### Universal module assets
+Unknown/unsupported declared components fail visibly during development rather than silently disappearing.
 
-Shared assets have one authoritative owner. Examples include:
+### Module DSP ownership
 
-- performance keyboard
-- ADSR prefab
-- oscilloscope/scope renderer
-- standard knobs/toggles/selectors
-- selector/faceplate renderers
-- PCM/library selection surfaces where shared
-- common hold/touch behavior
+A module owns only the DSP/behavior that makes that module unique.
 
-A module declares that it uses a shared asset and supplies configuration/state. The shared asset owns its DOM, geometry, interaction behavior, and common styling.
+Fundamental synthesized source primitives are created through the bottom shared `DspSources` layer in `dsp-source-family.js`. Source modules configure/tune/modulate/filter/mix/envelope/route those primitives according to their unique synthesis physics; they do not create parallel primitive-source systems.
 
-The universal performance keyboard is pinned to the bottom of the viewport, fills the usable viewport width, reserves the screen space it occupies, and remains in place while module content scrolls behind/above it. Consumers do not reposition it.
+Module Builder `sources`, `actions`, and connection metadata must describe the same source hierarchy used by the runtime.
 
-### Module presentation
+Stable module DSP must not be altered during unrelated graph, rack, selector, or shared-UI work.
 
-A standalone module selector uses the canonical full-color branded faceplate treatment.
+## 4. Shared controls and prefabs
 
-The same module inside a rack uses the canonical secondary rack treatment.
+Every shared control, prefab, renderer, routing primitive, state convention, and reusable behavior has one authoritative implementation.
 
-These are two presentation modes of one faceplate renderer, not separate handwritten cards.
+Consumers may configure state binding, labels, theme tokens, grouping, and supported metadata. They may not recreate, reposition, or independently implement the shared component.
 
-## 4. Selectors and thumbnails
+A shared-component change must propagate automatically to every consumer.
 
-Selectors are views over canonical metadata and canonical faceplate renderers.
+### Universal performance keyboard
 
-### Standalone module selectors
+The shared performance keyboard owns:
 
-Every module selector in every mode uses the same full-width horizontal module strip renderer. A module must look like the same module whether selected from Module Test, Rack Add Module, Node Graph Insert Module, or another MVP selector.
+- DOM construction;
+- touch/note interaction;
+- sizing and geometry;
+- viewport pinning;
+- usable-width containment;
+- reserved bottom screen space.
 
-The selector consumer may filter/order the available modules, but it does not restyle the module card.
+When a module declares the keyboard with `meta.pinned:"bottom"`, it is pinned to the bottom of the viewport, remains visible while editor content scrolls, and fills the usable viewport width without running off-screen.
 
-### Saved rack selectors
+Module/editor/rack CSS does not reposition the keyboard or recreate its keys.
 
-Every saved-rack selector uses the same rack-thumbnail renderer.
+### Scope
 
-The thumbnail consists of:
+The shared scope prefab owns its rendering and standard placement. The shared scope is pinned at the top where declared by the Module Builder layout contract. Every sound-producing module uses the standard analyser/scope path.
 
-1. rack identity/name header
-2. compact horizontal rack scope
-3. ordered secondary-treatment module strips
+### ADSR and controls
 
-The thumbnail is width-contained by design. If its module stack exceeds the allowed thumbnail height, the module-stack region scrolls internally.
+ADSR is one shared prefab over the existing envelope DSP/state contract; there is no second envelope system. Atomic knobs, toggles, selects, ranges, step controls, and related primitives render through shared RackUI/Module Builder controls.
 
-The same rack-thumbnail renderer is used as the visual content of a rack node on the Node Graph.
+## 5. Selector and thumbnail system
 
-## 5. Audio and routing ownership
+Module Test, Rack Builder Add Module, and Node Graph module insert/browser surfaces consume the same shared taxonomy and selector UI.
 
-The signal hierarchy is:
+### Module selectors
 
-`shared DSP sources -> module DSP/runtime -> rack internal chain -> rack compound I/O -> Node Graph -> project output`
+- One vertical application layout is used in portrait and landscape.
+- Module selector surfaces use full-width horizontal rack-strip presentation, not card grids.
+- Selector faces show NAME + FAMILY only.
+- Tags remain available for filtering/search.
+- The selector consumer may filter/order modules but may not create a different faceplate implementation.
 
-Each layer owns only its part of that hierarchy.
+Standalone/loose module presentation uses the canonical full themed identity treatment. A module represented as part of a rack uses the canonical secondary rack treatment. These are modes of shared presentation, not handwritten alternatives.
+
+### Rack selectors
+
+Saved-rack surfaces use the canonical rack-thumbnail renderer described above. The same renderer is reused inside rack graph nodes. Rack thumbnails remain width-contained and scroll their module-stack region internally when necessary.
+
+## 6. Application layout
+
+MultiSynth uses one vertical module layout only.
+
+Device rotation is allowed. In landscape, the same vertical composition expands to available width and remains vertically scrollable. Controls do not reorganize into a separate landscape-specific layout.
+
+Every shared component is responsible for remaining inside its allocated viewport/container. Shared UI uses predictable box sizing/containment, and scrollable content scrolls inside its intended region rather than expanding controls off-screen.
+
+Layout ownership belongs to the shared component that owns the geometry. Page-specific repair CSS must not compete with that ownership.
+
+## 7. Audio and routing hierarchy
+
+The architectural signal hierarchy is:
+
+`DspSources -> module DSP/runtime -> rack ordered chain -> compound rack I/O -> Node Graph -> project output`
 
 ### Module layer
 
-The module owns the DSP/behavior that makes that module unique. It accepts and emits only the signals its capabilities declare.
+Modules synthesize/process/control according to their declared capabilities and unique behavior.
 
 ### Rack layer
 
-The rack owns ordered internal composition of its module instances. It does not reimplement their DSP.
+Rack code owns ordered internal composition and routing of module instances. It does not reimplement module DSP.
 
-### Node Graph layer
+### Graph layer
 
-The graph owns explicit connections between complete nodes. It does not reach into module internals or reconstruct rack chains.
+Graph code owns explicit connections between complete loose-module or rack nodes. It does not reach into module DSP internals or reconstruct rack chains.
 
-### Shared audio runtime
+### Runtime ownership
 
-Opening another view of an existing module or rack must not create a competing audio graph for the same object. Editors are control surfaces over the canonical runtime/state. UI composition must not duplicate live DSP ownership.
+Opening an editor/view of an existing module or rack must not create a competing audio graph for the same object. UI views control canonical state/runtime objects rather than duplicating them.
 
-## 6. Timing, CV, and DV
+## 8. Timing, CV, and DV
 
-Timing/control behavior is capability-driven, not inferred from visual placement or family names.
+### Father Time
 
-CV is the persistent parent timing/control signal. It continues downstream unless a module explicitly transforms it.
+Father Time is the top-level timer/CV authority for everything reachable downstream, including modules contained inside downstream rack nodes.
 
-DV (Division Voltage) is a derived/local child timing signal used for divided/multiplied/split timing behavior. Creating or consuming DV does not destroy or replace the parent CV.
+### CV
 
-Father Time is the dedicated rack clock source. Timing-aware modules declare whether they source, follow, divide/consume, or transform timing through canonical capability/cascade metadata.
+CV is the persistent parent timing/control signal. It continues downstream unchanged unless a module is explicitly designed to transform CV.
 
-## 7. Persistence
+### DV
 
-Persistence is automatic for normal editing operations.
+DV means Division Voltage.
 
-The canonical project save must preserve:
+DV is a temporary child CV used for local split timing, divided timing, or multiple timing. It does not replace or modify the parent CV and does not become a second persistent graph-wide timing bus.
 
-- graph nodes
-- graph positions/view state where applicable
-- explicit graph connections
-- racks
-- rack names
-- rack module order
-- module instance identities
-- module state
-- referenced PCM/assets by stable IDs
-- applicable timing/controller/resource assignments
+Creating or consuming DV must leave parent CV available downstream unchanged.
 
-The same object must not have separate incompatible persistence formats merely because it was edited from a different screen.
+Timing-aware modules declare their source/follower/divider/transform behavior through canonical capabilities/cascade metadata. Intrinsic random or physical-model timing remains inside the owning module DSP.
 
-UI navigation must not silently reset working state.
+## 9. Persistence
 
-## 8. Navigation and editing context
+Persistence is automatic for normal project/rack/module editing.
 
-Navigation answers only: "where should Back/Close return?"
+Current Node Graph project serialization contract:
 
-It must not determine which implementation of an editor is loaded.
+- format: `multisynth-node-graph`
+- version: `4`
+- routing: `explicit-nodes`
+
+A project save preserves, as applicable:
+
+- node identities;
+- node positions/view state;
+- explicit connections;
+- rack identities and Names;
+- rack module order;
+- module instance identities;
+- module state;
+- referenced PCM/assets by stable IDs;
+- applicable controller/resource assignments.
+
+The same object must not gain incompatible persistence merely because it was edited from a different workspace. Navigation must not silently reset working state.
+
+Old spatial/grid project formats are not automatically interpreted as current explicit-node projects.
+
+## 10. Navigation and editing context
+
+Navigation determines only where Back/Close returns.
 
 Examples:
 
-- standalone module -> canonical module editor -> return to module selector
-- rack module -> canonical module editor -> return to that rack editor
-- rack opened from Node Graph -> canonical rack editor -> return to Node Graph
+- Module Test module -> canonical module editor -> Module Test selector;
+- rack-contained module -> canonical module editor -> that Rack Editor;
+- rack opened from Node Graph -> canonical Rack Editor -> Node Graph;
+- loose module opened from Node Graph -> canonical module editor -> Node Graph.
 
-The object being edited and its runtime/state remain the same regardless of entry path.
+Entry path must not determine editor implementation, shared-control implementation, state owner, or DSP owner.
 
-## 9. Layout and containment
+## 11. Android/native resource ownership
 
-Every shared component is responsible for remaining inside its allocated viewport/container.
+Modules do not own Android hardware directly.
 
-Shared UI uses border-box sizing and explicit containment. Width calculations must include padding and borders. Child components use `min-width: 0` where flex/grid shrinkage requires it. Long labels truncate or wrap only according to the component contract.
+Native/shared resources live below the module/rack runtime and are exposed through stable services/bridge APIs, including:
 
-Scrollable content scrolls inside its intended region. It does not enlarge a card, selector, editor, or viewport until controls run off-screen.
+- microphone/input capture;
+- MIDI/Bluetooth MIDI;
+- file import/export;
+- persistent storage;
+- Android audio focus/routing/device facilities;
+- permissions.
 
-These rules belong in the authoritative shared component, not in per-page repair CSS.
+Module instances subscribe to those resources according to declared capabilities/resources.
 
-## 10. MVP change discipline
+## 12. MVP change discipline
 
-The finished product is reached by reducing competing implementations, not adding compensating layers.
+Structural work must reduce competing ownership rather than stack corrections.
 
-For MVP work:
+Before architectural, UI-library, Module Builder, rack, or shared-control changes:
 
-1. Inspect ownership before changing behavior.
-2. Identify the authoritative implementation.
-3. Fix that implementation when the problem is shared.
-4. Remove or stop using competing ownership where proven safe.
-5. Do not add wrappers, shims, alternate renderers, duplicate runtimes, or page-specific CSS to mask an ownership problem.
-6. Do not alter stable module DSP while repairing graph/rack/UI architecture.
-7. Do not add features unrelated to the blocking MVP behavior.
-8. If the correct owner or runtime path is uncertain, inspect it before editing.
-9. Device testing confirms a traced fix; it is not a substitute for tracing repository ownership.
+1. inspect actual runtime loading, ownership, CSS cascade, state flow, routing, and call order;
+2. identify the authoritative owner;
+3. fix that owner when the problem is shared;
+4. remove competing ownership only after its role is verified;
+5. do not add wrappers, compatibility shims, duplicate renderers, alternate controls, duplicate runtimes, or compensating CSS unless proven necessary;
+6. do not alter stable module DSP during unrelated structural cleanup;
+7. do not add adjacent features or cleanup outside approved scope;
+8. if ownership or behavior is uncertain, inspect first rather than guessing;
+9. use repository audits as development diagnostics, not as substitutes for tracing behavior;
+10. use device testing to confirm internally traced fixes rather than making the user discover repository-level ownership mistakes.
 
-## 11. Definition of done for the structural MVP
+Before deleting, renaming, replacing, or broadly refactoring files, the exact proposed file/change list requires explicit approval.
 
-The graph/rack/module structure is complete when all of the following are true:
+## 13. Structural MVP definition of done
 
-- A standalone module can be added to the Node Graph, moved, connected, opened, edited, closed, and reopened without losing state or creating a second runtime.
-- A saved rack can be added to the Node Graph as one compound node, moved, connected, opened, edited, closed, and reopened without freezing or duplicating runtime ownership.
-- The Rack Editor behaves identically regardless of entry path except for its return destination.
-- Opening a module from a rack edits the same module instance and returns to the same rack.
-- Module selectors use one canonical full-color strip renderer everywhere.
-- Racked module strips use one canonical secondary renderer everywhere.
-- Saved-rack selectors and rack graph-node thumbnails use one canonical rack-thumbnail renderer.
-- Selector/card/editor content remains within its viewport and scrolls internally where specified.
-- The universal keyboard and other shared prefabs have one placement/style owner and behave consistently in every consumer.
+The graph/rack/module architecture is complete when all of the following are true:
+
+- A loose module can be added to the Node Graph, moved, explicitly connected, opened, edited, closed, and reopened without losing state or creating a duplicate runtime.
+- A saved rack can be added as one compound graph node, moved, explicitly connected, opened, edited, closed, and reopened without freezing or creating duplicate runtime/audio ownership.
+- Rack Editor behavior is the same regardless of entry path except for return destination.
+- Opening a module from a rack edits that exact module instance and returns to that rack.
+- Module Test, Rack Builder, and Node Graph selectors consume the same shared taxonomy and module selector renderer.
+- Module selector/node faces consistently show NAME + FAMILY.
+- Racked module strips use one shared secondary presentation.
+- Saved-rack selectors and rack graph nodes use one canonical rack-thumbnail renderer.
+- Rack/module cards and editors remain contained within the viewport; specified inner regions scroll rather than overflowing.
+- Shared keyboard, scope, ADSR, and control primitives each have one geometry/behavior owner and work consistently in every declaring module.
 - Rack internal routing is ordered and deterministic.
 - Node Graph routing is explicit and deterministic.
-- CV/DV/timing behavior follows declared contracts.
-- Saving/reloading the project reconstructs the same graph, racks, module instances, module state, and connections.
-- Existing working module DSP continues to work unchanged after structural standardization.
+- Father Time/CV/DV behavior follows the canonical timing contract through loose modules and rack-contained modules.
+- Saving/reloading reconstructs the same graph, rack contents/order, module instances/state, assets, and connections.
+- Existing stable module DSP and controls remain unchanged unless an observed module malfunction is being repaired.
+- The repo-wide shared-control ownership audit is clean and the resulting APK passes structural smoke testing.
 
-Once these conditions hold, graph/rack architecture is no longer a module-development concern. New modules can be built against the shared contracts without requiring page-specific integration work.
+When these conditions hold, graph/rack/shared-UI integration is infrastructure rather than recurring module-development work. New modules can be authored through Module Builder and the canonical contracts without requiring page-specific selector, keyboard, scope, rack, or graph integration patches.
