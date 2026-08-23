@@ -20,6 +20,9 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Enforce shared control ownership
+        run: node scripts/audit-shared-control-ownership.mjs
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
