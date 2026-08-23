@@ -15,9 +15,10 @@ function currentMode(){
   if(p==="index.html"||!p)return"main-menu";
   return"";
 }
-function mount(host=document.getElementById("msModeNav")){
+function mount(host=document.getElementById("msModeNav")||document.querySelector(".msModeNav")){
   if(!host)return null;
   const active=currentMode();
+  host.id="msModeNav";
   host.classList.add("msModeNav");
   host.setAttribute("aria-label","MultiSynth modes");
   host.innerHTML="";
