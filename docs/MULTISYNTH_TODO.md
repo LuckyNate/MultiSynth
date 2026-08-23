@@ -45,6 +45,7 @@ Read `docs/ARCHITECTURE_RULES.md` before making architectural, UI-library, Modul
 - [ ] A Module Builder module declares components, state binding, layout/group metadata, theme, family, and tags only; module editors must not reimplement shared component behavior.
 - [ ] Every declared supported Module Builder component renders through one shared renderer/component library. No per-module control whitelists, negative gates, silent skips, or duplicated component implementations.
 - [ ] Shared-component change = every module using that component changes automatically. Individual modules must not require repair after a shared ADSR, keyboard, scope, knob, selector, or other component change.
+- [x] Shared Module Builder controls inherit the active module theme through one semantic control-theme contract. Shared primitive/prefab code owns geometry, interaction, and behavior; module themes own appearance. Generic hardware styling is fallback only. Active/inactive states, tracks, thumbs, readouts, screens, pads, steps, LEDs, knobs, ribbons, faders, and buttons consume the same module theme vocabulary rather than requiring per-module control reimplementation.
 - [x] Source-instrument family now renders declared controls through shared `RackUI.renderControl()` rather than per-instrument control implementations.
 - [x] Shared Module Builder performance keyboard honors `meta.pinned:"bottom"`, loads from the shared editor when declared, and stays pinned at the bottom.
 - [x] Shared scope prefab pins at the top.
