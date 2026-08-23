@@ -5,6 +5,6 @@ function mount(container,{modules,onPick}={}){const T=MS.ModuleTaxonomy,M=MS.Mod
 function chip(name){const b=document.createElement("button");b.type="button";b.className="moduleFamilyChip";b.textContent=name;b.onclick=()=>{family=name;drawFamilies();draw()};return b}
 function drawFamilies(){families.replaceChildren();for(const f of ["ALL",...T.families()]){const b=chip(f);b.classList.toggle("active",f===family);families.appendChild(b)}}
 function draw(){list.replaceChildren();const q=search.value;for(const m of source){if(family!=="ALL"&&T.familyFor(m.id)!==family)continue;if(!T.matches(m.id,q))continue;const b=document.createElement("button"),name=m.displayName||m.id,fam=T.familyFor(m.id);b.type="button";b.className=`moduleRackStrip rackModuleIdentity ${m.themeKey||""}`.trim();b.style.setProperty("--module-color",m.color||"#777");b.innerHTML=`<strong>${String(name).toUpperCase()}</strong><span>${fam}</span>`;b.onclick=()=>onPick?.(m,b);list.appendChild(b)}}
-search.addEventListener("input",draw);global.addEventListener("multisynth-module-tags-changed",draw);drawFamilies();draw();return Object.freeze({redraw:draw,search,container:wrap})}
+search.addEventListener("input",draw);global.addEventListener("multisynth-module-taxonomy-changed",()=>{drawFamilies();draw()});drawFamilies();draw();return Object.freeze({redraw:draw,search,container:wrap})}
 MS.ModuleSelectorUI=Object.freeze({mount});
 })(window);
