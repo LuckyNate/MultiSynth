@@ -1,5 +1,7 @@
 "use strict";
-(function(){const MS=window.MultiSynth||{},M=MS.ModuleManifest,T=MS.ModuleTaxonomy,S=MS.ModuleSelectorUI,E=MS.RackEngine,choices=document.getElementById("moduleChoices"),list=document.getElementById("moduleOrder"),add=document.getElementById("addModuleBtn");if(!M||!T||!S)return;let busy=false;
-function simplifyRack(){if(!list||!E)return;const rackId=new URLSearchParams(location.search).get("selected")||new URLSearchParams(location.search).get("rack")||"";let rack;try{rack=E.getRack(rackId)}catch(_){return}for(const card of list.querySelectorAll(".moduleCard[data-module-id]")){const mod=rack.modules.find(x=>x.id===card.dataset.moduleId);if(!mod)continue;const meta=M.get(mod.type),name=meta?.displayName||mod.displayName||mod.type,fam=T.familyFor(mod.type);card.innerHTML=`<div class="moduleHead"><strong>${String(name).toUpperCase()}</strong><span>${fam}</span></div>`}}
-function enhanceChooser(){if(busy||!choices)return;const originals=[...choices.querySelectorAll("button.moduleChoice")];if(!originals.length||choices.querySelector(".moduleSelectorRack"))return;busy=true;const byName=new Map(originals.map(b=>[String(b.querySelector("strong")?.textContent||"").trim().toUpperCase(),b]));S.mount(choices,{modules:M.all,onPick:m=>byName.get(String(m.displayName).toUpperCase())?.click()});busy=false}
-add?.addEventListener("click",()=>setTimeout(enhanceChooser,0));new MutationObserver(()=>{if(!busy)simplifyRack()}).observe(list||document.body,{childList:true,subtree:true});simplifyRack()})();
+(function(){
+const MS=window.MultiSynth||{},M=MS.ModuleManifest,T=MS.ModuleTaxonomy,E=MS.RackEngine,list=document.getElementById("moduleOrder");
+if(!M||!T)return;
+function simplifyRack(){if(!list||!E)return;const q=new URLSearchParams(location.search),rackId=q.get("selected")||q.get("rack")||"";let rack;try{rack=E.getRack(rackId)}catch(_){return}for(const card of list.querySelectorAll(".moduleCard[data-module-id]")){const mod=rack.modules.find(x=>x.id===card.dataset.moduleId);if(!mod)continue;const meta=M.get(mod.type),name=meta?.displayName||mod.displayName||mod.type,fam=T.familyFor(mod.type);card.innerHTML=`<div class="moduleHead"><strong>${String(name).toUpperCase()}</strong><span>${fam}</span></div>`}}
+new MutationObserver(simplifyRack).observe(list||document.body,{childList:true,subtree:true});simplifyRack();
+})();
