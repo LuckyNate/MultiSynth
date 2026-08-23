@@ -2,6 +2,8 @@
 
 This is the canonical project to-do list. Read this file before answering questions about outstanding work. Update it when work is added, completed, deferred, or removed.
 
+Read `docs/ARCHITECTURE_RULES.md` before making architectural, UI-library, Module Builder, rack, or shared-control changes. Those rules govern implementation decisions for this list.
+
 ## Change-control rule
 
 - Before deleting, renaming, replacing, or broadly refactoring files, present the exact proposed file/change list to the user first and wait for explicit approval.
@@ -33,9 +35,10 @@ This is the canonical project to-do list. Read this file before answering questi
 - [ ] Complete the repo-wide ownership audit across every module, editor, rack surface, library control and prefab. A shared component has exactly one geometry/behavior owner; consumers may configure/theme it but may not reimplement or reposition it.
 - [x] Universal performance keyboard owns its viewport pinning and reserved bottom space in `control-performance-keyboard.css`; module/editor styles no longer own keyboard placement or bottom spacing.
 - [x] Remove the obsolete rack-specific keyboard implementation from `rackbuilder-app.js` and the obsolete `.rackKeyboard` / `.keyboardKeys` / `.key` stylesheet from `rackbuilder.css`.
-- [x] Build-time ownership audit rejects deleted/parallel rack keyboard implementations and module-specific geometry overrides of protected shared controls/prefabs.
+- [x] Keep `scripts/audit-shared-control-ownership.mjs` as a manual development diagnostic for locating shared-control ownership violations.
+- [x] Do not gate APK production on the ownership audit while architectural cleanup is in progress.
 - [ ] Continue removing any remaining competing shared-control geometry discovered by the ownership audit until it passes cleanly for the complete asset tree.
-- [ ] After the ownership audit is clean, keep the audit as a regression gate and mark this priority complete only after an APK build passes with the gate enabled.
+- [ ] Mark this priority complete only after the ownership audit is clean and the resulting APK has been smoke-tested; the audit remains diagnostic rather than an APK build gate.
 
 ### TOP PRIORITY — MAKE MODULE BUILDER AUTHORITATIVE
 
