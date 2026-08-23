@@ -1,94 +1,159 @@
 # MultiSynth
 
-MultiSynth is an Android-hosted HTML5 modular audio workstation. A plain-Java Android shell hosts the WebView and provides native MIDI, USB/Bluetooth MIDI transport, microphone capture, file picking, and Android lifecycle/back-navigation integration. The instrument, rack, and node-graph interfaces live in `app/src/main/assets/`.
+> READ THIS FILE BEFORE MAKING ANY CODE CHANGE.
+>
+> This README is the canonical architecture contract for both `main` and `alt`. Keep the two copies synchronized whenever the architecture, build order, or ownership rules change.
 
-## Application structure
+MultiSynth is an Android-hosted HTML5 modular audio workstation. The Android shell should remain thin: WebView hosting, lifecycle/back integration, permissions, microphone/file access, and native MIDI/Bluetooth transport. The instrument, routing, graph, and control systems live in HTML/CSS/JavaScript.
 
-`index.html` is the main menu and exposes three current workspaces:
+## Current recovery plan
 
-- **Test Modules** — instantiate and verify individual registered modules.
-- **Build Racks** — assemble reusable top-to-bottom internal module chains.
-- **Node Graph** — place modules and saved racks on a freeform plane and connect explicit OUT → IN ports.
+The existing implementation remains intact on `main` as reference/history. A clean replacement is being built on branch `alt` under `app/src/main/assets/alt/`.
 
-The node graph is the authoritative external routing model. There is no parent/child rack hierarchy, neighborhood routing, cascade grid, or position-derived signal relationship.
+Build order for `alt` is strict:
 
-## Android shell
+1. Node Graph — explicit nodes, explicit cables, instances only.
+2. Bottom-level sound path — minimal carrier/CV routing primitives and the tools required to inspect/test them.
+3. Shared control library — reusable CSS/JS controls designed once for all modules.
+4. Module declaration layer — modules declare controls/state/theme/DSP; they do not build private UI infrastructure.
+5. Migrate modules one at a time from the existing repo only after the lower layers are stable.
 
-`MainActivity` owns Android-specific services only:
+Do not reverse this order to solve an individual module bug.
 
-- WebView hosting and local asset delivery
-- USB/Bluetooth MIDI input and output
-- MIDI device reconnection
-- microphone capture and acoustic echo cancellation when available
-- audio-file selection
-- Android permission and lifecycle handling
-- Android Back integration
+## Non-negotiable architecture rules
 
-The current Android application namespace is `audio.multisynth.app`.
+### One owner per shared thing
 
-## Module architecture
+Every reusable behavior has exactly one authoritative implementation.
 
-Every active module has one canonical identity in `module-ids.js`, metadata in `module-manifest.js`, an explicit state-schema declaration, and a runtime definition registered through `ModuleContract`.
+- Node Graph owns graph instances, ports, cables, placement, selection, and removal of graph instances.
+- Audio core owns generic carrier/CV routing and graph connection lifetime.
+- A module owns its DSP and module-specific state only.
+- Shared controls own their DOM, interaction behavior, and geometry.
+- Module themes own appearance tokens only.
+- Module declarations describe which shared controls exist, their labels/ranges/state keys/grouping, and their theme.
 
-Module Builder definitions are owned by the module implementation files under `assets/modules/`. `module-builder-definitions.js` is only the shared registry; it does not maintain duplicate module specifications.
+Consumers do not recreate or compensate for shared behavior.
 
-Shared control surfaces, state keys, capabilities, events, and faceplate metadata are centralized. New modules should use the standard control descriptors and choose controls according to their actual job rather than reproducing module-specific UI infrastructure unnecessarily.
+### No workaround layers
 
-## Racks
+Do not add editor-specific patches, compatibility shims, duplicate renderers, compensating CSS, second state stores, or module-specific copies of shared controls to make a symptom disappear.
 
-A rack is a reusable unit containing an ordered module chain. Internal rack signal order is top-to-bottom. The rack itself exposes IN and OUT on the node graph and may be patched like any other node.
+If a shared knob, step bank, keyboard, scope, selector, ADSR, routing primitive, or graph behavior is wrong, fix its authoritative owner.
 
-Rack names are stored through `RackLibrary`. The obsolete hierarchy abstraction is not part of the current architecture.
+### Shared controls really are shared
 
-## Node graph
+The control library should remain small and obvious. Initial primitives include:
 
-The node graph is a freeform workspace. Visual position does not imply routing. Connections exist only when an explicit node connection is stored.
+- knob
+- toggle
+- momentary button
+- selector/button bank
+- fader
+- ribbon
+- pad bank
+- step bank/sequencer grid
+- text/readout/display
+- XY/touch surface
 
-Current project serialization uses:
+Compound prefabs include:
 
-- format: `multisynth-node-graph`
-- version: `4`
-- routing: `explicit-nodes`
+- ADSR
+- performance keyboard
+- oscilloscope
 
-Old spatial/grid project formats are not automatically interpreted by the development build.
+Changing a shared control must automatically change every module that declares it.
 
-## Persistence and compatibility
+A multi-lane step bank is still one shared step-bank primitive. For example, a drum machine may bind 12 independent tracks to one visible bank of 32 toggles by changing the selected lane. The module must not create another step-grid implementation to achieve that behavior.
 
-Current development persistence uses `multisynth.rack.project.v1` for the node/rack project container and `multisynth.racks.v1` for rack names.
+### State has one source of truth
 
-The generic module compatibility registry remains available for future released-version migrations. Compatibility migrations must be explicit and intentionally enabled; development startup does not automatically repair or reinterpret obsolete project formats.
+UI state, DSP state, persistence state, and playback must refer to the same canonical module state. Do not maintain a separate UI copy of a sequencer pattern or other control state.
 
-Once external users depend on persisted data, migrations should be added deliberately and tested on an experimental branch before release.
+Controls receive current state and emit state changes. Renderers do not invent module behavior.
 
-## Audio and performance rules
+### Node Graph rules
 
-Modules should preserve these project rules:
+The Node Graph is the authoritative external routing model.
 
-- incoming carrier audio remains usable unless the module is intentionally generator-only
-- neutral processing should not unexpectedly destroy the carrier
-- CV, DV, trigger, and clock behavior remain independent of audible audio unless explicitly designed otherwise
-- oscilloscopes represent the relevant post-process signal
-- modules clean up audio nodes, timers, microphone subscriptions, and other resources when destroyed
-- state changes remain serializable and restorable
-- modules using the universal performance keyboard inherit its shared keyboard behavior and velocity control
+- Every placed module or rack is an instance.
+- Position never implies routing.
+- Routing exists only through explicit cables.
+- Nodes expose explicit ports.
+- Start with two IN and two OUT ports for both modules and racks; extend module-specific ports deliberately later.
+- Removing a node removes that graph instance only. Installed module definitions are not deleted from the module library by graph removal.
+- Racks are compact reusable complex instrument/processor chains represented as a single node externally.
 
-## Module loading
+### Audio rules
 
-`module-loader.js` loads the canonical catalog from `module-ids.js`. Module scripts are authoritative for their Module Builder definitions and runtime behavior. A module should not have a second parallel implementation or duplicate specification elsewhere.
+Keep the bottom audio layer minimal.
 
-## Build
+- Carrier/audio routing is separate from CV/control routing.
+- Modules process/synthesize; graph code connects.
+- Generic routing code must not reach into module DSP internals to repair behavior.
+- Fundamental source constructors should have one lowest-level owner.
+- No silent audio/DSP shims.
+- Incoming carrier audio remains usable unless a module is intentionally generator-only.
+- Oscilloscopes show the relevant post-process signal.
+- Resources are cleaned up when an instance is destroyed.
 
-GitHub Actions builds the Android APK. Minimum Android version is Android 6.0 / API 23.
+### CSS/theme rules
 
-## Cleanup policy
+Shared control CSS owns geometry and interaction-related layout. Module themes provide semantic appearance variables/tokens. A module may make a knob chocolate, cream, surgical, Amiga-blue, etc.; it may not redefine what a knob is or how it behaves.
 
-The forward architecture is intentionally strict:
+There is one vertical module layout. Rotation may widen that layout but does not create a separate landscape composition.
 
-1. one canonical identity per active module
-2. one authoritative runtime/Module Builder definition per module
-3. explicit node connections for external routing
-4. ordered chains only inside racks
-5. no cascade/grid/hierarchy routing aliases
-6. no automatic interpretation of obsolete development save formats
-7. retain generic migration infrastructure for future public releases, but enable migrations explicitly
-8. remove obsolete aliases rather than allowing them to become permanent architecture
+## `alt` directory structure
+
+The clean implementation starts here:
+
+```text
+app/src/main/assets/alt/
+  index.html
+  node-graph/
+    node-graph.html
+    node-graph.css
+    node-graph.js
+  core/
+    state.js
+    audio.js
+  controls/
+    controls.css
+    controls.js
+    prefabs.js
+  modules/
+```
+
+Keep files narrow in responsibility. Do not create a general-purpose manager when a small explicit module will do.
+
+## Change discipline
+
+Before changing code:
+
+1. Read this README.
+2. Identify the authoritative owner of the behavior.
+3. Trace the actual state/call/render/routing path.
+4. Change the smallest authoritative layer that solves the problem for all consumers.
+5. Do not perform adjacent cleanup unless requested.
+6. Update this README on both `main` and `alt` if an architecture rule or build-order decision changes.
+
+Before deleting, renaming, replacing, or broadly refactoring existing files, list the proposed files/changes and get explicit approval first.
+
+## Existing implementation
+
+The current production/reference implementation still lives in `app/src/main/assets/`. Its Git history is valuable. Do not delete it while `alt` is being built. Reuse verified DSP equations, module behavior, names, themes, and assets deliberately; do not copy architecture merely because it already exists.
+
+## Definition of success for `alt`
+
+The replacement is successful when the system is understandable from the bottom up:
+
+- explicit Node Graph
+- small audio/routing core
+- small reusable control library
+- declarative modules
+- one state source of truth
+- no module-specific copies of shared controls
+- no editor workarounds for primitive defects
+- no hidden compatibility layers
+
+If a simple module requires a complicated editor or special-case renderer, the architecture is wrong.
