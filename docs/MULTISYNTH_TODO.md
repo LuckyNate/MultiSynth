@@ -8,6 +8,12 @@ This is the canonical project to-do list. Read this file before answering questi
 - Do not infer that a file is unused from a shallow reference search. Verify runtime loading, HTML/script inclusion, DOM/event entry points, manifest/editor mapping, Android/native dependencies, persistence/navigation roles, and indirect framework use.
 - For requested implementation work, make only the approved scope of changes. Do not add cleanup or adjacent rewrites unless explicitly approved.
 
+## Global UI rules
+
+- MultiSynth uses one vertical module layout only. There is no separate landscape arrangement.
+- Device rotation is allowed. When rotated sideways, the same vertical layout expands to the available width and remains vertically scrollable; controls must not reorganize into a different landscape-specific composition.
+- Shared scope prefab is pinned at the top. Shared performance keyboard prefab is pinned at the bottom when declared with `meta.pinned:"bottom"`.
+
 ## Active
 
 ### TOP PRIORITY — MAKE MODULE BUILDER AUTHORITATIVE
