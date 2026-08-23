@@ -93,13 +93,14 @@ Governing rules for all sound-engine work:
 - [ ] Audit `preserveFedCarrier()` in `rack-audio-graph.js`; determine whether it still has a legitimate target after synth ownership cleanup or is stale compensation for an older voice model.
 - [ ] Audit per-module safety compressor plus rack/master limiter stacking; keep only protection that does not unintentionally alter module sound.
 - [ ] Audit branch/output gain splitting separately from carrier behavior; routing gain must remain a graph concern and must not mutate module voice state.
-- [ ] Continue sound-engine KISS audit from the cleaned core: routing connects, modules synthesize/process, note/CV/DV events control; graph code must not reach into module DSP internals to repair behavior.
+- [ ] Continue sound-engine KISS audit from the cleaned core: routing connects, modules synthesize/process, note/CV events control; graph code must not reach into module DSP internals to repair behavior.
 
 - [ ] Populate the current active work list together from the actual project state.
 - [ ] Node Graph connector overhaul: render module IN/OUT connectors directly on the module face as convincing 3.5 mm audio jacks. Make patching easy to grab and connect. Draw connections like physical patch cables, with a cable body and a slightly darker circular plug/end-cap at each endpoint to give the impression of a cable plugged into the jack.
 
 ## Backlog
 
+- [ ] Analyze whether installed modules need a user-facing uninstall/removal path. Keep this separate from deleting graph/rack instances. Define what uninstall removes (module package/assets/registration/persisted module-specific data), how existing racks/graphs referencing that module are handled, whether uninstall is reversible/reinstallable, and which file/library utility owns permanent module removal. Installed module definitions and their runtime instances already have distinct UI presentation, so this analysis is about lifecycle and data integrity rather than visual disambiguation.
 - [ ] Snap Crackle Pop: rack-native procedural transient/noise synthesis module based on the No Quarter crackle system, but with deeper sound-generation controls and more independently controllable event families. Use Module Builder controls only.
 - [ ] AM/FM Processor: basic combined AM/FM rack processor with independent AM and FM ON/OFF toggles and LEVEL controls. Automatically mix enabled modulation paths into the final waveform. Support ADSR-triggered modulation shaping. Use Module Builder controls only.
 
