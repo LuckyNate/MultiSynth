@@ -43,18 +43,23 @@ If a shared knob, step bank, keyboard, scope, selector, ADSR, routing primitive,
 
 ### Shared controls really are shared
 
-The control library should remain small and obvious. Initial primitives include:
+The control library should remain small and obvious. Atomic primitives include:
 
-- knob
+- knob and dial
 - toggle
-- momentary button
+- momentary and hold buttons
 - selector/button bank
-- fader
+- general track/instrument bank
+- fader and fader bank
 - ribbon
 - pad bank
-- step bank/sequencer grid
-- text/readout/display
-- XY/touch surface
+- multi-lane step bank/sequencer grid
+- text input/readout/display
+- XY pad and spring joystick
+- touchscreen
+- turntable/scrub surface
+- LED and LED ring
+- knob bank
 
 Compound prefabs include:
 
@@ -125,6 +130,8 @@ app/src/main/assets/alt/
 ```
 
 Keep files narrow in responsibility. Do not create a general-purpose manager when a small explicit module will do.
+
+Every source file created under `alt` begins with a concise top-of-file ownership/purpose comment stating what that file owns and, where useful, what it explicitly does not own. Preserve that comment when editing the file.
 
 ## Change discipline
 
