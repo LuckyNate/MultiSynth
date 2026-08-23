@@ -60,6 +60,9 @@ The control library should remain small and obvious. Atomic primitives include:
 - turntable/scrub surface
 - LED and LED ring
 - knob bank
+- reusable controller IN/OUT jack pair
+
+Every controller is rendered as one faceplate unit containing the controller itself and its IN/OUT jacks in the same control div. The shared jack primitive owns jack DOM/geometry; the generic renderer composes the pair onto every declared controller. Modules only declare the state binding and port ids/kind. Do not build separate per-module control-port panels.
 
 Compound prefabs include:
 
@@ -125,6 +128,8 @@ app/src/main/assets/alt/
   controls/
     controls.css
     controls.js
+    control-jacks.css
+    control-jacks.js
     prefabs.js
   modules/
 ```
