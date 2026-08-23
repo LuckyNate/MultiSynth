@@ -2,14 +2,13 @@
 (function(global){
 const MS=global.MultiSynth=global.MultiSynth||{},M=MS.ModuleManifest,B=MS.ModuleBuilderDefinitions;
 const TAG_STORE="multisynth.module.tags.v1",FAMILY_STORE="multisynth.module.families.v1";
-const FAMILY_BY_CATEGORY=Object.freeze({input:"SIGNAL SOURCE",generator:"SIGNAL SOURCE",instrument:"SIGNAL SOURCE",modulator:"SIGNAL SOURCE",rhythm:"TIMED INSTRUMENT",clock:"TIMED INSTRUMENT",sampler:"TIMED INSTRUMENT",utility:"FILE UTILITY",granular:"AUDIO PROCESSOR",effect:"AUDIO PROCESSOR",looper:"AUDIO PROCESSOR",controller:"CONTROLLER",routing:"ROUTING / OUTPUT"});
 const TAG_ALIASES=Object.freeze({audioInput:"audio-in",audioOutput:"audio-out",generator:"generator",noteInput:"keyboard",clockSource:"clock-source",clockFollower:"clock-follow",dvInput:"dv",cvInput:"cv-in",cvOutput:"cv-out",terminalOutput:"terminal",mic:"mic",pcm:"pcm",midi:"midi",storage:"storage",nativeAudio:"native-audio"});
 function normalizeTag(v){const s=String(v||"").trim().toLowerCase().replace(/^#+/,"").replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"");return s?"#"+s:""}
 function normalizeFamily(v){return String(v||"").trim().replace(/\s+/g," ").toUpperCase()}
-function familyTagFor(id){const s=familyFor(id).toLowerCase().replace(/[^a-z0-9]+/g,"");return s?"#"+s:"#module"}
+function familyTagFor(id){const family=familyFor(id);if(family==="NULL FAMILY")return"#nullfamily";const s=family.toLowerCase().replace(/[^a-z0-9]+/g,"");return s?"#"+s:"#nullfamily"}
 function load(store){try{const x=JSON.parse(localStorage.getItem(store)||"{}");return x&&typeof x==="object"?x:{}}catch(_){return{}}}
 function save(store,x){localStorage.setItem(store,JSON.stringify(x))}
-function defaultFamilyFor(id){const m=M?.get?.(id),d=B?.get?.(id);return normalizeFamily(d?.family||d?.taxonomy?.family||FAMILY_BY_CATEGORY[m?.category]||"MODULE")}
+function defaultFamilyFor(id){const d=B?.get?.(id);return normalizeFamily(d?.family||d?.taxonomy?.family)||"NULL FAMILY"}
 function familyFor(id){const all=load(FAMILY_STORE),v=normalizeFamily(all[String(id)]);return v||defaultFamilyFor(id)}
 function setFamily(id,family){const all=load(FAMILY_STORE),key=String(id),v=normalizeFamily(family);if(v)all[key]=v;else delete all[key];save(FAMILY_STORE,all);global.dispatchEvent(new CustomEvent("multisynth-module-taxonomy-changed",{detail:{id:key,family:familyFor(key),familyTag:familyTagFor(key)}}));return familyFor(key)}
 function automaticTags(id){const m=M?.get?.(id),d=B?.get?.(id),set=new Set([familyTagFor(id)]),add=v=>{const t=normalizeTag(v);if(t)set.add(t)};add(m?.category);for(const x of m?.capabilities||[])add(TAG_ALIASES[x]||x);for(const x of m?.resources||[])add(TAG_ALIASES[x]||x);for(const x of d?.tags||d?.taxonomy?.tags||[])add(x);for(const c of d?.controls||[]){add(c.control);if(c.control==="keyboard")add("keyboard");for(const o of c.value?.options||[])if(["sine","square","triangle","saw","sawtooth","noise","white","pink","red","blue"].includes(String(o).toLowerCase()))add(o)}const blob=JSON.stringify(d?.sources||[]).toLowerCase();for(const w of ["sine","square","triangle","saw","noise","white","pink","red","blue","clock","mic","pcm"])if(blob.includes(w))add(w);return[...set].sort()}
