@@ -28,6 +28,15 @@ This is the canonical project to-do list. Read this file before answering questi
 
 ## Active
 
+### TOP PRIORITY — SHARED CONTROL/PREFAB OWNERSHIP — DO NOT DEPRIORITIZE UNTIL CLEAN
+
+- [ ] Complete the repo-wide ownership audit across every module, editor, rack surface, library control and prefab. A shared component has exactly one geometry/behavior owner; consumers may configure/theme it but may not reimplement or reposition it.
+- [x] Universal performance keyboard owns its viewport pinning and reserved bottom space in `control-performance-keyboard.css`; module/editor styles no longer own keyboard placement or bottom spacing.
+- [x] Remove the obsolete rack-specific keyboard implementation from `rackbuilder-app.js` and the obsolete `.rackKeyboard` / `.keyboardKeys` / `.key` stylesheet from `rackbuilder.css`.
+- [x] Build-time ownership audit rejects deleted/parallel rack keyboard implementations and module-specific geometry overrides of protected shared controls/prefabs.
+- [ ] Continue removing any remaining competing shared-control geometry discovered by the ownership audit until it passes cleanly for the complete asset tree.
+- [ ] After the ownership audit is clean, keep the audit as a regression gate and mark this priority complete only after an APK build passes with the gate enabled.
+
 ### TOP PRIORITY — MAKE MODULE BUILDER AUTHORITATIVE
 
 - [ ] A Module Builder module declares components, state binding, layout/group metadata, theme, family, and tags only; module editors must not reimplement shared component behavior.
