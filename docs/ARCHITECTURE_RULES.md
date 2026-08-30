@@ -10,11 +10,21 @@ Controls are atomic reusable interaction units. Prefabs are named reusable compo
 
 Users may build and name prefabs, then use those prefabs and controls to build modules.
 
+## One Node Graph, multiple graph documents
+
+There is one graph editor implementation: **Node Graph**. Prefab building, module building, rack building, and ordinary patch work are not separate editors.
+
+The workspace may contain multiple Node Graph documents at once as tabs. Each tab owns one persisted graph circuit. Switching tabs changes the active graph document, not the editor implementation.
+
+`Save as Prim` and `Save as Module` are output targets for the active graph. They snapshot the same circuit with different output metadata. Changing output type must never fork graph editing behavior or create a second builder architecture.
+
+Saved graph outputs are reusable graph assets. Their external runtime port/interface contract must be explicit and authoritative before the asset is treated as a routable inserted runtime node. Do not silently guess a different interface rule in individual compilers.
+
 ## Final face pipeline
 
 The circuit is authored first. Presentation is compiled afterward:
 
-`circuit -> declarations -> FaceCompiler -> ordered full-div face -> optional saved reorder -> renderer`
+`Node Graph circuit -> output compile -> declarations -> FaceCompiler -> ordered full-div face -> optional saved reorder -> renderer`
 
 The FaceCompiler proposes the initial usable face. Every top-level control or prefab becomes one full-width div in a vertical stack. Ordinary divs can only be reordered vertically as whole units. No arbitrary positioning, resizing, overlapping, grid packing, manual spans, or module-specific face CSS is permitted.
 
@@ -32,7 +42,8 @@ Every shared control, prefab registry, face compiler, renderer, routing primitiv
 - Prefabs own named composition only.
 - FaceCompiler owns initial ordering and pin rules only.
 - ControlRenderer owns compiled-face DOM composition and reorder gesture only.
-- Node Graph owns graph instances, routing topology, placement, patch persistence, and instance face-order overrides.
+- Node Graph owns graph documents, tabs, routing topology, placement, patch persistence, and instance face-order overrides.
+- Graph output compilation owns conversion of a graph document into prim/module/rack/patch assets.
 - Modules own unique DSP and canonical module state only.
 - Themes own appearance tokens only.
 
@@ -40,7 +51,7 @@ Consumers may declare configuration, state binding, labels, theme tokens, prefab
 
 ## Minimal layers
 
-Do not add wrappers, compatibility shims, duplicate renderers, alternate control implementations, compensating CSS, second state stores, or module-specific layout systems. When two layers appear to own the same behavior, determine the authoritative owner and fix it there.
+Do not add separate prefab/module/rack builder implementations, wrappers, compatibility shims, duplicate renderers, alternate control implementations, compensating CSS, second state stores, or module-specific layout systems. When two layers appear to own the same behavior, determine the authoritative owner and fix it there.
 
 ## Verify before changing
 
