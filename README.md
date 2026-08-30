@@ -4,55 +4,49 @@
 >
 > This README is the canonical architecture contract for both `main` and `alt`. Keep the two copies synchronized whenever the architecture, build order, or ownership rules change.
 
-MultiSynth is an Android-hosted HTML5 modular audio workstation. The Android shell should remain thin: WebView hosting, lifecycle/back integration, permissions, microphone/file access, and native MIDI/Bluetooth transport. The instrument, routing, graph, and control systems live in HTML/CSS/JavaScript.
+MultiSynth is an Android-hosted HTML5 modular audio workstation. The Android shell stays thin. Instrument, routing, graph, control, prefab, face-compilation, and module systems live in HTML/CSS/JavaScript.
 
-## Current recovery plan
+## Final architecture
 
-The existing implementation remains intact on `main` as reference/history. A clean replacement is being built on branch `alt` under `app/src/main/assets/alt/`.
+The architecture is intentionally bottom-up:
 
-Build order for `alt` is strict:
+1. **Node Graph** — explicit instances, ports, cables, placement and patch persistence.
+2. **Audio core** — minimal carrier/CV routing and connection lifetime.
+3. **Shared controls** — the atomic reusable interaction library.
+4. **Named prefabs** — reusable compositions made from controls and/or other prefabs.
+5. **Modules** — circuits/DSP made from controls and prefabs, with module-specific state and DSP only.
+6. **Face compiler** — after a prefab or module circuit exists, compiles its declared controls/prefabs into a usable control face.
+7. **Face renderer/editor** — renders the compiled face and permits only whole-div vertical reordering of ordinary face units. Pinned performance units do not participate in reordering.
 
-1. Node Graph — explicit nodes, explicit cables, instances only.
-2. Bottom-level sound path — minimal carrier/CV routing primitives and the tools required to inspect/test them.
-3. Shared control library — reusable CSS/JS controls designed once for all modules.
-4. Module declaration layer — modules declare controls/state/theme/DSP; they do not build private UI infrastructure.
-5. Migrate modules one at a time from the existing repo only after the lower layers are stable.
+The existing implementation on `main` remains reference/history while the clean replacement is built under `app/src/main/assets/alt/` on `alt`. Migrate modules only after the lower shared layers are stable.
 
-Do not reverse this order to solve an individual module bug.
+## One authoritative owner
 
-## Non-negotiable architecture rules
+Every reusable behavior has exactly one owner.
 
-### One owner per shared thing
-
-Every reusable behavior has exactly one authoritative implementation.
-
-- Node Graph owns graph instances, ports, cables, placement, selection, and removal of graph instances.
+- Node Graph owns graph instances, ports, cables, placement, selection, removal, patch persistence, and each instance's saved face-order override.
 - Audio core owns generic carrier/CV routing and graph connection lifetime.
-- A module owns its DSP and module-specific state only.
-- Shared controls own their DOM, interaction behavior, and geometry.
-- Module themes own appearance tokens only.
-- Module declarations describe which shared controls exist, their labels/ranges/state keys/grouping, and their theme.
+- Shared controls own control DOM, geometry and gestures.
+- Prefab registry owns named reusable compositions, not control behavior or layout implementation.
+- Face compiler owns automatic initial face order and pin rules.
+- Face renderer owns DOM composition from compiled packets and the reorder interaction.
+- A module owns module-specific DSP and canonical module state only.
+- Themes own appearance tokens only.
 
-Consumers do not recreate or compensate for shared behavior.
+Do not add compatibility shims, duplicate renderers, module-specific control copies, compensating CSS, second state stores, or editor-specific layout implementations.
 
-### No workaround layers
+## Shared controls
 
-Do not add editor-specific patches, compatibility shims, duplicate renderers, compensating CSS, second state stores, or module-specific copies of shared controls to make a symptom disappear.
+Atomic controls are reusable and behaviorally authoritative:
 
-If a shared knob, step bank, keyboard, scope, selector, ADSR, routing primitive, or graph behavior is wrong, fix its authoritative owner.
-
-### Shared controls really are shared
-
-The control library should remain small and obvious. Atomic primitives include:
-
-- knob and dial
-- toggle
-- momentary and hold buttons
+- knob and dial — touch/drag vertically
+- toggle switch — tap toggles persistent state
+- momentary switch — down is on; release/cancel is off; there is no separate hold control
 - selector/button bank
-- general track/instrument bank
+- track/instrument bank
 - fader and fader bank
 - ribbon
-- pad bank
+- pad and pad bank — pads are triggers, not persistent selectors
 - multi-lane step bank/sequencer grid
 - text input/readout/display
 - XY pad and spring joystick
@@ -62,58 +56,61 @@ The control library should remain small and obvious. Atomic primitives include:
 - knob bank
 - reusable controller IN/OUT jack pair
 
-Every controller is rendered as one faceplate unit containing the controller itself and its IN/OUT jacks in the same control div. The shared jack primitive owns jack DOM/geometry; the generic renderer composes the pair onto every declared controller. Modules only declare the state binding and port ids/kind. Do not build separate per-module control-port panels.
+Every modulatable controller is one faceplate unit containing the controller and its IN/OUT jacks. Modules declare state bindings and port IDs/kinds; they never build separate control-port panels.
 
-Compound prefabs include:
+## Named prefabs
 
-- ADSR
-- performance keyboard
-- oscilloscope
+A prefab is **not a control**. It is a named reusable composition built from shared controls and/or other named prefabs. Users must be able to build and name prefabs, then use those prefabs when building modules.
 
-Changing a shared control must automatically change every module that declares it.
+Canonical examples include ADSR, performance keyboard, and oscilloscope. ADSR is a prefab composed from controls; it is not an atomic control.
 
-A multi-lane step bank is still one shared step-bank primitive. For example, a drum machine may bind 12 independent tracks to one visible bank of 32 toggles by changing the selected lane. The module must not create another step-grid implementation to achieve that behavior.
+A prefab's internal declarations go through the same face compiler. Prefabs do not hard-code private control geometry or interaction behavior.
 
-### State has one source of truth
+## Modules
 
-UI state, DSP state, persistence state, and playback must refer to the same canonical module state. Do not maintain a separate UI copy of a sequencer pattern or other control state.
+A module is a circuit/DSP definition assembled from controls and prefabs. Building the circuit determines what exists and how it behaves; it does not hand-author the final control-face DOM.
 
-Controls receive current state and emit state changes. Renderers do not invent module behavior.
+Modules declare controls/prefabs, state bindings, routing metadata, labels, theme tokens and any explicit pin metadata. They do not implement shared controls, prefab internals, or face layout CSS.
 
-### Node Graph rules
+## Face compilation and editing
 
-The Node Graph is the authoritative external routing model.
+Face compilation is the final presentation step after the actual prefab/module circuit has been built.
 
-- Every placed module or rack is an instance.
-- Position never implies routing.
-- Routing exists only through explicit cables.
-- Nodes expose explicit ports.
-- Start with two IN and two OUT ports for both modules and racks; extend module-specific ports deliberately later.
-- Removing a node removes that graph instance only. Installed module definitions are not deleted from the module library by graph removal.
-- Racks are compact reusable complex instrument/processor chains represented as a single node externally.
+`circuit -> declarations -> face compile -> ordered face divs -> saved user reorder -> render`
 
-### Audio rules
+Rules:
 
-Keep the bottom audio layer minimal.
+- The compiler proposes a usable initial face automatically.
+- Every top-level control or prefab becomes one **full-width component div** in a vertical face.
+- Each compiled div receives a stable face ID.
+- Ordinary divs may only be reordered vertically as whole units. No free positioning, resizing, overlap, arbitrary pixel coordinates, or per-module layout CSS.
+- Reordering changes presentation only. It never rewrites the circuit, control, prefab, DSP, or module declaration.
+- The Node Graph persists only the ordered stable IDs as the instance's face-layout override.
+- If there is no override, compiler order is authoritative.
+- New components absent from an older override fall back into compiler order without destroying the saved order of known components.
+- Resetting a face means removing its order override and returning to compiler order.
+- Performance tools may be pinned. `performance-keyboard` is pinned to the bottom by contract and is excluded from ordinary reordering.
+- Prefabs use the same compilation rule internally, and a prefab placed in a module remains one top-level module-face div.
 
-- Carrier/audio routing is separate from CV/control routing.
-- Modules process/synthesize; graph code connects.
-- Generic routing code must not reach into module DSP internals to repair behavior.
-- Fundamental source constructors should have one lowest-level owner.
-- No silent audio/DSP shims.
-- Incoming carrier audio remains usable unless a module is intentionally generator-only.
-- Oscilloscopes show the relevant post-process signal.
-- Resources are cleaned up when an instance is destroyed.
+This is the final face-layout architecture. Do not introduce grid packing, manual spans, arbitrary coordinates, resizing, or module-owned face composition as alternate systems.
 
-### CSS/theme rules
+## State
 
-Shared control CSS owns geometry and interaction-related layout. Module themes provide semantic appearance variables/tokens. A module may make a knob chocolate, cream, surgical, Amiga-blue, etc.; it may not redefine what a knob is or how it behaves.
+UI, DSP, persistence and playback refer to the same canonical module state. Face-order persistence is graph-instance presentation metadata, not DSP/module state. Controls receive current state and emit changes; renderers do not invent module behavior.
 
-There is one vertical module layout. Rotation may widen that layout but does not create a separate landscape composition.
+## Node Graph
 
-## `alt` directory structure
+The Node Graph is the authoritative external routing model. Position never implies routing; routing exists only through explicit cables. Nodes expose explicit ports. Removing a node removes that graph instance only. Racks/complex modules remain single external graph instances.
 
-The clean implementation starts here:
+## Audio
+
+Carrier/audio routing is separate from CV/control routing. Modules process/synthesize; graph code connects. Generic routing must not reach into module DSP internals. Fundamental source constructors have one lowest-level owner. No silent DSP shims. Resources are cleaned up on destroy.
+
+## CSS/themes
+
+Shared control CSS owns control geometry. Face-compiler CSS owns vertical compiled-face geometry. Themes provide semantic appearance variables only. There is one vertical module layout; rotation may widen it but does not create a second composition system.
+
+## `alt` structure
 
 ```text
 app/src/main/assets/alt/
@@ -130,42 +127,23 @@ app/src/main/assets/alt/
     controls.js
     control-jacks.css
     control-jacks.js
+    face-compiler.css
+    face-compiler.js
     prefabs.js
+    control-renderer.js
   modules/
 ```
 
-Keep files narrow in responsibility. Do not create a general-purpose manager when a small explicit module will do.
-
-Every source file created under `alt` begins with a concise top-of-file ownership/purpose comment stating what that file owns and, where useful, what it explicitly does not own. Preserve that comment when editing the file.
+Every source file under `alt` starts with a concise ownership/purpose comment.
 
 ## Change discipline
 
-Before changing code:
+Before changing code: read this README, identify the authoritative owner, trace the actual state/call/render/routing path, change the smallest authoritative layer, and do not perform adjacent cleanup. Before deleting, renaming, replacing, or broadly refactoring existing files, list exact proposed changes and get explicit approval.
 
-1. Read this README.
-2. Identify the authoritative owner of the behavior.
-3. Trace the actual state/call/render/routing path.
-4. Change the smallest authoritative layer that solves the problem for all consumers.
-5. Do not perform adjacent cleanup unless requested.
-6. Update this README on both `main` and `alt` if an architecture rule or build-order decision changes.
+Reuse verified DSP equations, module behavior, names, themes, and assets deliberately; do not copy old architecture merely because it exists.
 
-Before deleting, renaming, replacing, or broadly refactoring existing files, list the proposed files/changes and get explicit approval first.
+## Definition of success
 
-## Existing implementation
+The replacement is successful when it has explicit graph routing, a small audio core, one shared control library, composable named prefabs, declarative modules, automatic face compilation, reorder-only face editing, one canonical module state, and no hidden compatibility or module-specific UI layers.
 
-The current production/reference implementation still lives in `app/src/main/assets/`. Its Git history is valuable. Do not delete it while `alt` is being built. Reuse verified DSP equations, module behavior, names, themes, and assets deliberately; do not copy architecture merely because it already exists.
-
-## Definition of success for `alt`
-
-The replacement is successful when the system is understandable from the bottom up:
-
-- explicit Node Graph
-- small audio/routing core
-- small reusable control library
-- declarative modules
-- one state source of truth
-- no module-specific copies of shared controls
-- no editor workarounds for primitive defects
-- no hidden compatibility layers
-
-If a simple module requires a complicated editor or special-case renderer, the architecture is wrong.
+If a simple module requires a special-case renderer or private control implementation, the architecture is wrong.
