@@ -57,6 +57,8 @@ When old implementation code is removed, these visual ideas are extracted and re
 
 ## 4. Four-color theme contract
 
+Every module owns a theme.
+
 A module theme starts from four semantic colors:
 
 - `background` — the deepest chassis/cavity color;
@@ -68,37 +70,91 @@ Everything else should normally be derived from those four colors: secondary pan
 
 A module may override a derived material value when its physical identity genuinely requires it, but the normal case is four authored colors plus derived hardware treatment.
 
+The theme belongs to the module, not to the primitive. A knob is the same shared knob implementation in every module, but it renders through the owning module's theme.
+
 This keeps themes coherent while still allowing radically different instruments. PureSynth can be stark black/white; QuadSynth amber/gold; Pulsynth green; SinLadder cyan; Razorback red/black; Stinger yellow/black; No Quarter blue/silver without inventing a separate control system for each.
 
-## 5. Shared control language
+## 5. Primitive authoring model
 
-The control library is unified.
+The central authoring model is:
 
-A knob should feel like the same family of knob wherever it appears. A jack should behave like the same kind of jack everywhere. A fader should use the same touch mechanics across modules.
+**small reusable primitives -> authored module -> themed playable device**
 
-The shared library should eventually cover:
+A module is not handwritten from raw WebAudio and arbitrary DOM. It is assembled from a compact vocabulary of reusable signal and interface primitives.
 
-- small knob;
-- large dial;
-- toggle switch;
+### Signal/DSP primitives
+
+The initial primitive vocabulary should include at least:
+
+- oscillator;
+- noise source;
+- constant/CV source;
+- gain/VCA;
+- filter;
+- envelope/ADSR;
+- mixer/summer;
+- delay;
+- clock/timer;
+- divider/multiplier;
+- sampler/buffer player;
+- recorder;
+- analyser/scope tap;
+- Carrier input/output;
+- CV input/output.
+
+These are intentionally low-level enough to build new instruments and processors, but high-level enough that a module author does not recreate basic WebAudio plumbing every time.
+
+A primitive exposes its real inputs, outputs and parameters. It does not invent fake controls. If an oscillator has frequency, detune and waveform, those are actual primitive parameters that may be bound to module controls or other graph signals.
+
+### Interface primitives
+
+The interface vocabulary should include:
+
+- knob;
+- dial;
+- toggle;
 - momentary button;
 - selector/button bank;
 - fader;
 - fader bank;
 - ribbon;
 - pad and pad bank;
-- step/sequencer controls;
+- step/sequencer control;
 - XY pad;
-- spring joystick;
-- touchscreen surface;
-- turntable/scrub surface;
-- LED;
-- LED ring;
+- joystick;
+- touchscreen;
+- turntable/scrub control;
+- LED and LED ring;
 - text/readout/display;
-- oscilloscope;
+- screen/oscilloscope;
 - performance keyboard;
 - Carrier jack;
 - CV jack.
+
+The same primitive may be reused thousands of times. It has one implementation, one interaction model and one visual construction.
+
+### Binding primitives together
+
+A module author connects primitives explicitly.
+
+Examples:
+
+- knob -> oscillator frequency;
+- ADSR -> VCA gain;
+- oscillator -> filter -> VCA -> Carrier OUT;
+- Father Time clock output -> sequencer clock input;
+- screen -> analyser tap;
+- performance keyboard -> synth note/gate input.
+
+The module definition therefore describes both the sound/control circuit and the physical face that controls it.
+
+The authoring system must not infer hidden DSP merely because a knob is present, and it must not generate a generic face merely because DSP primitives are present.
+
+## 6. Shared control language
+
+The control library is unified.
+
+A knob should feel like the same family of knob wherever it appears. A jack should behave like the same kind of jack everywhere. A fader should use the same touch mechanics across modules.
 
 Shared means behavior, proportions and craftsmanship, not identical presentation context.
 
@@ -118,7 +174,37 @@ A separate rectangular readout below every knob is specifically not the standard
 
 Modulation jacks also must not force every knob into a huge vertical card. A patchable parameter may have nearby or integrated jack hardware while still participating in a compact designed control group.
 
-## 6. Module composition
+## 7. Module definition
+
+A module definition owns five things together:
+
+1. identity/name;
+2. four-color theme;
+3. primitive circuit;
+4. authored face composition;
+5. canonical serializable state.
+
+The runtime is produced from that definition. There should not be a second implementation that attempts to imitate it.
+
+A useful simplified shape is conceptually:
+
+```text
+module
+  identity
+  theme { background, panel, accent, text }
+  circuit
+    primitives
+    connections
+  face
+    controls/screens/performance surfaces
+    layout/grouping
+    bindings to primitive parameters/actions
+  state
+```
+
+This is a conceptual contract, not a mandated serialization format yet.
+
+## 8. Module composition
 
 There is no universal generated module face.
 
@@ -141,7 +227,7 @@ The face can be wider or taller when the device needs the space. Internal scroll
 
 Controls must never be mechanically stacked simply because that was easiest for a renderer.
 
-## 7. Performance surfaces
+## 9. Performance surfaces
 
 Performance controls have priority over configuration controls.
 
@@ -162,7 +248,7 @@ Earlier experiments targeted the full piano range MIDI 21–108 and roughly 25 v
 
 A drum machine should similarly prioritize pads/steps and transport. A sampler should prioritize sample interaction. A mixer should prioritize channels and levels.
 
-## 8. Visual families
+## 10. Visual families
 
 The modules should look related enough to belong to one product, but distinct enough to recognize instantly.
 
@@ -194,7 +280,7 @@ Strong identities worth preserving from the previous project direction include:
 
 These are design directions, not exact CSS specifications.
 
-## 9. Patch field
+## 11. Patch field
 
 The patch field should resemble a dark workbench or modular synth surface.
 
@@ -214,7 +300,7 @@ Requirements:
 
 The patch graph is for patching. It is not the place to edit the internal visual layout of a module.
 
-## 10. Carrier and CV
+## 12. Carrier and CV
 
 Carrier and CV are distinct signal types.
 
@@ -226,7 +312,7 @@ Tempo-capable controls may participate in a shared tempo relationship. When two 
 
 The visible cable may still have a source and destination even when the specific semantic relationship is bidirectional synchronization.
 
-## 11. Output mixer
+## 13. Output mixer
 
 The output mixer is real infrastructure, not a placeholder module.
 
@@ -238,7 +324,7 @@ Rule: the number of visible inputs is always the number currently used plus one 
 
 No other normal module silently reaches the device destination.
 
-## 12. Functional-module rule
+## 14. Functional-module rule
 
 A named module cannot ship as a generic approximation of itself.
 
@@ -252,7 +338,7 @@ If a module is not ready, it should be marked unfinished or withheld from the pl
 
 A pretty face with fake DSP fails. Correct DSP with a broken/unusable face also fails.
 
-## 13. State and persistence
+## 15. State and persistence
 
 The same state drives UI, DSP and persistence.
 
@@ -270,34 +356,39 @@ Reloading a patch should restore:
 
 The restored patch should be immediately playable.
 
-## 14. First implementation gate
+## 16. First implementation gate
 
 Do not begin by recreating every historical module.
 
-Build one complete reference instrument first.
+Build one complete reference instrument first using only the new primitive vocabulary.
 
 The first reference slice must contain:
 
 1. one visually approved playable synth;
-2. the shared controls it actually needs, beginning with the canonical main-style knob/dial;
-3. a real shared performance keyboard;
-4. real note-on/note-off DSP;
-5. Carrier OUT;
-6. output mixer with its dynamic spare input;
-7. visible patch cable between synth and mixer;
-8. audible device output;
-9. save/reload persistence;
-10. the same patch still playable after reload.
+2. one authored four-color module theme;
+3. oscillator, VCA/envelope and output primitives sufficient for its real sound;
+4. the shared controls it actually needs, beginning with the canonical main-style knob/dial;
+5. a real shared performance keyboard;
+6. real note-on/note-off DSP;
+7. Carrier OUT;
+8. output mixer with its dynamic spare input;
+9. visible patch cable between synth and mixer;
+10. audible device output;
+11. save/reload persistence;
+12. the same patch still playable after reload.
 
-Only after that reference slice is both beautiful and correct should additional module families be added.
+Only after that reference slice is both beautiful and correct should additional primitive families and modules be added.
 
-## 15. Design review gate
+## 17. Design review gate
 
 Before calling any module complete, verify all of the following on an actual phone-sized viewport:
 
 - It looks intentional rather than generated.
 - It resembles plausible hardware.
 - Its primary job is visually obvious.
+- Its module theme is distinct and coherent.
+- It is composed from shared primitives rather than reimplementing them.
+- Its primitive bindings correspond to real DSP/control behavior.
 - Its main controls fit the hand and are reachable.
 - Its performance surface is present and usable.
 - Knobs use the canonical integrated-value hardware treatment unless the control genuinely requires another form.
