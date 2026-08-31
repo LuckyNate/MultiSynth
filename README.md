@@ -1,185 +1,145 @@
 # MultiSynth
 
-> READ THIS FILE BEFORE MAKING ANY CODE CHANGE.
->
-> This README is the canonical architecture contract for both `main` and `alt`. Keep the two copies synchronized whenever the architecture, build order, or ownership rules change.
+> READ THIS BEFORE WRITING CODE.
 
-MultiSynth is an Android-hosted HTML5 modular audio workstation. The Android shell stays thin. Instrument, routing, graph, control, prefab, face-compilation, and module systems live in HTML/CSS/JavaScript.
+MultiSynth is a phone-first Android-hosted HTML5 modular synthesizer and audio workstation.
 
-## Final architecture
+This restart begins from the product experience, not from the old implementation. Previous code remains in Git history as reference material only. Nothing from the legacy tree is automatically authoritative just because it already exists.
 
-The architecture is intentionally bottom-up:
+The goal is simple to state and strict to execute:
 
-1. **Node Graph** — the single reusable circuit editor/runtime surface. Every builder is just an instance of the Node Graph.
-2. **Audio core** — minimal carrier/CV routing and connection lifetime.
-3. **Shared controls** — the atomic reusable interaction library.
-4. **Named prefabs** — reusable compositions made from controls and/or other prefabs.
-5. **Modules** — circuits/DSP made from controls and prefabs, with module-specific state and DSP only.
-6. **Graph compiler/output target** — the same Node Graph can compile its circuit as a prefab, module, rack/compound unit, or ordinary patch/workspace object. The output type changes; the editor does not.
-7. **Face compiler** — after a compiled prefab/module circuit exists, compiles its declared controls/prefabs into a usable control face.
-8. **Face renderer/editor** — renders the compiled face and permits only whole-div vertical reordering of ordinary face units. Pinned performance units do not participate in reordering.
+**MultiSynth must be a playable modular synthesizer whose controls are unified, whose modules actually work, and whose instruments look like believable physical hardware.**
 
-The existing implementation on `main` remains reference/history while the clean replacement is built under `app/src/main/assets/alt/` on `alt`. Migrate modules only after the lower shared layers are stable.
+## Product priorities
 
-## One authoritative owner
+The priorities are equal parts function and form:
 
-Every reusable behavior has exactly one owner.
+- The synth must make sound and respond immediately.
+- Patch cables must really route Carrier and CV.
+- Controls must really alter the owning runtime state/DSP.
+- Playable instruments must be directly playable.
+- Module state and patch state must persist.
+- Controls must share one interaction language and one quality standard.
+- Modules must not all look the same.
+- Every module should look like a real piece of electronic music equipment that could plausibly exist on a desk, in a rack, or in a strange boutique synth shop.
+- Aesthetics are part of correctness. A technically functional but visually broken module is not finished.
 
-- Node Graph owns graph instances, ports, cables, placement, selection, removal, patch persistence, graph editing behavior, builder behavior, and each instance's saved face-order override.
-- Graph workspace owns open graph tabs, each graph document's intended output metadata, and each graph's public interface metadata.
-- Graph compilation owns conversion of a Node Graph circuit into the requested output type. Prefab/module/rack/patch are output contracts, not separate editors.
-- Audio core owns generic carrier/CV routing and graph connection lifetime.
-- Shared controls own control DOM, geometry and gestures.
-- Prefab registry owns named reusable compositions, not control behavior or layout implementation.
-- Face compiler owns automatic initial face order and pin rules.
-- Face renderer owns DOM composition from compiled packets and the reorder interaction.
-- A module owns module-specific DSP and canonical module state only.
-- Themes own appearance tokens only.
+## What "unified controls" means
 
-Do not add separate prefab-builder, module-builder, rack-builder, or patch-builder implementations. Do not add compatibility shims, duplicate renderers, module-specific control copies, compensating CSS, second state stores, or editor-specific layout implementations.
+Knobs, dials, switches, faders, ribbons, pads, keys, jacks, displays, scopes and other recurring controls come from one shared control library.
 
-## Shared controls
+That library owns:
 
-Atomic controls are reusable and behaviorally authoritative:
+- touch behavior;
+- value scaling and quantization;
+- pointer capture;
+- active/pressed states;
+- accessibility semantics;
+- common physical proportions;
+- common jack behavior;
+- common rendering quality.
 
-- knob and dial — touch/drag vertically
-- toggle switch — tap toggles persistent state
-- momentary switch — down is on; release/cancel is off; there is no separate hold control
-- selector/button bank
-- track/instrument bank
-- fader and fader bank
-- ribbon
-- pad and pad bank — pads are triggers, not persistent selectors
-- multi-lane step bank/sequencer grid
-- text input/readout/display
-- XY pad and spring joystick
-- touchscreen
-- turntable/scrub surface
-- LED and LED ring
-- knob bank
-- reusable controller IN/OUT jack pair
+A shared control does **not** force every module into the same panel layout.
 
-Every modulatable controller is one faceplate unit containing the controller and its IN/OUT jacks. Modules declare state bindings and port IDs/kinds; they never build separate control-port panels.
+The same knob may appear on several instruments, but the surrounding face, grouping, spacing, labeling, materials, color, hierarchy and composition belong to the module.
 
-## Named prefabs
+Shared controls are the parts bin. A module is the designed machine built from those parts.
 
-A prefab is **not a control** and not a special editor. It is one possible compiled output of a Node Graph circuit: a named reusable composition built from shared controls and/or other named prefabs.
+## Module rule
 
-Users build the circuit in a Node Graph instance, choose/assign the output type `prefab`, give it a name, and compile/save it. That prefab can then be inserted into any other Node Graph instance and can participate in a later module/rack/prefab build.
+Every module must have one clear definition that ties together:
 
-Canonical examples include ADSR, performance keyboard, and oscilloscope. ADSR is a prefab composed from controls; it is not an atomic control.
+- identity;
+- default state;
+- ports;
+- control bindings;
+- face composition;
+- DSP/runtime behavior;
+- note/clock/CV/trigger behavior where applicable;
+- persistence.
 
-A prefab's internal declarations go through the same face compiler. Prefabs do not hard-code private control geometry or interaction behavior.
+Do not create placeholder modules that merely expose controls without implementing the named behavior.
 
-## Modules
+Do not create a second fake runtime to make a face appear functional.
 
-A module is likewise a compiled Node Graph circuit, not the product of a separate module editor. The same graph can be compiled as a module by changing its output type.
+Do not create generic PITCH / LEVEL / TONE boilerplate for a module whose actual behavior is something else.
 
-A module circuit may contain controls and prefabs and owns its resulting module-specific DSP/state contract. Building the circuit determines what exists and how it behaves; it does not hand-author the final control-face DOM.
+## Visual rule
 
-Modules declare controls/prefabs, state bindings, routing metadata, labels, theme tokens and any explicit pin metadata. They do not implement shared controls, prefab internals, or face layout CSS.
+A module face is intentionally composed.
 
-## Node Graph builders and output types
+Controls may be arranged in rows, banks, sections, channels, strips, central clusters or other layouts that make musical and visual sense. Large modules may be larger than the viewport and scroll internally. Performance surfaces may remain pinned or otherwise immediately reachable.
 
-There is one builder: **Node Graph**.
+The retired approach where every control becomes a giant independent full-width card is explicitly rejected.
 
-A prefab builder, module builder, rack builder, and ordinary patch builder are the same graph implementation instantiated with a different intended output contract. They are deliberately interchangeable because they edit the same fundamental thing: an explicit circuit of graph nodes and cables.
+A keyboard instrument must visibly contain a usable keyboard. A drum machine must visually read as a drum machine. A sequencer must expose its sequence. A mixer must read as a mixer. A processor should communicate its signal flow through its controls.
 
-The graph does not become a different editor when the output type changes. The output type determines what compilation emits and what metadata must be supplied, for example a reusable name/identity for a prefab or module. Circuit editing, routing, insertion, selection, persistence, and graph interaction stay identical.
+## Patch workspace
 
-A compiled output may later be inserted as a node in another Node Graph. This nesting is normal and does not require another editor architecture.
+The patch workspace is an explicit-routing surface.
 
-Do not create parallel builder UIs or separate graph implementations for different output types.
+- Module position has no routing meaning.
+- Carrier and CV are distinct connection types.
+- Cables are visible, physical-looking and easy to follow.
+- Jacks look and behave like jacks.
+- Pan and zoom move the patch field coherently.
+- Module faces remain recognizable at useful zoom levels.
+- The workspace itself is visually quiet so the instruments and cables dominate.
 
-## Graph public interface
-
-Every graph document has a public boundary interface used when that graph is saved/compiled as a reusable prim or module.
-
-Defaults are always present:
+Every ordinary module exposes the standard external boundary ports unless a module type explicitly requires otherwise:
 
 - Carrier IN
 - CV IN
 - Carrier OUT
 - CV OUT
 
-The graph displays an **IN bus** and an **OUT bus**. Touching either bus opens the shared boundary selector. The user may add additional public Carrier or CV inputs/outputs from that list. Added boundary ports are graph-document metadata, not module DSP state.
+Additional jacks are declared deliberately.
 
-The saved prim/module asset receives the graph's exact public interface. Compilation/runtime wiring must map those declared public ports to the graph circuit; do not infer extra public ports from node position or hidden heuristics.
+## Output
 
-## Face compilation and editing
+Only the output mixer/final-output owner reaches the device destination.
 
-Face compilation is the final presentation step after the actual prefab/module circuit has been built.
+The output mixer grows as needed and always exposes one unused input beyond the number currently connected.
 
-`Node Graph circuit -> output compile -> declarations -> face compile -> ordered face divs -> saved user reorder -> render`
+No ordinary module silently connects itself to the device output.
 
-Rules:
+## Playability
 
-- The compiler proposes a usable initial face automatically.
-- Every top-level control or prefab becomes one **full-width component div** in a vertical face.
-- Each compiled div receives a stable face ID.
-- Ordinary divs may only be reordered vertically as whole units. No free positioning, resizing, overlap, arbitrary pixel coordinates, or per-module layout CSS.
-- Reordering changes presentation only. It never rewrites the circuit, control, prefab, DSP, or module declaration.
-- The Node Graph persists only the ordered stable IDs as the instance's face-layout override.
-- If there is no override, compiler order is authoritative.
-- New components absent from an older override fall back into compiler order without destroying the saved order of known components.
-- Resetting a face means removing its order override and returning to compiler order.
-- Performance tools may be pinned. `performance-keyboard` is pinned to the bottom by contract and is excluded from ordinary reordering.
-- Prefabs use the same compilation rule internally, and a prefab placed in a module remains one top-level module-face div.
+Playable instruments expose real note-on/note-off behavior and use a shared performance keyboard/control surface.
 
-This is the final face-layout architecture. Do not introduce grid packing, manual spans, arbitrary coordinates, resizing, or module-owned face composition as alternate systems.
+The performance keyboard is a primary instrument surface, not a decorative control hidden below an accidental scroll stack.
 
-## State
+Touch performance should support the useful behavior preserved from earlier experiments: multi-touch notes, sliding between notes, velocity/expression control, pitch interaction and octave navigation where appropriate.
 
-UI, DSP, persistence and playback refer to the same canonical module state. Face-order persistence is graph-instance presentation metadata, not DSP/module state. Builder/output-type and public-interface metadata are graph metadata, not a separate editor state system. Controls receive current state and emit changes; renderers do not invent module behavior.
+## Persistence
 
-## Node Graph
+Normal work persists automatically.
 
-The Node Graph is the authoritative routing and circuit-authoring model. Position never implies routing; routing exists only through explicit cables. Nodes expose explicit ports. Removing a node removes that graph instance only. Compiled prefabs/modules/racks remain single external graph instances when inserted into another graph.
+At minimum, save and restore:
 
-## Audio
+- module instances;
+- module positions;
+- module state;
+- graph camera state;
+- patch cables;
+- saved reusable modules/patches where supported;
+- referenced samples/assets by stable identity;
+- meaningful presentation state.
 
-Carrier/audio routing is separate from CV/control routing. Modules process/synthesize; graph code connects. Generic routing must not reach into module DSP internals. Fundamental source constructors have one lowest-level owner. No silent DSP shims. Resources are cleaned up on destroy.
+Reloading the project should reconstruct the same playable instrument, not merely the same drawing.
 
-## CSS/themes
+## Development order
 
-Shared control CSS owns control geometry. Face-compiler CSS owns vertical compiled-face geometry. Themes provide semantic appearance variables only. There is one vertical module layout; rotation may widen it but does not create a second composition system.
+Do not mass-port the module catalog first.
 
-## `alt` structure
+The first finished vertical slice is:
 
-```text
-app/src/main/assets/alt/
-  index.html
-  node-graph/
-    node-graph.html
-    node-graph.css
-    graph-tabs.js
-    graph-boundary.js
-    node-graph.js
-  core/
-    state.js
-    audio.js
-  controls/
-    controls.css
-    controls.js
-    control-jacks.css
-    control-jacks.js
-    face-compiler.css
-    face-compiler.js
-    prefabs.js
-    control-renderer.js
-  modules/
-```
+**one beautiful playable synth -> output mixer -> real patch cable -> audible output -> save -> reload -> still playable**
 
-Every source file under `alt` starts with a concise ownership/purpose comment.
+Then add CV/tempo synchronization and one processor. Only after that foundation is proven should the rest of the module catalog return.
 
-## Change discipline
+## Documentation
 
-Before changing code: read this README, identify the authoritative owner, trace the actual state/call/render/routing path, change the smallest authoritative layer, and do not perform adjacent cleanup. Before deleting, renaming, replacing, or broadly refactoring existing files, list exact proposed changes and get explicit approval.
+`docs/DESIGN.md` is the product/design contract for the restart and should be read with this README before implementation work.
 
-Reuse verified DSP equations, module behavior, names, themes, and assets deliberately; do not copy old architecture merely because it exists.
-
-## Definition of success
-
-The replacement is successful when it has one reusable Node Graph serving every builder/output workflow, explicit routing, explicit graph boundary interfaces, a small audio core, one shared control library, composable named prefabs, graph-compiled modules, automatic face compilation, reorder-only face editing, one canonical module state, and no hidden compatibility or builder-specific UI layers.
-
-If a prefab, module, or rack requires a separate editor or a special-case renderer, the architecture is wrong.
+When implementation and these documents disagree, stop and resolve the disagreement instead of stacking another adapter or compatibility layer on top.
