@@ -24,6 +24,34 @@ The priorities are equal parts function and form:
 - Every module should look like a real piece of electronic music equipment that could plausibly exist on a desk, in a rack, or in a strange boutique synth shop.
 - Aesthetics are part of correctness. A technically functional but visually broken module is not finished.
 
+## Two graph spaces
+
+MultiSynth has two graph editors with different jobs and different node types. They are deliberately separate.
+
+### Patch Graph
+
+The main Patch Graph is the performance/composition workspace. It should behave visually like a PureRef-style freeform board: a large quiet plane with smooth pan/zoom, direct object manipulation and very little application chrome.
+
+Only finished module instances may be placed on the Patch Graph.
+
+The Patch Graph never exposes oscillators, gains, knobs, screens or other primitives as placeable nodes.
+
+Its nodes are complete themed modules. Its edges are visible physical-looking Carrier/CV patch cables between module jacks.
+
+### Module Builder Graph
+
+The Module Builder is a separate graph used to create or edit one module definition.
+
+Only primitives may be placed in the Module Builder. These include DSP primitives such as oscillators, filters, gains and envelopes, and interface primitives such as knobs, buttons, screens, keyboards and jacks.
+
+Finished modules cannot be inserted into the Module Builder as primitive nodes.
+
+Primitive nodes cannot be inserted directly into the Patch Graph.
+
+**Modules and primitives never coexist in the same graph.**
+
+The Module Builder compiles its primitive circuit, bindings, authored face and theme into one finished module. That module then becomes one placeable node in the Patch Graph.
+
 ## What "unified controls" means
 
 Knobs, dials, switches, faders, ribbons, pads, keys, jacks, displays, scopes and other recurring controls come from one shared control library.
@@ -50,8 +78,10 @@ Shared controls are the parts bin. A module is the designed machine built from t
 Every module must have one clear definition that ties together:
 
 - identity;
+- four-color theme;
 - default state;
-- ports;
+- external ports;
+- internal primitive circuit;
 - control bindings;
 - face composition;
 - DSP/runtime behavior;
@@ -76,14 +106,16 @@ A keyboard instrument must visibly contain a usable keyboard. A drum machine mus
 
 ## Patch workspace
 
-The patch workspace is an explicit-routing surface.
+The Patch Graph is an explicit-routing surface.
 
 - Module position has no routing meaning.
 - Carrier and CV are distinct connection types.
 - Cables are visible, physical-looking and easy to follow.
 - Jacks look and behave like jacks.
-- Pan and zoom move the patch field coherently.
+- Pan and zoom move the complete board coherently.
 - Module faces remain recognizable at useful zoom levels.
+- Multiple modules may be freely scattered, grouped visually and rearranged like reference items on a PureRef board.
+- Selection and movement should be direct and lightweight rather than mediated through dense editor chrome.
 - The workspace itself is visually quiet so the instruments and cables dominate.
 
 Every ordinary module exposes the standard external boundary ports unless a module type explicitly requires otherwise:
@@ -93,7 +125,7 @@ Every ordinary module exposes the standard external boundary ports unless a modu
 - Carrier OUT
 - CV OUT
 
-Additional jacks are declared deliberately.
+Additional jacks are declared deliberately by the finished module definition.
 
 ## Output
 
@@ -120,9 +152,9 @@ At minimum, save and restore:
 - module instances;
 - module positions;
 - module state;
-- graph camera state;
+- Patch Graph camera state;
 - patch cables;
-- saved reusable modules/patches where supported;
+- saved module definitions created in Module Builder;
 - referenced samples/assets by stable identity;
 - meaningful presentation state.
 
@@ -134,12 +166,14 @@ Do not mass-port the module catalog first.
 
 The first finished vertical slice is:
 
-**one beautiful playable synth -> output mixer -> real patch cable -> audible output -> save -> reload -> still playable**
+**Module Builder primitives -> one beautiful playable synth module -> Patch Graph -> output mixer -> real patch cable -> audible output -> save -> reload -> still playable**
 
 Then add CV/tempo synchronization and one processor. Only after that foundation is proven should the rest of the module catalog return.
 
 ## Documentation
 
 `docs/DESIGN.md` is the product/design contract for the restart and should be read with this README before implementation work.
+
+`docs/THEME_AUTHORING.md` defines the four-color theme authoring/generation system.
 
 When implementation and these documents disagree, stop and resolve the disagreement instead of stacking another adapter or compatibility layer on top.
