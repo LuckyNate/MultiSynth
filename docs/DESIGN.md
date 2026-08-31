@@ -37,7 +37,40 @@ A believable device has:
 
 The goal is not skeuomorphism for its own sake. The physical metaphor exists because it makes a modular synthesizer legible and playable.
 
-## 3. Shared control language
+## 3. Canonical visual source
+
+The restart does **not** treat the current `alt` control renderer as a visual reference.
+
+The visual reference for shared controls is the best hardware language already present on `main`, especially the control work in `rack-ui-primitives.js` and `rack-instrument-theme.css`.
+
+The useful qualities to preserve are:
+
+- compact controls rather than giant generic cards;
+- convincing radial knob faces with depth and material shading;
+- the numeric value physically integrated into the knob face;
+- a clear indicator/tick on the same face;
+- tactile buttons, pads, faders, ribbons and displays that look mounted into equipment;
+- restrained borders, recesses, shadows and glows that imply real construction;
+- module identity expressed through a small coherent palette rather than one-off CSS for every element.
+
+When old implementation code is removed, these visual ideas are extracted and reimplemented cleanly. They are not discarded merely because the surrounding old architecture is being replaced.
+
+## 4. Four-color theme contract
+
+A module theme starts from four semantic colors:
+
+- `background` — the deepest chassis/cavity color;
+- `panel` — the primary faceplate/material color;
+- `accent` — the active/identity color;
+- `text` — the primary labeling/readout color.
+
+Everything else should normally be derived from those four colors: secondary panel shade, edge/trim, dim text, track color, knob body, screen color, shadows and active glow.
+
+A module may override a derived material value when its physical identity genuinely requires it, but the normal case is four authored colors plus derived hardware treatment.
+
+This keeps themes coherent while still allowing radically different instruments. PureSynth can be stark black/white; QuadSynth amber/gold; Pulsynth green; SinLadder cyan; Razorback red/black; Stinger yellow/black; No Quarter blue/silver without inventing a separate control system for each.
+
+## 5. Shared control language
 
 The control library is unified.
 
@@ -67,11 +100,25 @@ The shared library should eventually cover:
 - Carrier jack;
 - CV jack.
 
-Shared means behavior and craftsmanship, not identical presentation context.
+Shared means behavior, proportions and craftsmanship, not identical presentation context.
 
-A module may theme these components through controlled visual tokens: face material, accent, active glow, label color, screen treatment, trim and similar properties. The module may also choose their composition and relative importance.
+### Knob standard
 
-## 4. Module composition
+The canonical knob is based on the successful `main` construction:
+
+- label outside/above the hardware as needed by the module composition;
+- one circular hardware face;
+- indicator/tick physically on that face;
+- numeric value integrated into the face itself, not placed in a separate textbox beneath it;
+- radial material shading and edge treatment that reads as a manufactured control;
+- direct touch/drag response;
+- external state updates redraw the same knob face immediately.
+
+A separate rectangular readout below every knob is specifically not the standard.
+
+Modulation jacks also must not force every knob into a huge vertical card. A patchable parameter may have nearby or integrated jack hardware while still participating in a compact designed control group.
+
+## 6. Module composition
 
 There is no universal generated module face.
 
@@ -94,7 +141,7 @@ The face can be wider or taller when the device needs the space. Internal scroll
 
 Controls must never be mechanically stacked simply because that was easiest for a renderer.
 
-## 5. Performance surfaces
+## 7. Performance surfaces
 
 Performance controls have priority over configuration controls.
 
@@ -115,7 +162,7 @@ Earlier experiments targeted the full piano range MIDI 21–108 and roughly 25 v
 
 A drum machine should similarly prioritize pads/steps and transport. A sampler should prioritize sample interaction. A mixer should prioritize channels and levels.
 
-## 6. Visual families
+## 8. Visual families
 
 The modules should look related enough to belong to one product, but distinct enough to recognize instantly.
 
@@ -126,9 +173,10 @@ Shared product traits can include:
 - related edge treatment and fastener language;
 - common touch feedback;
 - common cable style;
-- common control proportions.
+- common control proportions;
+- the canonical knob/dial family and integrated value treatment.
 
-Individual modules then establish identity through face material, palette, layout and device-specific details.
+Individual modules then establish identity through face material, the four-color theme, layout and device-specific details.
 
 Strong identities worth preserving from the previous project direction include:
 
@@ -146,7 +194,7 @@ Strong identities worth preserving from the previous project direction include:
 
 These are design directions, not exact CSS specifications.
 
-## 7. Patch field
+## 9. Patch field
 
 The patch field should resemble a dark workbench or modular synth surface.
 
@@ -166,7 +214,7 @@ Requirements:
 
 The patch graph is for patching. It is not the place to edit the internal visual layout of a module.
 
-## 8. Carrier and CV
+## 10. Carrier and CV
 
 Carrier and CV are distinct signal types.
 
@@ -178,7 +226,7 @@ Tempo-capable controls may participate in a shared tempo relationship. When two 
 
 The visible cable may still have a source and destination even when the specific semantic relationship is bidirectional synchronization.
 
-## 9. Output mixer
+## 11. Output mixer
 
 The output mixer is real infrastructure, not a placeholder module.
 
@@ -190,7 +238,7 @@ Rule: the number of visible inputs is always the number currently used plus one 
 
 No other normal module silently reaches the device destination.
 
-## 10. Functional-module rule
+## 12. Functional-module rule
 
 A named module cannot ship as a generic approximation of itself.
 
@@ -204,7 +252,7 @@ If a module is not ready, it should be marked unfinished or withheld from the pl
 
 A pretty face with fake DSP fails. Correct DSP with a broken/unusable face also fails.
 
-## 11. State and persistence
+## 13. State and persistence
 
 The same state drives UI, DSP and persistence.
 
@@ -222,7 +270,7 @@ Reloading a patch should restore:
 
 The restored patch should be immediately playable.
 
-## 12. First implementation gate
+## 14. First implementation gate
 
 Do not begin by recreating every historical module.
 
@@ -231,7 +279,7 @@ Build one complete reference instrument first.
 The first reference slice must contain:
 
 1. one visually approved playable synth;
-2. the shared controls it actually needs;
+2. the shared controls it actually needs, beginning with the canonical main-style knob/dial;
 3. a real shared performance keyboard;
 4. real note-on/note-off DSP;
 5. Carrier OUT;
@@ -243,7 +291,7 @@ The first reference slice must contain:
 
 Only after that reference slice is both beautiful and correct should additional module families be added.
 
-## 13. Design review gate
+## 15. Design review gate
 
 Before calling any module complete, verify all of the following on an actual phone-sized viewport:
 
@@ -252,6 +300,8 @@ Before calling any module complete, verify all of the following on an actual pho
 - Its primary job is visually obvious.
 - Its main controls fit the hand and are reachable.
 - Its performance surface is present and usable.
+- Knobs use the canonical integrated-value hardware treatment unless the control genuinely requires another form.
+- The four-color theme reads coherently across faceplate and controls.
 - No controls overlap.
 - No fixed footer/header covers controls.
 - Scrolling, if used, feels deliberate.
