@@ -1,10 +1,12 @@
 # MultiSynth Absolute Primitive Catalog
 
-This document defines the only things that may be called **primitives** in the restart architecture.
+This document defines the only things that may be called **primitives** in the restart architecture, plus a small library of **authoring prefabs** built from those primitives.
 
-A primitive is one irreducible operation or one irreducible control surface. If something is meaningfully assembled from multiple primitives, it is a **module** or a composed part of a module, not another primitive.
+A primitive is one irreducible operation or one irreducible control surface. If something is meaningfully assembled from multiple primitives, it is not another primitive.
 
-The Module Builder may place primitives directly. The Patch Graph may place finished modules only.
+A prefab is a reusable authored combination of primitives. In the Module Builder it is inserted for convenience, then expands into ordinary primitive graph content. A prefab is not a new runtime node type, is not a primitive, and never appears directly on the Patch Graph.
+
+The Module Builder may place primitives directly and may insert prefabs that expand into primitives. The Patch Graph may place finished modules only.
 
 ## Primitive test
 
@@ -16,7 +18,7 @@ A candidate is a primitive only if all are true:
 - duplicating it gives another instance of the same atomic operation/control;
 - richer behavior is made by wiring primitives in the Module Builder.
 
-If there is doubt, classify it as a module until proven otherwise.
+If there is doubt, classify it as a composition/prefab or module until proven otherwise.
 
 ## Signal / DSP primitives
 
@@ -48,7 +50,7 @@ One comparison operation producing a binary/control result according to a thresh
 One state transition detector. It reports a rising edge, falling edge, or configured transition from an incoming control/gate signal. It does not itself constitute a clock or sequencer.
 
 ### Pulse source
-One primitive timing source that produces a repeating pulse/phase signal from a rate/period. It is the atomic timing operation from which clocks, dividers and Father Time-style modules can be composed. A complete clock/timer with transport, divisions and UI is a module.
+One primitive timing source that produces a repeating pulse/phase signal from a rate/period. It is the atomic timing operation from which clocks, dividers and Father Time-style modules can be composed. A complete clock/timer with transport, divisions and UI is a composition/module.
 
 ### Trigger / impulse source
 One single-event impulse generator. When fired, it emits one defined trigger/impulse. Repeating trigger behavior requires composition with timing/state primitives.
@@ -58,6 +60,9 @@ One stateful operation that captures an input value when triggered and holds tha
 
 ### Random value source
 One discrete random-value operation. On request/trigger it produces a random scalar according to its primitive range/distribution parameters. It is distinct from continuous audio noise and does not contain probability sequencing policy.
+
+### Ramp / slew
+One operation that moves an output toward a target over time rather than changing instantaneously. It is the atomic basis for portamento, fades, smoothing, attack/decay/release segments and other time-varying control transitions. A complete envelope is a prefab/composition.
 
 ### Filter — biquad
 One automatable low-order biquad filter operation. Filter type and native cutoff/Q/gain/detune parameters belong to the primitive. Filter banks, EQs and crossovers are modules.
@@ -229,9 +234,169 @@ One visible physical Carrier connection point.
 ### CV jack
 One visible physical CV connection point. Its accepted semantic type is declared by the owning module/port definition.
 
+# Basic Module Builder prefabs
+
+Prefabs are convenience constructions only. Selecting one in the Module Builder expands it into its constituent primitives, connections, bindings and optional starter face layout. After expansion, the author may inspect, move, reconnect, delete or replace every constituent part.
+
+A prefab never becomes a new primitive type and never survives compilation as an opaque hidden graph.
+
+## ADSR envelope prefab
+
+Purpose: generate a conventional attack-decay-sustain-release control envelope from gate/note state.
+
+Typical constituents:
+
+- CV/gate input;
+- Edge Detector for gate transitions where required;
+- Ramp/Slew stages for Attack, Decay and Release;
+- Constant Source for Sustain level/reference values;
+- Sample and Hold/state where required for stage state;
+- Comparator/state logic as required to advance stages;
+- CV output;
+- four Knobs labeled Attack, Decay, Sustain and Release.
+
+Meaning: gate-on begins Attack, then Decay falls to Sustain and holds while the gate remains active; gate-off begins Release. The prefab is editable primitive wiring, not a special envelope runtime.
+
+## AR envelope prefab
+
+Purpose: simple attack-release envelope.
+
+Typical constituents: gate input, edge/state logic, Ramp/Slew for attack and release, CV output, Attack and Release knobs.
+
+## VCA prefab
+
+Purpose: voltage/control-driven amplitude stage.
+
+Typical constituents: Carrier Input, Gain/Multiply, CV Input connected to gain parameter, Carrier Output, optional level Knob.
+
+Meaning: incoming Carrier amplitude is multiplied by the supplied control value. It contains no envelope unless the author explicitly patches one in.
+
+## LFO prefab
+
+Purpose: low-frequency modulation source.
+
+Typical constituents: Oscillator, optional Gain/Multiply for depth, optional Constant Source/Sum for offset, CV Output, Rate and Depth knobs, waveform selection UI where desired.
+
+Meaning: it is simply a slow oscillator-based control source. Sync, division, phase-reset policy and elaborate modulation belong to richer authored modules unless explicitly added.
+
+## Clock prefab
+
+Purpose: basic periodic timing source.
+
+Typical constituents: Pulse Source, Rate/Tempo Knob, Button or Toggle for run state where desired, CV Output typed as pulse/clock.
+
+Meaning: produces periodic timing edges. Transport, tap tempo, divisions, swing and synchronization networks are not hidden in this basic prefab.
+
+## Clock divider prefab
+
+Purpose: emit one pulse after a selected number of incoming pulses.
+
+Typical constituents: CV clock input, Edge Detector, primitive state/counter logic implemented from atomic state/custom atomic DSP as required, comparator/reset logic, CV trigger/pulse output, division control.
+
+Meaning: the prefab expresses division explicitly; it is not an absolute primitive.
+
+## Clock multiplier prefab
+
+Purpose: derive faster periodic timing from an incoming clock by estimating period and generating intermediate pulses.
+
+Typical constituents: CV clock input, Edge Detector, held timing state, Pulse/Trigger generation, rate math/state, CV output, multiplication control.
+
+Meaning: because period estimation and generated events require several operations, this is a prefab/composition rather than a primitive.
+
+## Simple mixer prefab
+
+Purpose: combine several Carrier signals with independent levels.
+
+Typical constituents for each channel: Carrier Input + Gain/Multiply + Fader/Knob. Channel outputs feed Sum/Add; Sum feeds Carrier Output. Stereo variants may additionally use Stereo Pan and left/right routing.
+
+Meaning: the Sum primitive performs only arithmetic addition; the prefab supplies the recognizable mixer structure.
+
+## Oscillator voice prefab
+
+Purpose: quickly create the most basic playable oscillator signal path without defining a finished synth identity.
+
+Typical constituents: Oscillator, Gain/Multiply, optional ADSR prefab expanded into primitives, Carrier Output, CV/note/gate inputs, pitch and level controls.
+
+Meaning: this is starter authoring material, not a named synth module and not a primitive.
+
+## Filter stage prefab
+
+Purpose: basic patchable filter section.
+
+Typical constituents: Carrier Input, Biquad Filter, Carrier Output, cutoff/Q controls and optional CV input bound to cutoff or other exposed parameters.
+
+Meaning: one Filter primitive plus hardware/boundary wiring becomes a usable section.
+
+## Delay feedback prefab
+
+Purpose: elementary echo structure.
+
+Typical constituents: Carrier Input, Delay, Gain/Multiply in an explicit feedback loop, Sum/Add for dry/wet combination if desired, Carrier Output, time/feedback/mix controls.
+
+Meaning: feedback is visible graph wiring; it is never hidden inside the Delay primitive.
+
+## Oscilloscope prefab
+
+Purpose: visualize a signal waveform.
+
+Typical constituents: Carrier or CV Input, Analyser, Screen/Canvas.
+
+Meaning: the Analyser supplies data and the Screen renders it. Neither primitive alone is an oscilloscope.
+
+## Spectrum display prefab
+
+Purpose: visualize frequency-domain analysis.
+
+Typical constituents: Carrier Input, Analyser configured for frequency data, Screen/Canvas.
+
+## Performance keyboard prefab
+
+Purpose: provide a reusable playable key surface inside authored instruments.
+
+Typical constituents: individual touch/key hit regions built from Touch Surface/Pad/Button-class atomic controls as appropriate, note/gate state wiring, octave controls, optional velocity/expression Ribbon or Touch Surface controls, pitch control, CV/note/gate outputs/bindings.
+
+Meaning: the keyboard is intentionally a reusable authoring prefab because it is a compound performance surface. It must expand to inspectable constituent controls/logic rather than becoming a hidden primitive.
+
+The useful historical behavior to preserve when rebuilding this prefab includes multitouch, sliding between notes, velocity/expression strategy, pitch interaction and octave navigation.
+
+## Pad grid prefab
+
+Purpose: create a regular set of trigger pads quickly.
+
+Typical constituents: repeated Pad primitives with explicit independent outputs/bindings and optional labels.
+
+Meaning: a grid is layout convenience over individual pads, not a new atomic control.
+
+## Step row prefab
+
+Purpose: provide a reusable row of individually addressable step controls for sequencer modules.
+
+Typical constituents: repeated Button/Toggle/Pad primitives, explicit step state, optional LED primitives for indication.
+
+Meaning: timing/playhead/sequencing policy is not hidden in the row. The prefab only supplies editable step controls and their state bindings.
+
+## Channel strip prefab
+
+Purpose: provide a conventional single mixer-channel construction.
+
+Typical constituents: Carrier Input, Gain/Multiply, optional Stereo Pan, level Fader, mute/solo controls if explicitly requested, Carrier Output or bus connection.
+
+Meaning: a channel strip is a reusable composition. A complete mixer is assembled from channel strips plus explicit summing/output structure.
+
+## Prefab rules
+
+1. A prefab is stored as an authored graph fragment composed exclusively of registered absolute primitives and bindings.
+2. Insertion creates real primitive instances with stable IDs in the current module definition.
+3. The inserted result is immediately editable; there is no opaque prefab runtime wrapper.
+4. The saved module may remember optional provenance such as `createdFromPrefab: "adsr"`, but runtime behavior never depends on the prefab still existing.
+5. Updating a prefab definition does not silently mutate existing authored modules.
+6. A prefab may contain another prefab only during authoring expansion; nested prefabs must be fully flattened to primitives before the module definition is saved/compiled.
+7. Prefabs cannot be placed on the Patch Graph.
+8. Named product modules are never demoted into prefabs merely for convenience.
+
 ## Explicitly not primitives
 
-The following are combinations and therefore **modules or authored module substructures**, even if an older branch called them primitives, prefabs or controls:
+The following are combinations and therefore **prefabs, authored module substructures or complete modules**, even if an older branch called them primitives or controls:
 
 - ADSR/envelope generators;
 - VCA-with-envelope behavior;
@@ -274,9 +439,9 @@ Composite `alt` controls are not imported as primitives. What survives is low-le
 - Oscillators + Gain + Sum can become an additive synth.
 - Comparator + Edge Detector + Pulse Source + Sample and Hold can build timing/stepped-control behavior.
 - Random Value Source + Trigger + Sample and Hold can build probability/random modules.
-- Knobs controlling timing segments plus signal arithmetic/state can become an envelope module.
-- Analyser + Screen can become an oscilloscope module.
-- Delay + Gain + explicit feedback routing can become an echo module.
+- ADSR prefab expands to Ramp/Slew, state, gate logic and controls.
+- Analyser + Screen can become an oscilloscope prefab/module.
+- Delay + Gain + explicit feedback routing can become an echo prefab/module.
 - Convolver + Gain + controls can become an impulse-response reverb module.
 - Buffer Source + controls + resource state can become a sampler module.
 
@@ -284,4 +449,4 @@ No combination is promoted back into the primitive catalog merely for convenienc
 
 ## Growth rule
 
-The primitive catalog grows only when a genuinely irreducible operation/control is missing. New combinations belong in the module catalog or as authored module structures, not in this file.
+The primitive catalog grows only when a genuinely irreducible operation/control is missing. Reusable combinations belong in the prefab section or as authored module structures; finished named instruments/effects belong in the module catalog.
