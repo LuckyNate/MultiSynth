@@ -1,6 +1,6 @@
 "use strict";
 (()=>{
-  const P=parent.MultiSynth||{},A=P.RackAudioGraph,host=document.getElementById("performanceKeyboard");
+  const P=parent.MultiSynth||{},A=P.NodeAudioGraph||P.RackAudioGraph,host=document.getElementById("performanceKeyboard");
   if(!host||!window.MultiSynth?.PerformanceKeyboard?.mount)return;
   document.body.classList.add("hasPinnedKeyboard");
   const keyboard=window.MultiSynth.PerformanceKeyboard.mount(host,{audio:A});
