@@ -6,160 +6,143 @@ The architectural model is invariant:
 
 **Patch Graph -> modules -> shared control library.**
 
-A finished module is one intentionally composed face made from shared library controls. Module code arranges, binds and themes those controls. It does not invent another control system.
+The shared control surface owns the default geometry. A module declares semantic layout roles and supplies theme/content. It does not reinvent page, bank, grid or responsive CSS.
 
-## 1. Phone viewport is the hard constraint
+## 1. Required shared structure
 
-The module editor is phone-first. At every supported phone width, the entire module face must fit the viewport width.
+A normal module editor uses this hierarchy:
+
+```text
+#controls
+  .ms-module-surface
+    .ms-module-bank
+      .ms-module-bank-title
+      .ms-control-grid + one semantic layout role
+```
+
+Semantic grid roles supplied by the shared control surface are:
+
+- `.ms-layout-transport`
+- `.ms-layout-knobs`
+- `.ms-layout-params`
+- `.ms-layout-pads`
+- `.ms-layout-steps`
+- `.ms-layout-list`
+- `.ms-layout-fill` when controls should fill their grid cell
+
+List rows use `.ms-list-row`.
+
+These classes are the default module composition API. New modules should use them before writing any module-specific geometry.
+
+## 2. Shared CSS owns layout
+
+`control-surface.css` owns:
+
+- full-width module surface behavior;
+- maximum module width;
+- page inset;
+- bank inset and separation;
+- grid behavior;
+- responsive column counts;
+- responsive knob/dial sizing;
+- fill behavior for pads/buttons/steps/lists;
+- screen width containment;
+- label overflow containment;
+- list-row geometry;
+- narrow-phone reflow;
+- horizontal-overflow prevention.
+
+`module-instrument-editor.css` is layout-neutral. It provides the page/header/scope frame only. It must never assign a multi-column layout to `#controls`.
+
+## 3. Module CSS does not reimplement geometry
+
+Module CSS normally owns only:
+
+- colors/theme;
+- faceplate material;
+- bank material/border treatment;
+- typography flavor;
+- deliberate device-specific decorative treatment;
+- exceptional composition that the shared semantic roles genuinely cannot express.
+
+A module stylesheet should not normally set:
+
+- `#controls` display or columns;
+- shell width;
+- shell page margins;
+- bank width;
+- standard bank padding;
+- standard bank spacing;
+- ordinary control-grid column counts;
+- ordinary phone breakpoints;
+- generic knob/dial responsive sizes;
+- generic pad/step/list containment.
+
+If a new module needs those declarations just to become usable on a phone, the shared control surface is missing a reusable rule and should be fixed there instead.
+
+## 4. Phone viewport is the hard constraint
+
+At every supported phone width, the entire module face must fit the viewport width.
 
 **Horizontal overflow is a failed layout.**
 
-This applies to the module shell, every bank, every row, every grid, every screen and every library control. A child may never make its parent wider than the available content width.
+This applies to the module surface, every bank, every grid, every screen and every control.
 
-Before approving a layout, verify `scrollWidth <= clientWidth` for the page and for each major bank.
+The shared control surface is responsible for enforcing this by default. Module code should not have to perform one-off width repairs.
 
-## 2. Width arithmetic comes before column count
+## 5. Predictable shared reflow
 
-Never choose a column count first and then hope CSS makes it fit.
+At phone widths the shared roles intentionally reflow as follows:
 
-For a bank with usable width `W`, horizontal padding `P`, column gap `G`, control minimum useful width `C`, and `N` columns, the layout is valid only when:
+- transport: 2 columns;
+- ordinary knob bank: 3 columns;
+- parameter bank: 3 columns;
+- pad bank: 2 columns;
+- step bank: 4 columns;
+- list: 1 column.
 
-`N*C + (N-1)*G <= W - 2P`
+At very narrow widths, knob and parameter banks reflow to 2 columns.
 
-If that fails, reduce `N`. Do not allow CSS Grid to widen the module.
+At wider widths the shared grids expand automatically from their role-specific useful minimum widths.
 
-`minmax(<fixed minimum>, 1fr)` is forbidden when that fixed minimum can make the grid wider than its parent. For phone grids use `minmax(0,1fr)` and explicitly choose a column count that preserves useful control size.
+The principle is always the same: reflow vertically before shrinking controls below useful touch size.
 
-## 3. Outer composition
+## 6. Width arithmetic is centralized
 
-Canonical hierarchy:
+The shared grid system uses shrink-safe tracks and `min-width:0` containment. Modules must not introduce fixed grid minimums that can force a bank wider than its parent.
 
-```text
-module viewport
-  main content inset
-    header
-    output scope / primary display when applicable
-    module shell
-      functional bank
-      functional bank
-      functional bank
+Forbidden pattern in module CSS:
+
+```css
+grid-template-columns:repeat(4,minmax(92px,1fr));
 ```
 
-The module shell is one centered bounded chassis. Banks are regions inside it.
+when that minimum can exceed the available phone width.
 
-Required behavior:
+The shared control surface must solve the common case once.
 
-- 8-16 px page inset;
-- shell width `100%` of the available inset content, never wider;
-- `box-sizing:border-box` on shell, banks, rows and grids;
-- `min-width:0` on grid/flex children that must shrink;
-- 10-18 px vertical separation between major regions;
-- bottom clearance for persistent app controls and Android safe area.
+## 7. Controls remain library controls
 
-## 4. Banks are not independent page-width cards
+Interactive hardware comes only from the shared control library: knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and registered primitives.
 
-Prefer one module shell containing its functional banks. A bank must remain completely inside the shell.
+Structural DOM is allowed for module surfaces, banks, headings, grids and list content.
 
-Bank defaults:
+There is no second interactive-control layer and no retired control implementation inside `control-surface.css`.
 
-- normal width: 12-18 px internal padding;
-- narrow phone: 8-12 px internal padding;
-- 12-20 px between banks;
-- bank heading inside the bank;
-- border/recess/material change may establish grouping.
+## 8. Choosing the semantic role
 
-A bank must never be narrower than its children or allow children to paint outside its border.
+Choose the shared role from the musical job of the bank:
 
-## 5. Controls stay inside their cells
+- transport actions/state -> `.ms-layout-transport`
+- set-and-leave control bank -> `.ms-layout-knobs`
+- selected-item/detail parameters -> `.ms-layout-params`
+- performance/selection pads -> `.ms-layout-pads`
+- sequencer/step matrix -> `.ms-layout-steps`
+- text-heavy choices/library -> `.ms-layout-list`
 
-Every library control placed in a grid must obey the grid cell width.
+This should be enough for a first usable layout without new CSS.
 
-Required wrapper rules:
-
-- `min-width:0`;
-- `max-width:100%`;
-- `width:100%` only for controls designed to fill a cell, such as pads/buttons/steps;
-- circular knobs/dials use an approved fixed size that is **smaller than the cell**, never wider than it;
-- control faces must not use a hardcoded width larger than their grid cell;
-- labels/readouts must not increase intrinsic grid width.
-
-Do not rely on visual overflow being clipped. Fix the geometry.
-
-## 6. Phone grid patterns
-
-These are safe starting patterns, subject to actual width arithmetic.
-
-At approximately 360-430 CSS px viewport width:
-
-- ordinary large knobs/dials: **2 columns**;
-- compact knobs: **3 columns only if the measured cell comfortably contains them**;
-- transport buttons/switches: **2 columns**;
-- sample/drum pads: **2 columns by default; 4 only when each pad remains a useful touch target and labels fit**;
-- sequencer steps: **4 columns by default; 8 only for genuinely compact step primitives proven to fit**;
-- text-heavy sample/library choices: normally **1 column**.
-
-Do not preserve desktop column counts on a phone merely because the controls technically render.
-
-## 7. Reflow, do not shrink indefinitely
-
-Responsive resolution order:
-
-1. keep page inset;
-2. keep bank inset;
-3. reduce decorative gaps modestly;
-4. reflow to fewer columns;
-5. use a smaller approved control size if still useful;
-6. grow vertically and scroll.
-
-Never solve width by eliminating margins, overlapping controls, allowing controls to cross bank borders, compressing text into unreadable columns, or shrinking touch targets until they are ornamental.
-
-## 8. Labels are part of geometry
-
-Labels must fit the same cell as their control.
-
-- short hardware labels remain one line when possible;
-- a label may wrap only inside its own cell;
-- sample names may wrap, but must not overlap adjacent pads;
-- long asset names belong in a screen/list row, not under a small pad;
-- a loaded sample pad should show a compact slot identity; full sample metadata belongs in the selected-sample/library area;
-- labels and values may not extend the intrinsic width of a grid track.
-
-## 9. Screens and lists
-
-A screen is a shared library control mounted inside a bank. Its face must be `width:100%` of the bank's content area and `max-width:100%`.
-
-List content inside the screen must use predictable rows:
-
-- one text/content area;
-- fixed-size action controls at the trailing edge;
-- text wraps inside the content area;
-- action controls never overlap text;
-- rows never create horizontal overflow;
-- the screen scrolls internally when appropriate.
-
-A library item with a long title must remain a row, not become a narrow tower of words.
-
-## 10. Primary versus secondary controls
-
-Layout follows musical use.
-
-- sampler: sample interaction, pads and sequence are primary;
-- drum machine: pads, steps and transport are primary;
-- synth: performance surface and principal tone controls are primary;
-- mixer: channels and levels are primary;
-- timing module: rate/timing controls and indication are primary.
-
-Primary controls receive the best space and easiest reach. Secondary configuration may appear lower in the vertical flow.
-
-## 11. Shared controls only
-
-Interactive hardware comes from the shared control library: knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and registered primitives.
-
-Module code selects, binds, arranges and themes those controls. Structural DOM is allowed for shells, banks, headings, rows and layout containers.
-
-Module code must not create substitute interactive controls or parallel interaction systems.
-
-## 12. Choosing control type
+## 9. Choosing the control type
 
 - knob: set-and-leave parameter with moderate useful range;
 - dial: wide range/high sensitivity/high resolution/indexed precision;
@@ -171,38 +154,46 @@ Module code must not create substitute interactive controls or parallel interact
 - screen: bounded information/selection surface;
 - LED/meter: status or level indication.
 
-Control choice follows use, not whichever primitive happens to fit a row.
+Control choice follows intended use, not grid convenience.
 
-## 13. CSS ownership
+## 10. Labels and long text
 
-Shared control anatomy, geometry limits and interaction belong to the shared control library.
+The shared grid constrains labels to their cells. Module content still has to be sensible:
 
-Module CSS owns page material, chassis, banks, grid/flow composition, spacing, theme and responsive arrangement.
+- hardware labels should be concise;
+- full sample/file names belong in a list or selected-item display;
+- pads should present compact slot identity;
+- long text may wrap inside its own cell but may never establish grid width;
+- list actions use `.ms-list-row` so text and trailing action controls remain separate.
 
-Module CSS may size a shared control through supported variables/visual options, but it may not reconstruct the control anatomy.
+## 11. Screens and lists
 
-## 14. Reference principle
+A library `screen` mounted directly inside `.ms-module-bank` automatically fills the usable bank width.
 
-No Quarter remains useful as a composition reference for centered content, breathing room, bounded faceplate, internal grouping and responsive reflow. It is **not** a template whose desktop grid counts are copied blindly.
+Scrollable content may be placed inside the screen face. Ordinary list rows use `.ms-list-row`.
 
-Every new module must run its own width arithmetic against its actual controls and labels.
+Module-specific CSS may style the screen material/content, but should not repair its width.
 
-## 15. Required narrow-phone review
+## 12. Escape hatch rule
 
-A module is not complete until it is visually reviewed at a narrow phone width and all of these are true:
+A module may deliberately override the shared composition only when its physical design genuinely requires a different arrangement: mixer channel strips, a keyboard surface, a large XY surface, a turntable, or another purpose-built performance face.
 
-- no horizontal page overflow;
-- shell is fully visible between left/right insets;
-- every bank is fully inside the shell;
-- every control is fully inside its bank;
-- no knob/dial crosses a bank border;
-- no pad/button crosses a bank border;
-- no label overlaps a neighboring cell;
-- long text remains readable;
-- screens/lists remain useful widths;
-- primary controls are easy to reach;
+An override is not permitted merely because the shared default looks inconvenient. If several modules need the same exception, promote it into a new shared semantic layout role.
+
+## 13. Completion gate
+
+A module interface is not complete until:
+
+- `#controls` occupies the full available editor width;
+- `.ms-module-surface` remains inside the viewport inset;
+- every bank remains inside the surface;
+- every control remains inside its grid cell;
+- there is no horizontal page overflow;
+- no labels collide;
 - touch targets remain useful;
+- screens/lists remain readable;
 - vertical scrolling is deliberate;
-- persistent bottom UI does not cover the last usable control.
+- the persistent app footer does not cover the final usable control;
+- module-specific CSS contains no unnecessary generic layout repair.
 
-If any item fails, the column count or composition is wrong. Fix the layout; do not add another layer.
+If a standard module fails this gate, fix the shared control surface rather than patching the individual module.
