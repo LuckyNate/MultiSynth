@@ -26,6 +26,7 @@ const core=["module-ids.js","module-capabilities.js","module-boilerplate.js","st
 for(const f of core)try{load(f)}catch(e){fail(`load ${f}`,e)}
 const MS=context.MultiSynth||{};
 const catalog=Object.values(MS.ModuleIds?.CATALOG||{});
+try{load("modules/carrier-synth-modules.js")}catch(e){fail("load modules/carrier-synth-modules.js",e)}
 for(const rel of [...new Set(catalog.map(x=>x.moduleScript))])try{load(rel)}catch(e){fail(`load ${rel}`,e)}
 for(const f of ["module-standards-audit.js","node-graph-engine.js","node-audio-graph.js","cv-bus.js","module-ui-primitives.js"])try{load(f)}catch(e){fail(`load ${f}`,e)}
 
