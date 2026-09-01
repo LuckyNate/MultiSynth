@@ -20,8 +20,46 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Repository reference inventory
-        run: grep -RIni --exclude-dir=.git 'rack' . || true
+      - name: Browser asset smoke
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+
+          root = Path("app/src/main/assets").resolve()
+          missing = []
+          for html in root.rglob("*.html"):
+              text = html.read_text(encoding="utf-8", errors="ignore")
+              for attr in ("src", "href"):
+                  for ref in re.findall(rf'{attr}=["\']([^"\']+)["\']', text):
+                      if ref.startswith(("http:", "https:", "data:", "#", "javascript:")):
+                          continue
+                      local = ref.split("?", 1)[0].split("#", 1)[0]
+                      if not local:
+                          continue
+                      target = (html.parent / local).resolve()
+                      try:
+                          target.relative_to(root)
+                      except ValueError:
+                          continue
+                      if not target.exists():
+                          missing.append(f"{html.relative_to(root)} -> {ref}")
+          if missing:
+              print("Missing local browser assets:")
+              print("\n".join(missing))
+              sys.exit(1)
+          print("Browser asset smoke passed")
+          PY
+
+      - name: Architecture smoke
+        run: |
+          if grep -RInE --exclude-dir=.git --exclude='*.md' \
+            'RackEngine|RackAudioGraph|RackStandard|RackUI|RackUIPrefabs|RackUIBanks|graph\.racks|runtime\.rack|rt\.rack|api\.rack|MS\.rack|rackId|setRackValue|rack-ui-|nodeRackEditor' \
+            app/src/main/assets app/src/main/java; then
+            echo "Obsolete rack architecture reference found"
+            exit 1
+          fi
+          echo "Architecture smoke passed"
 
       - name: Prepare publishable signing key
         env:
