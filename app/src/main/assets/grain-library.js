@@ -3,7 +3,7 @@
 const MS=global.MultiSynth=global.MultiSynth||{},PCM=MS.RawPCMLibrary||MS.PCMLibrary,DB_NAME="multisynth-grain-library",DB_VERSION=1,STORE="grains";let dbp=null;
 const folderDefs=new Map([
  ["mic",{id:"mic",label:"MIC SAMPLES",order:10}],
- ["rack",{id:"rack",label:"RACK SAMPLES",order:20}],
+ ["input",{id:"input",label:"INPUT SAMPLES",order:20}],
  ["grains",{id:"grains",label:"GRAIN SAMPLES",order:30}],
  ["processed",{id:"processed",label:"PROCESSED SAMPLES",order:40}],
  ["imported",{id:"imported",label:"IMPORTED SAMPLES",order:50}],
@@ -11,7 +11,7 @@ const folderDefs=new Map([
 ]);
 function safeFolder(id){id=String(id||"").toLowerCase();return folderDefs.has(id)?id:"other"}
 function registerFolder(def){const id=String(def?.id||"").toLowerCase().replace(/[^a-z0-9_-]/g,"");if(!id||id==="root"||id==="..")throw new Error("Invalid sample folder");folderDefs.set(id,{id,label:String(def?.label||id.toUpperCase()),order:Number(def?.order)||500});return id}
-function classify(rec){if(rec?.folder&&folderDefs.has(String(rec.folder)))return String(rec.folder);if(rec?.library==="grain"||String(rec?.id||"").startsWith("grain-"))return"grains";const s=(String(rec?.source||"")+" "+(rec?.tags||[]).join(" ")).toLowerCase();if(s.includes("mic"))return"mic";if(s.includes("rack"))return"rack";if(s.includes("sample-surgery")||s.includes("big-deal")||s.includes("granulator")||s.includes("chop"))return"processed";if(s.includes("import"))return"imported";return"other"}
+function classify(rec){if(rec?.folder&&folderDefs.has(String(rec.folder)))return String(rec.folder);if(rec?.library==="grain"||String(rec?.id||"").startsWith("grain-"))return"grains";const s=(String(rec?.source||"")+" "+(rec?.tags||[]).join(" ")).toLowerCase();if(s.includes("mic"))return"mic";if(s.includes("input")||s.includes("capture"))return"input";if(s.includes("sample-surgery")||s.includes("big-deal")||s.includes("granulator")||s.includes("chop"))return"processed";if(s.includes("import"))return"imported";return"other"}
 function open(){if(dbp)return dbp;dbp=new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(STORE)){const s=db.createObjectStore(STORE,{keyPath:"id"});s.createIndex("createdAt","createdAt");s.createIndex("name","name")}};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});return dbp}
 function tx(mode,fn){return open().then(db=>new Promise((resolve,reject)=>{const t=db.transaction(STORE,mode),s=t.objectStore(STORE);let result;try{result=fn(s,t)}catch(e){reject(e);return}t.oncomplete=()=>resolve(result);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error||new Error("Grain transaction aborted"))}))}
 function id(){return"grain-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9)}
