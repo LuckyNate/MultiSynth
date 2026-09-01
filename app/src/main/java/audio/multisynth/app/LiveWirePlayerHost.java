@@ -25,6 +25,11 @@ final class LiveWirePlayerHost {
         FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(2,2,Gravity.TOP|Gravity.START); player.setAlpha(0.01f); activity.addContentView(player,lp); player.loadUrl("https://appassets.androidplatform.net/assets/live-wire-host.html");
     }
     private void js(String code){activity.runOnUiThread(()->player.evaluateJavascript(code,null));}
-    void play(String id){js("window.LiveWireHost&&LiveWireHost.play("+org.json.JSONObject.quote(id)+");");} void pause(){js("window.LiveWireHost&&LiveWireHost.pause();");} void resume(){js("window.LiveWireHost&&LiveWireHost.resume();");} void seek(double seconds){js("window.LiveWireHost&&LiveWireHost.seek("+seconds+");");}
-    void destroy(){activity.runOnUiThread(()->{try{((ViewGroup)player.getParent()).removeView(player);}catch(Exception ignored){}player.destroy();});}
+    void play(String id){js("window.LiveWireHost&&LiveWireHost.play("+org.json.JSONObject.quote(id)+");");}
+    void pause(){js("window.LiveWireHost&&LiveWireHost.pause();");}
+    void resume(){js("window.LiveWireHost&&LiveWireHost.resume();");}
+    void stop(){js("window.LiveWireHost&&LiveWireHost.stop();");}
+    void mute(boolean muted){js("window.LiveWireHost&&LiveWireHost.mute("+(muted?"true":"false")+");");}
+    void seek(double seconds){js("window.LiveWireHost&&LiveWireHost.seek("+seconds+");");}
+    void destroy(){activity.runOnUiThread(()->{try{player.evaluateJavascript("window.LiveWireHost&&LiveWireHost.stop();window.LiveWireHost&&LiveWireHost.mute(true);",null);}catch(Exception ignored){}try{((ViewGroup)player.getParent()).removeView(player);}catch(Exception ignored){}player.destroy();});}
 }
