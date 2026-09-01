@@ -2,7 +2,6 @@
 (function(global){
 const MENU=[
   {id:"module-test",label:"TEST MODULES",href:"module-test.html"},
-  {id:"racks",label:"RACKS",href:"workspace-library.html?type=rack"},
   {id:"node-graph",label:"NODE GRAPH",href:"nodebuilder.html"},
   {id:"module-builder",label:"MODULE BUILDER",disabled:true},
   {id:"main-menu",label:"MAIN MENU",href:"index.html"}
@@ -10,7 +9,6 @@ const MENU=[
 function currentMode(){
   const p=(location.pathname.split("/").pop()||"").toLowerCase();
   if(p==="module-test.html")return"module-test";
-  if(p==="rackbuilder.html"||p==="workspace-library.html")return"racks";
   if(p==="nodebuilder.html")return"node-graph";
   if(p==="index.html"||!p)return"main-menu";
   return"";
