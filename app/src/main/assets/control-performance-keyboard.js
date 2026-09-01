@@ -27,7 +27,7 @@
   function noteOn(state,pointerId,midi){const n=clamp(Number(midi),MIDI_MIN,MIDI_MAX);state.active.set(pointerId,n);return n}
   function moveTouch(state,pointerId,midi){const next=clamp(Number(midi),MIDI_MIN,MIDI_MAX),prev=state.active.get(pointerId);if(prev===next)return{off:null,on:null};state.active.set(pointerId,next);return{off:prev??null,on:next}}
   function noteOff(state,pointerId){const prev=state.active.get(pointerId);state.active.delete(pointerId);return prev??null}
-  function mount(host,{audio=global.parent?.MultiSynth?.NodeAudioGraph||MS.NodeAudioGraph||global.parent?.MultiSynth?.RackAudioGraph||MS.RackAudioGraph,orientation=innerWidth>innerHeight?"landscape":"portrait",onExpression=null,onPitch=null}={}){
+  function mount(host,{audio=global.parent?.MultiSynth?.NodeAudioGraph||MS.NodeAudioGraph,orientation=innerWidth>innerHeight?"landscape":"portrait",onExpression=null,onPitch=null}={}){
     if(!host||!audio)return null;
     const state=createState(orientation),held=new Map(),ribbonHeld=new Map(),TF=MS.ControlTouchFollower;
     host.classList.add("ms-performance-keyboard");
