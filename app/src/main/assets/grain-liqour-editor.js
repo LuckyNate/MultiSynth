@@ -1,10 +1,10 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,C=P.ModuleContract,G=P.GrainLibrary,U=window.RackUI;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!I||!module||module.type!==I.GRAIN_LIQOUR||!U)return;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,C=P.ModuleContract,G=P.GrainLibrary,U=window.RackUI;
+let module;try{module=E.getModule(instance)}catch(_){}if(!I||!module||module.type!==I.GRAIN_LIQOUR||!U)return;
 let state={grainId:"",density:1,direction:"forward",phase:0,edge:.08,level:.8,octave:0,detune:0,...(module.state||{})};if(!state.grainId&&state.sourceKey)state.grainId=state.sourceKey;
 const root=document.getElementById("controls"),title=document.getElementById("title"),desc=document.getElementById("desc");if(!root)return;root.innerHTML="";title.textContent="GRAIN LIQOUR";desc.textContent="SAVED-GRAIN WAVEFORM SYNTH · GRAINS ARE THE OSCILLATOR";document.documentElement.style.setProperty("--accent","#c8904d");
-const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
+const patch=p=>{state={...state,...p};try{E.setModuleState(instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
 const group=name=>{const s=document.createElement("section");s.className="group";const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
 const source=group("GRAIN WAVEFORM");const sourceHost=document.createElement("div");sourceHost.className="grainSourceHost";source.appendChild(sourceHost);
 async function fillSources(){const xs=await G?.list?.()||[];sourceHost.innerHTML="";if(!xs.length){const empty=document.createElement("div");empty.className="deckHint";empty.textContent="NO SAVED GRAINS";sourceHost.appendChild(empty);return}U.buttonBank(sourceHost,{value:state.grainId,label:"GRAIN CELLAR",options:xs.map(x=>[x.id,String(x.name||x.id),"◈"]),onChange:v=>patch({grainId:v})})}
