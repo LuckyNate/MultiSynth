@@ -19,7 +19,7 @@
     [I.SAMPLE_LIBRARY]:row(I.SAMPLE_LIBRARY,"utility","#c8b57a",["pcm"],["pcm","storage"]),
     [I.BIG_DEAL]:row(I.BIG_DEAL,"granular","#b4232f",["audioInput","audioOutput","pcm"],["pcm","storage"]),
     [I.BIG_MOUTH]:row(I.BIG_MOUTH,"effect","#ff4f87",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
-    [I.GRAIN_LIQOUR]:row(I.GRAIN_LIQOUR,"granular","#8d5fa8",["audioInput","audioOutput","pcm"],["pcm","storage"]),
+    [I.GRAIN_LIQOUR]:row(I.GRAIN_LIQOUR,"granular","#8d5fa8",["audioOutput","generator","noteInput","cvInput","pcm"],["pcm","storage"]),
     [I.BEEN_SERVED]:row(I.BEEN_SERVED,"effect","#d6a04b",["audioInput","audioOutput"],[]),
     [I.GARAGE_BAND]:row(I.GARAGE_BAND,"effect","#8b8b8b",["audioInput","audioOutput"],[]),
     [I.MASTER_OF_LEVELS]:row(I.MASTER_OF_LEVELS,"utility","#d0d0d0",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal"}),
