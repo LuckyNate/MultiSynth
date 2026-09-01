@@ -8,8 +8,15 @@ function bridge(){return global.LiveWireAndroid||global.AndroidMidi||null}
 function decode(b64){const bin=atob(b64),n=bin.length>>1,out=new Float32Array(n);for(let i=0,j=0;i<n;i++,j+=2){let v=(bin.charCodeAt(j)&255)|((bin.charCodeAt(j+1)&255)<<8);if(v&0x8000)v-=0x10000;out[i]=v/32768}return out}
 function valid(items){const out=[],seen=new Set(queue.map(x=>x.id));for(const x of items||[]){const id=String(x?.id||"");if(!/^[A-Za-z0-9_-]{11}$/.test(id)||seen.has(id))continue;seen.add(id);out.push({id,title:String(x.title||id)});if(queue.length+out.length>=5)break}return out}
 const api={
- available(){const b=bridge();return !!b&&typeof b.startLiveWire==="function"},start(){const b=bridge();return b&&typeof b.startLiveWire==="function"?!!b.startLiveWire():false},stop(){const b=bridge();if(b&&typeof b.stopLiveWire==="function")b.stopLiveWire()},
- play(id){const b=bridge();if(b&&typeof b.liveWirePlay==="function")b.liveWirePlay(String(id||""))},pause(){bridge()?.liveWirePause?.()},resume(){bridge()?.liveWireResume?.()},seek(seconds){bridge()?.liveWireSeek?.(Number(seconds)||0)},
+ available(){const b=bridge();return !!b&&typeof b.startLiveWire==="function"},
+ start(){const b=bridge();return b&&typeof b.startLiveWire==="function"?!!b.startLiveWire():false},
+ stop(){const b=bridge();if(b&&typeof b.stopLiveWire==="function")b.stopLiveWire()},
+ play(id){const b=bridge();if(b&&typeof b.liveWirePlay==="function")b.liveWirePlay(String(id||""))},
+ pause(){bridge()?.liveWirePause?.()},resume(){bridge()?.liveWireResume?.()},
+ stopPlayer(){bridge()?.liveWireStopPlayer?.();playerState={...playerState,state:-1,current:0};api.emit()},
+ setMuted(muted){bridge()?.liveWireMute?.(!!muted)},
+ seek(seconds){bridge()?.liveWireSeek?.(Number(seconds)||0)},
+ clearQueue(){queue=[];api.emit()},
  get queue(){return queue.slice()},get random(){return randomOn},setRandom(on){randomOn=!!on;try{localStorage.setItem("live-wire-random",randomOn?"1":"0")}catch(_){}if(randomOn)api.refill()},
  setQueue(items,{play=true}={}){queue=[];queue.push(...valid(items));api.emit();if(play&&queue[0])api.play(queue[0].id);if(randomOn)api.refill()},
  async next(){if(queue.length)queue.shift();if(!queue.length)await api.refill(true);else if(randomOn)api.refill();api.emit();if(queue[0])api.play(queue[0].id)},
