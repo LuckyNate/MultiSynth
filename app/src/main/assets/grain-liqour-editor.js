@@ -1,6 +1,6 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,C=P.ModuleContract,G=P.GrainLibrary,U=window.RackUI;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,C=P.ModuleContract,G=P.GrainLibrary,U=window.ModuleUI;
 let module;try{module=E.getModule(instance)}catch(_){}if(!I||!module||module.type!==I.GRAIN_LIQOUR||!U)return;
 let state={grainId:"",density:1,direction:"forward",phase:0,edge:.08,level:.8,octave:0,detune:0,...(module.state||{})};if(!state.grainId&&state.sourceKey)state.grainId=state.sourceKey;
 const root=document.getElementById("controls"),title=document.getElementById("title"),desc=document.getElementById("desc");if(!root)return;root.innerHTML="";title.textContent="GRAIN LIQOUR";desc.textContent="SAVED-GRAIN WAVEFORM SYNTH · GRAINS ARE THE OSCILLATOR";document.documentElement.style.setProperty("--accent","#c8904d");
