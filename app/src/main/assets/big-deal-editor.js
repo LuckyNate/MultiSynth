@@ -1,6 +1,6 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,L=P.UnifiedLibrary||P.PCMLibrary,U=window.RackUI;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,L=P.UnifiedLibrary||P.PCMLibrary,U=window.ModuleUI;
 let module;try{module=E.getModule(instance)}catch(_){}if(!I||!module||module.type!==I.BIG_DEAL)return;
 const root=document.getElementById("controls");if(!root)return;let state=module.state||{};root.innerHTML="";
 const patch=p=>{state={...state,...p};try{E.setModuleState(instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
