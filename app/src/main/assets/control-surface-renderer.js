@@ -9,6 +9,8 @@
   function shell(d,visual){const root=el("div",`ms-control ms-${d.control} ms-${d.control}--${visual.variant}`);root.dataset.control=d.control;if(d.id)root.dataset.controlId=d.id;if(d.state)root.dataset.stateKey=d.state;root.dataset.variant=visual.variant;applyVars(root,SPEC.cssVars(d.control,visual));const face=el("div","ms-control-face");root.appendChild(face);if(d.label){const l=el("div","ms-control-label",d.label);root.appendChild(l)}if(visual.valueReadout&&d.value){const value=el("output","ms-control-value",String(d.value.default??d.value.value??""));root.appendChild(value)}return{root,face}}
   function installScrollableScreen(root,face){
     face.classList.add("ms-scroll-face");
+    face.style.paddingRight="44px";
+    face.style.boxSizing="border-box";
     const rail=el("div","ms-scroll-rail"),thumb=el("div","ms-scroll-thumb");rail.appendChild(thumb);root.appendChild(rail);
     function sync(){const max=face.scrollHeight-face.clientHeight;if(max<=0){rail.hidden=true;return}rail.hidden=false;const h=rail.clientHeight,th=Math.max(44,h*face.clientHeight/face.scrollHeight),travel=Math.max(0,h-th);thumb.style.height=`${th}px`;thumb.style.transform=`translateY(${travel*(face.scrollTop/max)}px)`}
     face.addEventListener("scroll",sync,{passive:true});
