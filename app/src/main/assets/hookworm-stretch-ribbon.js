@@ -1,7 +1,7 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.RackEngine,R=window.MultiSynth?.ControlSurfaceRenderer,F=window.MultiSynth?.ControlTouchFollower;if(!rackId||!instance||!E||!R)return;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!module)return;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.NodeGraphEngine,A=P.NodeAudioGraph,R=window.MultiSynth?.ControlSurfaceRenderer,F=window.MultiSynth?.ControlTouchFollower;if(!instance||!E||!R)return;
+let module;try{module=E.getModule(instance)}catch(_){}if(!module)return;
 let value=Math.max(0,Math.min(1,Number(module.state?.stretchBlend??.5)));
 const host=document.getElementById("controls");if(!host)return;
 const section=document.createElement("section");section.className="group";const h=document.createElement("h2");h.textContent="TIME STRETCH METHOD";section.appendChild(h);
@@ -10,7 +10,7 @@ const ribbon=R.render({control:"ribbon",id:"stretchBlend",state:"stretchBlend",l
 const marker=ribbon.querySelector(".ms-ribbon-position"),face=ribbon.querySelector(".ms-control-face"),out=ribbon.querySelector(".ms-control-value");
 function text(){const pct=value*100;return pct<1?"STRETCH":pct>99?"TILE":Math.round(pct)+"% TILE"}
 function paint(){const pct=value*100;if(marker)marker.style.left=pct+"%";if(out)out.value=out.textContent=text()}
-function patch(v){value=Math.max(0,Math.min(1,v));paint();try{E.setModuleState(rackId,instance,{stretchBlend:value});P.RackAudioGraph?.rebuild?.()}catch(e){console.error(e)}}
+function patch(v){value=Math.max(0,Math.min(1,v));paint();try{E.setModuleState(instance,{stretchBlend:value});A?.rebuild?.()}catch(e){console.error(e)}}
 function fromPoint(e){const r=face.getBoundingClientRect();patch((e.clientX-r.left)/Math.max(1,r.width));F?.move?.(ribbon,text(),e,{label:"STRETCH / TILE"})}
 let pid=null;face.addEventListener("pointerdown",e=>{e.preventDefault();pid=e.pointerId;try{face.setPointerCapture(pid)}catch(_){}fromPoint(e);F?.show?.(ribbon,text(),e,{label:"STRETCH / TILE"})});face.addEventListener("pointermove",e=>{if(e.pointerId===pid)fromPoint(e)});const end=e=>{if(pid==null||e.pointerId!==pid)return;pid=null;F?.hide?.(ribbon)};face.addEventListener("pointerup",end);face.addEventListener("pointercancel",end);face.addEventListener("lostpointercapture",()=>{pid=null;F?.hide?.(ribbon)});paint();
 })();
