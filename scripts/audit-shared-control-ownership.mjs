@@ -3,8 +3,8 @@ import path from "node:path";
 
 const ROOT=path.resolve("app/src/main/assets");
 const SHARED_CSS=new Set(["control-surface.css","control-performance-keyboard.css"]);
-const FINISHED_MODULES=new Set(["ws","no-quarter","time-bandits","big-deal","big-mouth","control-freak","denzels-equalizer","echo-canyon","been-served","garage-band","live-wire","lowrider-lfo","master-of-levels","randrone","sample-library","sample-surgery","tail-gator","the-chopper"]);
-const DELETED_LAYERS=["console-fit.css","device-controls.css","control-ribbon.css"];
+const FINISHED_MODULES=new Set(["live-wire","beat-red","father-time","ws","time-bandits","the-chopper","sample-surgery","sample-library","big-deal","big-mouth","grain-liqour","been-served","garage-band","master-of-levels","denzels-equalizer","echo-canyon","control-freak","lowrider-lfo","unstable-diffusion","puresynth","quadsynth","pulsynth","sinladder","razorback","stinger","no-quarter","randrone","hookworm","tapeworm","tail-gator","bluetooth-output"]);
+const DELETED_LAYERS=["console-fit.css","device-controls.css","control-ribbon.css","module-ui-primitives.js","direct-controls.js"];
 const FORBIDDEN_RUNTIME=/\b(?:ModuleUI|rackKnob|deviceKnob|bmKnob|rdKnob|lrKnob|verticalRibbon(?:Control|Track|Thumb)|knobControl)\b/;
 const RAW_HARDWARE=/<(?:input|select)\b[^>]*(?:type=["'](?:range|checkbox|radio)["'])?[^>]*>|<button\b/i;
 const SHARED_ANATOMY=/(?:\.ms-(?:control(?:-[\w-]+)?|knob(?:-[\w-]+)?|dial(?:-[\w-]+)?|button(?:-[\w-]+)?|pad(?:-[\w-]+)?|fader(?:-[\w-]+)?|ribbon(?:-[\w-]+)?|switch(?:-[\w-]+)?|screen(?:-[\w-]+)?|xy(?:-[\w-]+)?))/;
@@ -19,7 +19,7 @@ const files=walk(ROOT),violations=[];
 
 for(const file of files){
   const ext=path.extname(file).toLowerCase(),name=path.basename(file),text=fs.readFileSync(file,"utf8"),where=rel(file);
-  for(const dead of DELETED_LAYERS)if(text.includes(dead))violations.push(`${where}: references deleted transitional stylesheet ${dead}`);
+  for(const dead of DELETED_LAYERS)if(text.includes(dead))violations.push(`${where}: references deleted/retired implementation ${dead}`);
   const old=FORBIDDEN_RUNTIME.exec(text);if(old)violations.push(`${where}:${lineOf(text,old.index)} contains forbidden private/retired control token ${old[0]}`);
   if(ext===".html"&&FINISHED_MODULES.has(moduleStem(file))){
     if(!text.includes("control-surface.css"))violations.push(`${where}: finished module does not load control-surface.css`);
@@ -35,4 +35,4 @@ for(const file of files){
 }
 
 if(violations.length){console.error("Shared control/CSS contract audit FAILED:\n");for(const v of violations)console.error("- "+v);console.error(`\n${violations.length} violation(s). Fix the shared owner or migrate the module; do not add a compatibility layer.`);process.exit(1)}
-console.log("Shared control/CSS contract audit passed.");
+console.log("Shared control/CSS contract audit passed for the full finished module catalog.");
