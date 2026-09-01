@@ -1,12 +1,12 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},C=P.ModuleContract,E=P.RackEngine,L=P.PCMLibrary,A=P.RackAudioGraph,S=P.RackStandard;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},C=P.ModuleContract,E=P.NodeGraphEngine,L=P.PCMLibrary,A=P.NodeAudioGraph,S=P.ModuleStandard;
 const canvas=document.getElementById("wave"),g=canvas.getContext("2d"),status=document.getElementById("status"),nameEl=document.getElementById("name"),count=document.getElementById("count"),countOut=document.getElementById("countOut"),lib=document.getElementById("library");
 const CODE_KEY="multisynth.the-chopper.parent-code.v1",CODE_ALPHABET="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
 let rt=null,capture=null,runtimeSeen=null,cuts=[],previewSource=null,parentCode=null,sourceLibraryId=null,selected=new Set(),holdTimer=null,holdPid=null,holdX=0,holdY=0,held=false;
 try{rt=C.getRuntime(instance)}catch(_){}
 if(!rt){status.textContent="MODULE RUNTIME NOT FOUND";return}
-function patch(p){try{A?.resume?.();const rack=(E.graph().racks||[]).find(r=>r.modules.some(m=>m.id===instance));if(rack)E.setModuleState(rack.id,instance,p)}catch(e){console.error(e)}}
+function patch(p){try{A?.resume?.();E.setModuleState(instance,p)}catch(e){console.error(e)}}
 function runtimeCapture(){return rt?.user?.getCapture?.()||rt?.user?.capture||null}
 function encodeCode(n){n=Math.max(0,Math.floor(Number(n)||0));let out="";for(let i=0;i<6;i++){out=CODE_ALPHABET[n%64]+out;n=Math.floor(n/64)}return out}
 function claimParentCode(){let n=0;try{n=Math.max(0,Math.floor(Number(localStorage.getItem(CODE_KEY))||0));localStorage.setItem(CODE_KEY,String(n+1))}catch(_){}return encodeCode(n)}
@@ -27,7 +27,7 @@ count.oninput=()=>countOut.textContent=count.value;
 document.getElementById("auto").onclick=()=>{if(!capture)return;const n=Math.max(1,Number(count.value)||1);cuts=[];selected.clear();for(let i=1;i<n;i++)cuts.push(i/n);draw()};
 document.getElementById("clear").onclick=()=>{cuts=[];selected.clear();draw()};
 function bind(id,key,idle){const b=document.getElementById(id);S.bindHold(b,{idleText:idle,activeText:"RECORDING — RELEASE",down:()=>patch({[key]:true}),up:()=>{patch({[key]:false});setTimeout(syncCapture,250)}})}
-bind("mic","micRecording","HOLD MIC");bind("rack","rackRecording","HOLD RACK INPUT");
+bind("mic","micRecording","HOLD MIC");bind("input","inputRecording","HOLD INPUT");
 function sliceRecords(){if(!capture?.data?.length)return[];const pts=bounds(),out=[];for(let i=0;i<pts.length-1;i++){const a=Math.floor(pts[i]*capture.data.length),b=Math.floor(pts[i+1]*capture.data.length);if(b-a>=2)out.push({index:i,data:capture.data.slice(a,b)})}return out}
 async function saveSlices(whole=false){syncCapture();if(!capture)return;const edited=cuts.length>0||selected.size>0;if(!whole&&!edited){status.textContent=`ORIGINAL KEPT · ${capture.name||"SAMPLE"} · NO CHOPS MADE`;await refresh();return}let ss=whole?[{index:0,data:capture.data}]:sliceRecords();if(!whole&&selected.size)ss=ss.filter(x=>selected.has(x.index));const code=parentCode||(parentCode=claimParentCode());if(!ss.length){status.textContent="NO SELECTED CHOPS TO SAVE";return}status.textContent="SAVING…";const saved=[];for(let i=0;i<ss.length;i++){const originalNo=String(ss[i].index+1).padStart(2,"0"),sampleName=whole?`${code}_00.pcm`:`${code}_${originalNo}.pcm`;const rec=await L.save({name:sampleName,sampleRate:capture.sampleRate,data:ss[i].data,source:capture.source||"the-chopper",tags:[whole?"whole":"chop",instance,`parent:${code}`,selected.size?"selected-chop":"all-chops"]});if(rec?.id)saved.push(rec.id)}if(!whole&&edited&&sourceLibraryId&&!saved.includes(sourceLibraryId)){await L.remove(sourceLibraryId);sourceLibraryId=null}status.textContent=`SAVED ${ss.length} PCM SAMPLE${ss.length===1?"":"S"} · ${selected.size?"SELECTED ONLY · ":"ALL CHOPS · "}${edited&&!whole?"ORIGINAL REMOVED · ":""}${code}`;await refresh()}
 document.getElementById("save").onclick=()=>saveSlices(false).catch(e=>status.textContent="SAVE ERROR "+e.message);
