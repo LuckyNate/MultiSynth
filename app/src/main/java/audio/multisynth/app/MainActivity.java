@@ -234,7 +234,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume(){super.onResume();runJs("window.warmAudioEngine&&window.warmAudioEngine();");}
     @Override public void onBackPressed(){
         if(webView==null){super.onBackPressed();return;}
-        webView.evaluateJavascript("(function(){if(window.MultiSynthRackHandleBack){try{return window.MultiSynthRackHandleBack()? '1':'0';}catch(e){}}return '0';})()", value->{
+        webView.evaluateJavascript("(function(){if(window.MultiSynthNodeHandleBack){try{return window.MultiSynthNodeHandleBack()? '1':'0';}catch(e){}}return '0';})()", value->{
             boolean handled=value!=null&&(value.contains("1"));
             if(handled)return;
             if(webView!=null&&webView.canGoBack())webView.goBack();else MainActivity.super.onBackPressed();
