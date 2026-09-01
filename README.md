@@ -21,7 +21,7 @@ The priorities are equal parts function and form:
 - Module state and patch state must persist.
 - Controls must share one interaction language and one quality standard.
 - Modules must not all look the same.
-- Every module should look like a real piece of electronic music equipment that could plausibly exist on a desk, in a rack, or in a strange boutique synth shop.
+- Every module should look like a real piece of electronic music equipment that could plausibly exist on a desk, in a modular setup, or in a strange boutique synth shop.
 - Aesthetics are part of correctness. A technically functional but visually broken module is not finished.
 
 ## Two graph spaces
@@ -104,6 +104,8 @@ The retired approach where every control becomes a giant independent full-width 
 
 A keyboard instrument must visibly contain a usable keyboard. A drum machine must visually read as a drum machine. A sequencer must expose its sequence. A mixer must read as a mixer. A processor should communicate its signal flow through its controls.
 
+`docs/MODULE_INTERFACE_LAYOUT.md` is the canonical layout contract for module faces. It defines phone spacing, main-panel composition, functional banks, control grids, responsive reflow, control-type choice and the interface completion gate. Follow it for every module unless the module's actual musical function requires a different composition.
+
 ## Patch workspace
 
 The Patch Graph is an explicit-routing surface.
@@ -173,6 +175,8 @@ Then add CV/tempo synchronization and one processor. Only after that foundation 
 ## Documentation
 
 `docs/DESIGN.md` is the product/design contract for the restart and should be read with this README before implementation work.
+
+`docs/MODULE_INTERFACE_LAYOUT.md` is the canonical module-face layout and usability contract.
 
 `docs/THEME_AUTHORING.md` defines the four-color theme authoring/generation system.
 
