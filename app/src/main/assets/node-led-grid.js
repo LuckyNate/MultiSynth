@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const GRID=24,PATTERN_SECONDS=14,TRANSITION_SECONDS=2.2;
+const GRID=24,PATTERN_SECONDS=30,TRANSITION_SECONDS=2.2;
 const PATTERNS=["waves","rings","plasma","diagonal","vortex","sparkle"];
 let viewport=null,canvas=null,ctx=null,view={x:0,y:0,scale:1},raf=0,start=performance.now();
 function ensure(){
