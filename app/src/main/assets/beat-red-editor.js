@@ -1,63 +1,6 @@
 "use strict";
-(function(){
-  const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.NodeGraphEngine,A=P.NodeAudioGraph,B=P.ModuleBuilderDefinitions,I=P.ModuleIds,U=window.ModuleUI;
-  if(!instance||!E||!B||!I||!U)return;
-  const model=B.require(I.BEAT_RED),module=E.getModule(instance),root=document.getElementById("controls");
-  if(!module||!root)return;
-  let state={...model.defaults,...(module.state||{})};
-  const selected=()=>Math.max(0,Math.min(11,Math.round(Number(state.selected)||0)));
-  const patch=p=>{state={...state,...p};E.setModuleState(instance,p);A?.rebuild?.()};
-  const section=className=>{const el=document.createElement("section");el.className=className;root.appendChild(el);return el};
-  root.innerHTML="";
-  const globals=section("beatRedGlobal"),voices=section("beatRedPads"),steps=section("beatRedSteps"),voiceControls=section("beatRedVoice");
-  const byId=id=>model.controls.find(c=>c.id===id);
-
-  function renderGlobal(){
-    globals.innerHTML="";
-    for(const id of ["bpm","swing","steps","clickLevel","running","clockClick"]){
-      const control=byId(id);if(!control)continue;
-      U.renderControl(globals,control,{state,defaults:model.defaults,patch});
-    }
-  }
-
-  function renderVoices(){
-    voices.innerHTML="";
-    const control=byId("voice");if(!control)return;
-    U.renderControl(voices,control,{state,defaults:model.defaults,patch:p=>{patch(p);queueMicrotask(()=>{renderSteps();renderVoiceControls()})}});
-  }
-
-  function renderSteps(){
-    steps.innerHTML="";
-    const control=byId("pattern");if(!control)return;
-    U.renderControl(steps,control,{state,defaults:model.defaults,patch});
-  }
-
-  const ranges=Object.freeze({
-    pitch:{min:20,max:2000,step:1},
-    decay:{min:20,max:2500,step:1},
-    bend:{min:-2500,max:2500,step:10},
-    tone:{min:0,max:100,step:1},
-    character:{min:0,max:100,step:1},
-    level:{min:0,max:100,step:1}
-  });
-
-  function renderVoiceControls(){
-    voiceControls.innerHTML="";
-    const index=selected(),voice=state.voices?.[index]||model.defaults.voices[index];
-    for(const id of Object.keys(ranges)){
-      const base=byId(id),range=ranges[id];if(!base)continue;
-      const control={...base,state:id,value:{...range,default:Number(voice[id])}};
-      U.renderControl(voiceControls,control,{state:{[id]:Number(voice[id])},defaults:{[id]:Number(voice[id])},patch:p=>{
-        if(!(id in p))return;
-        const next=(state.voices||model.defaults.voices).map(v=>({...v}));
-        next[index][id]=p[id];
-        patch({voices:next});
-      }});
-    }
-  }
-
-  renderGlobal();
-  renderVoices();
-  renderSteps();
-  renderVoiceControls();
+(()=>{
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},E=P.NodeGraphEngine,A=P.NodeAudioGraph,B=P.ModuleBuilderDefinitions,I=P.ModuleIds,R=window.MultiSynth?.ControlSurfaceRenderer;if(!instance||!E||!B||!I||!R)return;const model=B.require(I.BEAT_RED),module=E.getModule(instance),root=document.getElementById("controls");if(!module||!root)return;let state={...model.defaults,...(module.state||{})};root.innerHTML="";root.classList.add("ms-module-surface");const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0)),patch=p=>{state={...state,...p};E.setModuleState(instance,p);A?.rebuild?.()},mount=(p,d,v={})=>R.mount(p,{...d,meta:{...(d.meta||{}),visual:v}}),byId=id=>model.controls.find(c=>c.id===id),selected=()=>clamp(Math.round(Number(state.selected)||0),0,11);function bank(title,layout){const s=document.createElement("section");s.className="ms-module-bank";const h=document.createElement("div");h.className="ms-module-bank-title";h.textContent=title;const g=document.createElement("div");g.className=`ms-control-grid ${layout}`;s.append(h,g);root.appendChild(s);return g}function knob(parent,{id,label,min,max,step,value,unit="",change}){let current=Number(value),active=false,startY=0,start=current;const n=mount(parent,{id,control:"knob",label,value:{default:current,min,max,step},meta:{unit}},{variant:"cap",valueReadout:true}),ptr=n.querySelector(".ms-control-pointer"),out=n.querySelector(".ms-control-value"),quant=v=>clamp(min+Math.round((v-min)/step)*step,min,max),paint=()=>{const t=(current-min)/(max-min||1);if(ptr)ptr.style.transform=`translateX(-50%) rotate(${-135+t*270}deg)`;if(out)out.textContent=`${step<1?current.toFixed(2):Math.round(current)}${unit}`};n.setModuleValue=v=>{current=quant(Number(v));paint()};n.onpointerdown=e=>{active=true;startY=e.clientY;start=current;n.setPointerCapture?.(e.pointerId);e.preventDefault()};n.onpointermove=e=>{if(!active)return;const next=quant(start+(startY-e.clientY)*(max-min)/180);if(next!==current){current=next;paint();change?.(current)}e.preventDefault()};const end=e=>{active=false;try{n.releasePointerCapture?.(e.pointerId)}catch(_){}};n.onpointerup=end;n.onpointercancel=end;paint();return n}function sw(parent,id,label){let value=!!state[id];const n=mount(parent,{id,control:"switch",state:id,label,value:{default:value}},{variant:"rocker"}),paint=()=>{n.dataset.on=value?"1":"0";n.dataset.active=value?"1":"0"};n.setModuleValue=v=>{value=!!v;paint()};n.onclick=()=>{value=!value;paint();patch({[id]:value})};paint();return n}
+const transport=bank("TRANSPORT","ms-layout-transport");sw(transport,"running","RUN");sw(transport,"clockClick","CLICK");const globalBank=bank("SEQUENCER","ms-layout-knobs");for(const id of ["bpm","swing","steps","clickLevel"]){const d=byId(id);knob(globalBank,{id,label:d.label,min:d.value.min,max:d.value.max,step:d.value.step,value:state[id]??d.value.default,unit:d.meta?.unit||"",change:v=>patch({[id]:v})})}
+const voiceBank=bank("VOICE / TRACK","ms-layout-pads"),stepBank=bank("32 STEP TRIGGERS","ms-layout-steps"),voiceParamsBank=bank("SELECTED VOICE","ms-layout-params");function drawVoices(){voiceBank.innerHTML="";const d=byId("voice"),labels=d.value.labels||[];for(let i=0;i<12;i++){const n=mount(voiceBank,{id:`voice-${i}`,control:"pad",label:labels[i]||`VOICE ${i+1}`},{variant:"square"});n.dataset.active=i===selected()?"1":"0";n.onclick=()=>{patch({selected:i});drawVoices();drawSteps();drawVoiceParams()}}}function drawSteps(){stepBank.innerHTML="";const lane=selected(),pattern=state.pattern||model.defaults.pattern;for(let i=0;i<32;i++){const on=!!pattern?.[lane]?.[i],n=mount(stepBank,{id:`step-${i}`,control:"button",label:String(i+1)},{variant:"rect"});n.dataset.active=on?"1":"0";n.onclick=()=>{const next=(state.pattern||model.defaults.pattern).map(row=>[...row]);next[lane][i]=next[lane][i]?0:1;patch({pattern:next});drawSteps()}}}const ranges={pitch:{min:20,max:2000,step:1},decay:{min:20,max:2500,step:1},bend:{min:-2500,max:2500,step:10},tone:{min:0,max:100,step:1},character:{min:0,max:100,step:1},level:{min:0,max:100,step:1}};function drawVoiceParams(){voiceParamsBank.innerHTML="";const i=selected(),voice=state.voices?.[i]||model.defaults.voices[i];for(const [id,r] of Object.entries(ranges)){const base=byId(id);knob(voiceParamsBank,{id:`voice-${i}-${id}`,label:base.label,min:r.min,max:r.max,step:r.step,value:Number(voice[id]),change:v=>{const next=(state.voices||model.defaults.voices).map(x=>({...x}));next[i][id]=v;patch({voices:next})}})}}drawVoices();drawSteps();drawVoiceParams();window.addEventListener("multisynth-state-sync",e=>{const before=state;state={...model.defaults,...(e.detail||state)};root.querySelectorAll("[data-state-key]").forEach(n=>{const k=n.dataset.stateKey;if(k in state)n.setModuleValue?.(state[k])});if(before.selected!==state.selected)drawVoices();if(before.pattern!==state.pattern||before.selected!==state.selected)drawSteps();if(before.voices!==state.voices||before.selected!==state.selected)drawVoiceParams()});
 })();
