@@ -24,7 +24,7 @@
     [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,opacity:1,rotation:0,fit:"contain",blend:"normal",labelGap:0,valueReadout:false})
   });
   const VARIANTS=freeze({
-    knob:freeze(["cap","skirted","pointer","encoder"]),dial:freeze(["rotary","selector","indexed"]),turntable:freeze(["platter"]),fader:freeze(["vertical","horizontal"]),ribbon:freeze(["horizontal","vertical"]),pad:freeze(["square","round","strip"]),button:freeze(["rect","round","arcade"]),switch:freeze(["rocker","slide","toggle"]),key:freeze(["key","black-key","pad-key"]),xy:freeze(["pad"]),screen:freeze(["screen"]),oscilloscope:freeze(["scope"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),decal:freeze(["screenprint","sticker","stencil","plate"])
+    knob:freeze(["cap","skirted","pointer","encoder"]),dial:freeze(["rotary","selector","indexed"]),turntable:freeze(["platter"]),fader:freeze(["vertical","horizontal"]),ribbon:freeze(["horizontal","vertical"]),pad:freeze(["square","round","strip"]),button:freeze(["rect","round","arcade"]),switch:freeze(["rocker","slide","toggle"]),key:freeze(["key","black-key","pad-key"]),xy:freeze(["pad"]),screen:freeze(["screen","scroll"]),oscilloscope:freeze(["scope"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),decal:freeze(["screenprint","sticker","stencil","plate"])
   });
   function defaults(control){const d=TYPES[control];if(!d)throw new Error("No control visual spec for "+control);return d}
   function resolve(control,overrides={}){const base=defaults(control),r={...base,...overrides};if(VARIANTS[control]&&!VARIANTS[control].includes(r.variant))throw new Error("Unsupported "+control+" variant: "+r.variant);return freeze(r)}
