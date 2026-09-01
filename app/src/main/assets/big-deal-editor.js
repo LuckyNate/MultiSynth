@@ -1,9 +1,9 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,L=P.UnifiedLibrary||P.PCMLibrary,U=window.RackUI;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!I||!module||module.type!==I.BIG_DEAL)return;
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,L=P.UnifiedLibrary||P.PCMLibrary,U=window.RackUI;
+let module;try{module=E.getModule(instance)}catch(_){}if(!I||!module||module.type!==I.BIG_DEAL)return;
 const root=document.getElementById("controls");if(!root)return;let state=module.state||{};root.innerHTML="";
-const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
+const patch=p=>{state={...state,...p};try{E.setModuleState(instance,p);A?.rebuild?.()}catch(e){console.error(e)}};
 const group=name=>{const s=document.createElement("section");s.className="group";const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
 const range=(sec,id,label,min,max,step=1)=>U.range(sec,{value:state[id]??min,min,max,step,label,onInput:v=>patch({[id]:v})});
 const toggle=(sec,id,label)=>U.toggle(sec,{value:!!state[id],label,onChange:v=>patch({[id]:v})});
