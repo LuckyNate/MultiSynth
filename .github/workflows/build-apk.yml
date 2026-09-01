@@ -56,10 +56,13 @@ jobs:
           if grep -RInE --exclude-dir=.git --exclude='*.md' \
             'RackEngine|RackAudioGraph|RackStandard|RackUI|RackUIPrefabs|RackUIBanks|graph\.racks|runtime\.rack|rt\.rack|api\.rack|MS\.rack|rackId|setRackValue|rack-ui-|nodeRackEditor|ModuleCompatibility' \
             app/src/main/assets app/src/main/java; then
-            echo "Obsolete rack or compatibility path found"
+            echo "Obsolete architecture or compatibility path found"
             exit 1
           fi
           echo "Architecture smoke passed"
+
+      - name: Shared control CSS contract
+        run: node scripts/audit-shared-control-ownership.mjs
 
       - name: Runtime smoke
         run: node tools/runtime-smoke.mjs
