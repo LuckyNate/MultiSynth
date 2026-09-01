@@ -20,6 +20,9 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Repository reference inventory
+        run: grep -RIni --exclude-dir=.git 'rack' . || true
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
