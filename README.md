@@ -65,11 +65,12 @@ That library owns:
 - accessibility semantics;
 - common physical proportions;
 - common jack behavior;
-- common rendering quality.
+- common rendering quality;
+- standard phone-first module shell/bank/grid layout and responsive reflow.
 
-A shared control does **not** force every module into the same panel layout.
+A shared control does **not** force every module into the same visual identity.
 
-The same knob may appear on several instruments, but the surrounding face, grouping, spacing, labeling, materials, color, hierarchy and composition belong to the module.
+The same knob may appear on several instruments, but the surrounding materials, color, hierarchy, decoration and genuinely unique composition belong to the module. Ordinary fit/reflow does not.
 
 Shared controls are the parts bin. A module is the designed machine built from those parts.
 
@@ -104,7 +105,11 @@ The retired approach where every control becomes a giant independent full-width 
 
 A keyboard instrument must visibly contain a usable keyboard. A drum machine must visually read as a drum machine. A sequencer must expose its sequence. A mixer must read as a mixer. A processor should communicate its signal flow through its controls.
 
-`docs/MODULE_INTERFACE_LAYOUT.md` is the canonical layout contract for module faces. It defines phone spacing, main-panel composition, functional banks, control grids, responsive reflow, control-type choice and the interface completion gate. Follow it for every module unless the module's actual musical function requires a different composition.
+`docs/MODULE_INTERFACE_LAYOUT.md` is the canonical layout contract for module faces.
+
+`docs/CSS_STYLE_CONTRACT.md` is the canonical CSS ownership and implementation contract. Ordinary module fit, control containment and responsive bank reflow belong to the shared control surface, not local repair CSS.
+
+`docs/CSS_COMPLIANCE_AUDIT.md` records the current stylesheet-by-stylesheet migration/compliance status.
 
 ## Patch workspace
 
@@ -177,6 +182,10 @@ Then add CV/tempo synchronization and one processor. Only after that foundation 
 `docs/DESIGN.md` is the product/design contract for the restart and should be read with this README before implementation work.
 
 `docs/MODULE_INTERFACE_LAYOUT.md` is the canonical module-face layout and usability contract.
+
+`docs/CSS_STYLE_CONTRACT.md` is the canonical CSS ownership/style contract.
+
+`docs/CSS_COMPLIANCE_AUDIT.md` is the current stylesheet compliance/migration inventory.
 
 `docs/THEME_AUTHORING.md` defines the four-color theme authoring/generation system.
 
