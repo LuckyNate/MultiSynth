@@ -1,8 +1,8 @@
 "use strict";
 (()=>{
-const q=new URLSearchParams(location.search),rackId=q.get("rack"),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,L=P.PCMLibrary,U=window.RackUI,B=window.RackUIBanks;
-let rack,module;try{rack=E.getRack(rackId);module=rack.modules.find(m=>m.id===instance)}catch(_){}if(!I||!module||module.type!==I.WS||!U)return;
-const root=document.getElementById("controls");let state=module.state||{};if(!root)return;root.innerHTML="";const patch=p=>{state={...state,...p};try{E.setModuleState(rackId,instance,p)}catch(e){console.error(e)}};
+const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,L=P.PCMLibrary,U=window.RackUI,B=window.RackUIBanks;
+let module;try{module=E.getModule(instance)}catch(_){}if(!I||!module||module.type!==I.WS||!U)return;
+const root=document.getElementById("controls");let state=module.state||{};if(!root)return;root.innerHTML="";const patch=p=>{state={...state,...p};try{E.setModuleState(instance,p)}catch(e){console.error(e)}};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const group=name=>{const s=document.createElement("section");s.className="group wsGroup wsGroup--"+slug(name);const h=document.createElement("h2");h.textContent=name;s.appendChild(h);root.appendChild(s);return s};
 const transport=group("SAMPLER"),transportBank=document.createElement("div");transportBank.className="wsTransportBank";transport.appendChild(transportBank);U.hold(transportBank,{idleText:"RECORD",activeText:"RECORDING — RELEASE",onDown:()=>patch({recording:true}),onUp:()=>patch({recording:false})});U.toggle(transportBank,{value:!!state.previewPlaying,label:"PLAY",onChange:v=>patch({previewPlaying:v})});U.toggle(transportBank,{value:!!state.running,label:"RUN",onChange:v=>patch({running:v})});U.toggle(transportBank,{value:state.cvTrigger!==false,label:"CV",onChange:v=>patch({cvTrigger:v})});
@@ -20,9 +20,6 @@ async function drawLibrary(){const keepScroll=libraryScreen.scrollTop;libraryScr
 function drawAll(){drawPads();drawParams();drawSteps();drawLibrary().catch(console.error)}drawAll();
 const pathValue=(obj,path)=>String(path||"").split(".").reduce((v,k)=>v==null?undefined:v[k],obj);
 const assignmentSig=samples=>(samples||[]).map(s=>`${s?.pcmKey||""}|${s?.name||""}|${s?.start??""}|${s?.end??""}`).join("¶");
-/* Live instrument rule: never replace control DOM for ordinary state changes. Nested sample
-   parameters are patched into the existing controls. Only PCM assignment/selection changes
-   are structural enough to rebuild the selected-sample controls. */
 let lastSelected=selected(),lastAssignmentSig=assignmentSig(state.samples),lastStepsData=state.stepsData;
 window.addEventListener("multisynth-state-sync",e=>{const next=e.detail||state,prev=state;state=next;root.querySelectorAll("[data-state-key]").forEach(el=>{const key=el.dataset.stateKey;if(!key)return;const nv=pathValue(next,key),pv=pathValue(prev,key);if(nv===undefined||nv===pv)return;try{el.setRackValue?.(nv)}catch(_){}});const nowSelected=selected(),nextAssignmentSig=assignmentSig(next.samples),assignmentChanged=nextAssignmentSig!==lastAssignmentSig,stepsChanged=next.stepsData!==lastStepsData;if(nowSelected!==lastSelected){lastSelected=nowSelected;drawPads();drawParams();drawSteps();drawLibrary().catch(console.error)}else{if(assignmentChanged){drawPads();drawParams()}if(stepsChanged)drawSteps()}lastAssignmentSig=nextAssignmentSig;lastStepsData=next.stepsData});
 })();
