@@ -62,6 +62,7 @@ public final class MainActivity extends Activity {
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String APP_PREFIX = "/assets/";
     private static final String APP_START = "https://" + APP_HOST + APP_PREFIX + "index.html";
+    private static final String NODE_GRAPH = "https://" + APP_HOST + APP_PREFIX + "nodebuilder.html";
 
     private WebView webView;
     private LiveWireBridge liveWireBridge;
@@ -235,9 +236,14 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed(){
         if(webView==null){super.onBackPressed();return;}
         webView.evaluateJavascript("(function(){if(window.MultiSynthNodeHandleBack){try{return window.MultiSynthNodeHandleBack()? '1':'0';}catch(e){}}return '0';})()", value->{
-            boolean handled=value!=null&&(value.contains("1"));
+            boolean handled=value!=null&&value.contains("1");
             if(handled)return;
-            if(webView!=null&&webView.canGoBack())webView.goBack();else MainActivity.super.onBackPressed();
+            WebView current=webView;
+            if(current==null){MainActivity.super.onBackPressed();return;}
+            Uri uri=Uri.parse(current.getUrl()==null?"":current.getUrl());
+            String path=uri.getPath();
+            if(path!=null&&path.equals(APP_PREFIX+"nodebuilder.html"))MainActivity.super.onBackPressed();
+            else current.loadUrl(NODE_GRAPH);
         });
     }
     @Override protected void onDestroy(){stopNativeMic();LiveWireProjectionService.stop(this);closeOpenMidi(false);if(midiManager!=null)midiManager.unregisterDeviceCallback(deviceCallback);if(fileChooserCallback!=null){fileChooserCallback.onReceiveValue(null);fileChooserCallback=null;}if(webView!=null){if(liveWireBridge!=null){liveWireBridge.destroy();liveWireBridge=null;}webView.removeJavascriptInterface("LiveWireAndroid");webView.removeJavascriptInterface("AndroidMidi");webView.destroy();webView=null;}super.onDestroy();}
