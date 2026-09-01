@@ -28,11 +28,13 @@ The physical metaphor exists because it makes a modular synthesizer legible and 
 
 ## 3. Canonical visual source
 
-The restart does not treat the current `alt` control renderer as a visual reference.
+The shared control library is the only canonical source for recurring interactive hardware.
 
-The visual reference for shared controls is the best hardware language already present on `main`, especially the control work in `rack-ui-primitives.js` and `rack-instrument-theme.css`.
+Use `control-surface-library.js`, `control-surface-spec.js`, `control-surface-renderer.js` and `control-surface.css` as the implementation source for knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and other registered primitives.
 
-Preserve the compact hardware treatment, radial knob faces, integrated numeric value on the knob face, tactile switches/pads/faders, mounted displays/jacks, restrained shadows/glows, and coherent per-module palettes.
+Preserve the compact hardware treatment, radial control faces, tactile switches/pads/faders, mounted displays/jacks, restrained shadows/glows, coherent per-module palettes and predictable touch behavior defined by that shared system.
+
+A module may theme and arrange shared controls. It must not replace them with a parallel control implementation.
 
 ## 4. Four-color theme contract
 
@@ -134,17 +136,15 @@ Shared means behavior, proportions and craftsmanship, not identical presentation
 
 ### Knob standard
 
-The canonical knob is based on the successful `main` construction:
+The canonical knob uses the shared control library construction:
 
-- label outside/above the hardware as needed;
+- concise label placement;
 - one circular hardware face;
 - indicator/tick physically on that face;
-- numeric value integrated into the face itself;
+- shared value readout treatment where enabled;
 - radial material shading and edge treatment;
 - direct touch/drag response;
-- external state updates redraw the same knob face immediately.
-
-A separate rectangular readout below every knob is not the standard.
+- external state updates redraw the same control immediately.
 
 Patchable parameters may have nearby or integrated jack hardware without forcing every control into a huge generic card.
 
@@ -188,6 +188,8 @@ A module definition explicitly composes shared controls into a face that suits t
 Useful patterns include horizontal control rows, grouped oscillator strips, mixer channels, parameter banks, central hero dials, signal-flow layouts, pad/step matrices, scopes/screens, keyboard performance areas and deliberate scrollable configuration sections.
 
 Controls must never be mechanically stacked merely because that is easiest for a renderer.
+
+`MODULE_INTERFACE_LAYOUT.md` is the canonical layout and usability contract for finished module faces. It defines page inset, centered main-panel composition, functional banks, control-grid behavior, responsive reflow, control-type choice, spacing and the completion gate. No Quarter is the current general composition reference; copy its layout discipline, not its instrument-specific appearance.
 
 ## 10. Performance surfaces
 
@@ -276,7 +278,7 @@ Build one complete reference path:
 1. Module Builder with the minimum useful primitive vocabulary;
 2. one visually approved playable synth authored entirely from those primitives;
 3. one authored four-color theme;
-4. canonical main-style knobs;
+4. canonical shared-library knobs;
 5. real performance keyboard;
 6. real note-on/note-off DSP;
 7. compile/save the result as one finished module;
@@ -291,7 +293,7 @@ Only after that path is beautiful and correct should additional module families 
 
 ## 18. Design review gate
 
-Before calling a module complete, verify it looks intentional and plausibly manufactured, its primary job is obvious, its theme is coherent, it is composed from shared primitives, its primitive bindings correspond to real DSP/control behavior, its controls fit the hand, performance surfaces are usable, knobs retain the integrated-value treatment, no controls overlap, scrolling is deliberate, state is visibly reflected, jacks really patch, output is audible, and save/reload reproduces it correctly.
+Before calling a module complete, verify it looks intentional and plausibly manufactured, its primary job is obvious, its theme is coherent, it is composed from shared primitives, its primitive bindings correspond to real DSP/control behavior, its controls fit the hand, performance surfaces are usable, no controls overlap, scrolling is deliberate, state is visibly reflected, jacks really patch, output is audible, and save/reload reproduces it correctly.
 
 Before calling the Patch Graph complete, verify it feels like a direct freeform board rather than a conventional boxed node editor, modules preserve their authored hardware faces, pan/zoom is fluid, cables remain correctly attached through transforms, and no primitive can be inserted there.
 
