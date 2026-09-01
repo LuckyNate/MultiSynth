@@ -6,276 +6,203 @@ The architectural model is invariant:
 
 **Patch Graph -> modules -> shared control library.**
 
-A finished module is an intentionally composed face made from shared library controls. Module code may arrange, bind and theme those controls. It must not invent a second control system or substitute custom lookalike controls for library primitives.
+A finished module is one intentionally composed face made from shared library controls. Module code arranges, binds and themes those controls. It does not invent another control system.
 
-## 1. The reference composition pattern
+## 1. Phone viewport is the hard constraint
 
-A module face uses this hierarchy:
+The module editor is phone-first. At every supported phone width, the entire module face must fit the viewport width.
+
+**Horizontal overflow is a failed layout.**
+
+This applies to the module shell, every bank, every row, every grid, every screen and every library control. A child may never make its parent wider than the available content width.
+
+Before approving a layout, verify `scrollWidth <= clientWidth` for the page and for each major bank.
+
+## 2. Width arithmetic comes before column count
+
+Never choose a column count first and then hope CSS makes it fit.
+
+For a bank with usable width `W`, horizontal padding `P`, column gap `G`, control minimum useful width `C`, and `N` columns, the layout is valid only when:
+
+`N*C + (N-1)*G <= W - 2P`
+
+If that fails, reduce `N`. Do not allow CSS Grid to widen the module.
+
+`minmax(<fixed minimum>, 1fr)` is forbidden when that fixed minimum can make the grid wider than its parent. For phone grids use `minmax(0,1fr)` and explicitly choose a column count that preserves useful control size.
+
+## 3. Outer composition
+
+Canonical hierarchy:
 
 ```text
 module viewport
   main content inset
     header
     output scope / primary display when applicable
-    module panel
+    module shell
       functional bank
       functional bank
       functional bank
 ```
 
-The outer content has breathing room from the viewport. The module panel is centered and bounded. Functional banks live inside that panel and have their own internal padding.
+The module shell is one centered bounded chassis. Banks are regions inside it.
 
-No control, bank, panel, title, screen or grid should appear visually smashed against a viewport edge or another container edge.
+Required behavior:
 
-## 2. Outer page spacing
+- 8-16 px page inset;
+- shell width `100%` of the available inset content, never wider;
+- `box-sizing:border-box` on shell, banks, rows and grids;
+- `min-width:0` on grid/flex children that must shrink;
+- 10-18 px vertical separation between major regions;
+- bottom clearance for persistent app controls and Android safe area.
 
-Phone-first defaults:
+## 4. Banks are not independent page-width cards
 
-- page/content inset: approximately 8-16 px depending on viewport width;
-- vertical separation between header, scope and module panel: approximately 10-16 px;
-- module panel centered with a useful maximum width on wider screens;
-- bottom padding must account for persistent app controls / safe area;
-- nothing important may rely on the physical screen edge as its margin.
+Prefer one module shell containing its functional banks. A bank must remain completely inside the shell.
 
-The layout should become denser on a narrow phone by reducing gaps and control sizes modestly, not by eliminating padding.
+Bank defaults:
 
-## 3. One main module panel
+- normal width: 12-18 px internal padding;
+- narrow phone: 8-12 px internal padding;
+- 12-20 px between banks;
+- bank heading inside the bank;
+- border/recess/material change may establish grouping.
 
-Prefer one coherent module chassis/panel containing the device's functional regions.
+A bank must never be narrower than its children or allow children to paint outside its border.
 
-Do not make each control group look like a separate unrelated full-size card unless the physical device concept genuinely calls for separate subassemblies.
+## 5. Controls stay inside their cells
 
-The main panel should provide:
+Every library control placed in a grid must obey the grid cell width.
 
-- consistent outer padding;
-- a clear faceplate/chassis boundary;
-- a stable maximum width;
-- intentional internal hierarchy;
-- room for controls to breathe.
+Required wrapper rules:
 
-A module may be taller than the viewport and scroll vertically. Horizontal overflow is normally a layout failure unless the interface explicitly requires a horizontal performance surface.
+- `min-width:0`;
+- `max-width:100%`;
+- `width:100%` only for controls designed to fill a cell, such as pads/buttons/steps;
+- circular knobs/dials use an approved fixed size that is **smaller than the cell**, never wider than it;
+- control faces must not use a hardcoded width larger than their grid cell;
+- labels/readouts must not increase intrinsic grid width.
 
-## 4. Functional banks
+Do not rely on visual overflow being clipped. Fix the geometry.
 
-Controls are grouped by musical job, not by implementation type.
+## 6. Phone grid patterns
 
-Examples:
+These are safe starting patterns, subject to actual width arithmetic.
 
-- transport;
-- tempo/timing;
-- oscillator section;
-- filter section;
-- envelope section;
-- sample parameters;
-- sample pads;
-- sequencer steps;
-- mixer channels;
-- source/library display;
-- modulation;
-- output.
+At approximately 360-430 CSS px viewport width:
 
-A bank uses an internal inset and spacing distinct from the main panel. Related controls stay together. Unrelated controls get visible separation.
+- ordinary large knobs/dials: **2 columns**;
+- compact knobs: **3 columns only if the measured cell comfortably contains them**;
+- transport buttons/switches: **2 columns**;
+- sample/drum pads: **2 columns by default; 4 only when each pad remains a useful touch target and labels fit**;
+- sequencer steps: **4 columns by default; 8 only for genuinely compact step primitives proven to fit**;
+- text-heavy sample/library choices: normally **1 column**.
 
-A useful default bank treatment is:
+Do not preserve desktop column counts on a phone merely because the controls technically render.
 
-- 12-18 px internal padding on normal widths;
-- 8-14 px on narrow phones;
-- 12-24 px separation between banks depending on hierarchy;
-- optional border/recess/material change to make the grouping physically legible.
+## 7. Reflow, do not shrink indefinitely
 
-## 5. Control grids
+Responsive resolution order:
 
-Control grids must be derived from usable touch size and available width.
+1. keep page inset;
+2. keep bank inset;
+3. reduce decorative gaps modestly;
+4. reflow to fewer columns;
+5. use a smaller approved control size if still useful;
+6. grow vertically and scroll.
 
-Do not choose a column count simply to keep everything on one row.
+Never solve width by eliminating margins, overlapping controls, allowing controls to cross bank borders, compressing text into unreadable columns, or shrinking touch targets until they are ornamental.
 
-Rules:
+## 8. Labels are part of geometry
 
-- controls may shrink only within the shared library's useful size range;
-- preserve enough gap that adjacent touch targets do not feel merged;
-- labels must fit without colliding with neighboring labels;
-- values must remain readable;
-- when a row no longer fits, reflow to fewer columns;
-- do not let CSS grid force a bank wider than its panel.
+Labels must fit the same cell as their control.
 
-Typical phone patterns:
+- short hardware labels remain one line when possible;
+- a label may wrap only inside its own cell;
+- sample names may wrap, but must not overlap adjacent pads;
+- long asset names belong in a screen/list row, not under a small pad;
+- a loaded sample pad should show a compact slot identity; full sample metadata belongs in the selected-sample/library area;
+- labels and values may not extend the intrinsic width of a grid track.
 
-- large knobs/dials: 2-3 columns;
-- small knobs: 3 columns, occasionally 4 when genuinely compact;
-- transport buttons/switches: 2-4 columns depending on width;
-- sample/drum pads: commonly 4 columns;
-- 16-step controls: commonly 4 or 8 columns depending on control size;
-- 32-step controls: commonly 8 columns of compact step controls, with spacing preserved.
+## 9. Screens and lists
 
-These are composition patterns, not mandatory counts. Usability wins over keeping an arbitrary count on one line.
+A screen is a shared library control mounted inside a bank. Its face must be `width:100%` of the bank's content area and `max-width:100%`.
 
-## 6. Primary versus secondary controls
+List content inside the screen must use predictable rows:
 
-Every module has a primary musical job. The layout must make that job immediately obvious.
+- one text/content area;
+- fixed-size action controls at the trailing edge;
+- text wraps inside the content area;
+- action controls never overlap text;
+- rows never create horizontal overflow;
+- the screen scrolls internally when appropriate.
 
-Primary controls receive the best space and easiest reach. Secondary configuration controls may be smaller, grouped lower, or placed in a scrollable section.
+A library item with a long title must remain a row, not become a narrow tower of words.
 
-Examples:
+## 10. Primary versus secondary controls
 
-- sampler: pads/sample selection and sequence behavior are primary;
+Layout follows musical use.
+
+- sampler: sample interaction, pads and sequence are primary;
 - drum machine: pads, steps and transport are primary;
 - synth: performance surface and principal tone controls are primary;
-- mixer: channel strips and levels are primary;
-- timing module: timing/rate controls and timing indication are primary.
+- mixer: channels and levels are primary;
+- timing module: rate/timing controls and indication are primary.
 
-Do not let low-priority configuration consume the top of the face while the module's actual performance surface is buried below it.
+Primary controls receive the best space and easiest reach. Secondary configuration may appear lower in the vertical flow.
 
-## 7. Shared controls only
+## 11. Shared controls only
 
-Interactive hardware comes from the shared control library.
+Interactive hardware comes from the shared control library: knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and registered primitives.
 
-That includes knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and other registered primitives.
+Module code selects, binds, arranges and themes those controls. Structural DOM is allowed for shells, banks, headings, rows and layout containers.
 
-Module code is responsible for:
+Module code must not create substitute interactive controls or parallel interaction systems.
 
-- selecting the correct library primitive;
-- binding it to module state;
-- choosing an appropriate approved variant;
-- arranging it on the face;
-- applying the module theme;
-- updating its visual state.
+## 12. Choosing control type
 
-Module code must not:
-
-- redraw a substitute knob/button/switch from arbitrary DOM;
-- create a parallel interaction model;
-- replace a shared control because local CSS is easier;
-- build a generic per-module control framework;
-- reintroduce retired UI systems.
-
-Non-interactive structural DOM is expected for panels, banks, headings, labels, rows and layout containers.
-
-## 8. Choosing the control type
-
-Choose hardware according to intended use.
-
-- knob: set-and-leave parameters with a moderate useful range;
-- dial: wide range, high sensitivity, high resolution, indexed selection or deliberate precision;
+- knob: set-and-leave parameter with moderate useful range;
+- dial: wide range/high sensitivity/high resolution/indexed precision;
 - switch: persistent binary state;
-- momentary button: action that exists while pressed or fires once;
-- pad: direct performance/selection target where area matters;
-- fader: continuous level or position where visible linear relationship matters;
-- ribbon/XY: direct continuous gesture control;
-- screen: information or selection surface that benefits from a bounded display;
-- LED/meter: status/level indication rather than a substitute for text-heavy UI.
+- momentary button: press action;
+- pad: direct performance/selection target;
+- fader: continuous level/position with useful linear relationship;
+- ribbon/XY: gesture control;
+- screen: bounded information/selection surface;
+- LED/meter: status or level indication.
 
-Do not use a control merely because it fits a grid conveniently.
-
-## 9. Labels and values
-
-Labels belong to the physical control composition and should remain predictable.
-
-- one concise label per control;
-- no duplicate headings that repeat the same meaning immediately above and below a control;
-- values use the shared control readout where supported;
-- units are concise and consistent;
-- labels may wrap only where the control type genuinely needs longer names, such as sample pads/library choices;
-- wrapping must not change neighboring control widths unpredictably.
-
-Section headings describe a bank's job, not individual control names.
-
-## 10. Screens and lists
-
-Screens are library controls. Their internal informational/list content may use ordinary structural DOM inside the screen face.
-
-A screen/list should:
-
-- remain inside the module panel width;
-- have its own internal inset;
-- scroll internally when appropriate;
-- avoid forcing the whole module wider;
-- keep action controls aligned and touchable;
-- preserve the visual identity of a mounted display rather than becoming a generic webpage list.
-
-## 11. Responsive behavior
-
-Phone layout is the baseline, not a compressed desktop afterthought.
-
-Responsive changes should happen in this order:
-
-1. reduce outer/page gaps modestly;
-2. reduce bank padding modestly;
-3. reduce inter-control gaps modestly;
-4. use smaller approved control sizes where appropriate;
-5. reflow grids to fewer columns;
-6. allow vertical growth/scroll.
-
-Do not solve narrow width by:
-
-- removing all margins;
-- touching panel borders to the screen edge;
-- overlapping labels;
-- clipping controls;
-- horizontal scrolling of ordinary parameter banks;
-- shrinking touch targets below useful sizes.
-
-## 12. Predictable module skeleton
-
-Unless a module has a strong reason to differ, build its editor in this order:
-
-```text
-header
-scope / primary display
-main module panel
-  primary performance bank
-  primary parameter bank
-  secondary parameter bank(s)
-  sequence / matrix / source bank where applicable
-```
-
-The order follows musical use, not code initialization order.
+Control choice follows use, not whichever primitive happens to fit a row.
 
 ## 13. CSS ownership
 
-Shared control geometry and interaction belong to the shared control library.
+Shared control anatomy, geometry limits and interaction belong to the shared control library.
 
-Module CSS owns:
+Module CSS owns page material, chassis, banks, grid/flow composition, spacing, theme and responsive arrangement.
 
-- page background/material;
-- main panel/chassis;
-- bank composition;
-- grid/flow layout;
-- spacing;
-- theme colors/material treatment;
-- module-specific responsive arrangement.
+Module CSS may size a shared control through supported variables/visual options, but it may not reconstruct the control anatomy.
 
-Module CSS may theme a shared control through supported classes/variables. It should not reconstruct the control's anatomy.
+## 14. Reference principle
 
-## 14. Reference implementation pattern
+No Quarter remains useful as a composition reference for centered content, breathing room, bounded faceplate, internal grouping and responsive reflow. It is **not** a template whose desktop grid counts are copied blindly.
 
-No Quarter is the current reference for general face composition:
+Every new module must run its own width arithmetic against its actual controls and labels.
 
-- page inset;
-- centered bounded main panel;
-- deliberate internal bank padding;
-- useful gaps between controls;
-- responsive column reduction;
-- preserved margins on narrow phones;
-- shared controls placed directly into an intentional physical face.
+## 15. Required narrow-phone review
 
-Copy the composition principles, not the instrument-specific colors or exact grid counts.
+A module is not complete until it is visually reviewed at a narrow phone width and all of these are true:
 
-## 15. Completion gate
+- no horizontal page overflow;
+- shell is fully visible between left/right insets;
+- every bank is fully inside the shell;
+- every control is fully inside its bank;
+- no knob/dial crosses a bank border;
+- no pad/button crosses a bank border;
+- no label overlaps a neighboring cell;
+- long text remains readable;
+- screens/lists remain useful widths;
+- primary controls are easy to reach;
+- touch targets remain useful;
+- vertical scrolling is deliberate;
+- persistent bottom UI does not cover the last usable control.
 
-A module interface is not complete until all of the following are true:
-
-- its primary job is obvious at first glance;
-- every interactive control is a shared library control;
-- controls have useful touch sizes;
-- no controls overlap;
-- no labels collide;
-- no ordinary bank horizontally overflows;
-- the face has visible outer margins on phone;
-- the main panel has consistent inset;
-- banks have consistent internal padding;
-- related controls are visibly grouped;
-- the interface remains usable at the narrow-phone breakpoint;
-- state changes are reflected immediately;
-- the module looks intentionally assembled rather than browser-laid-out.
-
-If any of these fail, fix the composition rather than adding another UI layer.
+If any item fails, the column count or composition is wrong. Fix the layout; do not add another layer.
