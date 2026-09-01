@@ -10,7 +10,7 @@ function graph(){return E.graph()}const key=id=>"module:"+id;
 function defaultPos(id,index){const k=key(id);return positions[k]||(positions[k]={x:500000+(index%4)*330,y:500000+Math.floor(index/4)*260})}
 function colorFor(type){try{return M?.get(type)?.color||C?.getDefinition(type)?.color||"#789"}catch(_){return"#789"}}
 function labelFor(type){try{return M?.get(type)?.displayName||C?.getDefinition(type)?.displayName||type}catch(_){return type}}
-function applyView(){world.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.scale})`;drawWires()}
+function applyView(){world.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.scale})`;MS.NodeLedGrid?.setView?.(view);drawWires()}
 function viewportPoint(x,y){const r=viewport.getBoundingClientRect();return{x:x-r.left,y:y-r.top}}
 function worldPoint(x,y){const p=viewportPoint(x,y);return{x:(p.x-view.x)/view.scale,y:(p.y-view.y)/view.scale}}
 function zoomAt(x,y,next){next=Math.max(MIN_SCALE,Math.min(MAX_SCALE,next));const p=viewportPoint(x,y),wx=(p.x-view.x)/view.scale,wy=(p.y-view.y)/view.scale;view.scale=next;view.x=p.x-wx*next;view.y=p.y-wy*next;applyView();save()}
