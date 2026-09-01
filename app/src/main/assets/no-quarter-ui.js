@@ -1,9 +1,9 @@
 "use strict";
 (function(){
-  const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.RackEngine,A=P.RackAudioGraph,B=P.ModuleBuilderDefinitions,R=window.MultiSynth?.ControlSurfaceRenderer;
+  const q=new URLSearchParams(location.search),instance=q.get("instance"),P=parent.MultiSynth||{},I=P.ModuleIds,E=P.NodeGraphEngine,A=P.NodeAudioGraph,B=P.ModuleBuilderDefinitions,R=window.MultiSynth?.ControlSurfaceRenderer;
   if(!I||!E||!B||!R)return;
-  let rackId="",state={};
-  if(instance)try{for(const r of E.graph().racks||[]){const m=r.modules?.find?.(x=>x.id===instance);if(m){rackId=r.id;state=m.state||{};break}}}catch(_){}
+  let state={};
+  if(instance)try{state=E.getModule?.(instance)?.state||{}}catch(_){}
   const def=B.get(I.NO_QUARTER);if(!def)return;
   const root=document.getElementById("controls");if(!root)return;
   const panel=document.createElement("div");panel.className="nq-panel";
@@ -11,7 +11,7 @@
   const crackleBank=document.createElement("section");crackleBank.className="nq-crackle-bank";crackleBank.innerHTML='<div class="nq-crackle-head"><div class="nq-crackle-title">CRACKLE EVENTS</div><div class="nq-crackle-sub">MASTER VOLUME · EVENT DENSITY</div></div>';
   const crackleGrid=document.createElement("div");crackleGrid.className="nq-crackle-grid";crackleBank.appendChild(crackleGrid);panel.appendChild(crackleBank);root.appendChild(panel);
   const crackleIds=new Set(["crackle","crackleMicro","crackleTick","cracklePop","crackleDust","crackleArc"]);
-  const patch=(key,value)=>{state={...state,[key]:value};if(rackId&&instance)try{E.setModuleState(rackId,instance,{[key]:value});A?.rebuild?.()}catch(e){console.error(e)}};
+  const patch=(key,value)=>{state={...state,[key]:value};if(instance)try{E.setModuleState(instance,{[key]:value});A?.rebuild?.()}catch(e){console.error(e)}};
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const quant=(v,min,step)=>min+Math.round((v-min)/step)*step;
   const paint=(node,d,v)=>{const min=Number(d.value?.min??0),max=Number(d.value?.max??1),pct=(v-min)/(max-min||1),angle=-135+clamp(pct,0,1)*270;const p=node.querySelector(".ms-control-pointer");if(p)p.style.transform=`translateX(-50%) rotate(${angle}deg)`;const out=node.querySelector(".ms-control-value");if(out){const unit=d.meta?.unit||"";out.textContent=(Number.isInteger(Number(d.value?.step))?Math.round(v):Number(v).toFixed(2))+unit}};
