@@ -23,6 +23,7 @@
     [I.BEEN_SERVED]:row(I.BEEN_SERVED,"effect","#d6a04b",["audioInput","audioOutput","noteInput"],[]),
     [I.GARAGE_BAND]:row(I.GARAGE_BAND,"effect","#8b8b8b",["audioInput","audioOutput"],[]),
     [I.MASTER_OF_LEVELS]:row(I.MASTER_OF_LEVELS,"utility","#d0d0d0",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal"}),
+    [I.ALCHEMY_MIXER]:row(I.ALCHEMY_MIXER,"mixer","#9a6734",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal",carrierBehavior:"passthrough"}),
     [I.DENZELS_EQUALIZER]:row(I.DENZELS_EQUALIZER,"effect","#72b9a7",["audioInput","audioOutput"],[]),
     [I.ECHO_CANYON]:row(I.ECHO_CANYON,"effect","#c47b48",["audioInput","audioOutput"],[]),
     [I.CONTROL_FREAK]:row(I.CONTROL_FREAK,"controller","#75b7ff",["noteInput","midi","cvOutput"],["midi"]),
