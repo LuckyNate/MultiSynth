@@ -11,8 +11,8 @@ android {
     val signingAlias = System.getenv("MULTISYNTH_KEY_ALIAS")
     val signingKeyPassword = System.getenv("MULTISYNTH_KEY_PASSWORD")
     val hasCiSigning = listOf(signingStore, signingStorePassword, signingAlias, signingKeyPassword).all { !it.isNullOrBlank() }
-    // Live Wire public-video discovery key is injected by GitHub Actions at build time.
-    val youtubeApiKey = (System.getenv("YOUTUBE_API_KEY") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
+    val freesoundApiKey = (System.getenv("FREESOUND_API_KEY") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
+    val jamendoClientId = (System.getenv("JAMENDO_CLIENT_ID") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
 
     if (hasCiSigning) {
         signingConfigs {
@@ -33,7 +33,8 @@ android {
         val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
         versionCode = ciRun ?: 18
         versionName = if (ciRun != null) "1.${ciRun}" else "1.17"
-        buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
+        buildConfigField("String", "FREESOUND_API_KEY", "\"$freesoundApiKey\"")
+        buildConfigField("String", "JAMENDO_CLIENT_ID", "\"$jamendoClientId\"")
     }
 
     buildTypes {
