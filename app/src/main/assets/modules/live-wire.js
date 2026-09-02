@@ -4,16 +4,15 @@ const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract,I=MS.Module
 if(!C||!I)return;
 const defaults={};
 C.define({
- type:I.LIVE_WIRE,version:"module-builder-7",description:"YOUTUBE PLAYER · PRECISION SEEK · HOLD TO SAMPLE",defaults,
+ type:I.LIVE_WIRE,version:"module-builder-8",description:"FREESOUND + JAMENDO AUDIO PLAYER · 30 RPM PRECISION SEEK · HOLD TO SAMPLE",defaults,
  create(api){
   const ctx=api.context;if(!ctx)return{};
   const out=ctx.createGain();out.gain.value=0;api.setOutput(out);
-  try{N?.setMuted?.(true)}catch(_){}
   return{out};
  },
  setState(){},
- destroy({runtime}){try{N?.stopPlayer?.()}catch(_){}try{N?.stop?.()}catch(_){}try{N?.setMuted?.(true)}catch(_){}try{runtime.user?.out?.disconnect?.()}catch(_){}},
+ destroy({runtime}){try{N?.stop?.()}catch(_){}try{runtime.user?.out?.disconnect?.()}catch(_){}},
  serialize:({state})=>({...state}),restore:({saved})=>({...saved})
 });
-B?.define?.({id:I.LIVE_WIRE,model:"module-builder",version:7,package:{id:I.LIVE_WIRE,version:7,behavior:{audioMode:"youtube-player-recorder",capture:"hold-to-pcm",stateOwnership:"module-builder",destroyStopsTransport:true}},faceplate:{livery:"high-voltage-crt",primary:"#081419",secondary:"#72d7ff",tertiary:"#dff7ff"},defaults,controls:[{id:"source",control:"touchscreen",label:"VIDEO PLAYER",node:"controller.source"},{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",meta:{unit:"s",gesture:"circular-drag",scale:"1 revolution = 2 seconds"},node:"controller.seek"},{id:"pause",control:"button",label:"PAUSE",node:"controller.pause"},{id:"stop",control:"button",label:"STOP",node:"controller.stop"},{id:"record",control:"hold",label:"HOLD TO RECORD",node:"controller.record"}],sources:[{id:"source.youtube",type:"nativeAudio",mode:"record-only"}],actions:[{id:"action.select",type:"selectVideo"},{id:"action.seek",type:"seek"},{id:"action.pause",type:"pause"},{id:"action.stop",type:"stop"},{id:"action.record",type:"savePcm"}],nodes:{connections:[["controller.source","action.select"],["controller.seek","action.seek"],["controller.pause","action.pause"],["controller.stop","action.stop"],["controller.record","action.record"],["source.youtube","action.record"]]}});
+B?.define?.({id:I.LIVE_WIRE,model:"module-builder",version:8,package:{id:I.LIVE_WIRE,version:8,behavior:{audioMode:"freesound-jamendo-player-recorder",capture:"hold-to-pcm",stateOwnership:"module-builder",destroyStopsTransport:true}},faceplate:{livery:"high-voltage-crt",primary:"#081419",secondary:"#72d7ff",tertiary:"#dff7ff"},defaults,controls:[{id:"source",control:"touchscreen",label:"AUDIO SOURCE",node:"controller.source"},{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",meta:{unit:"s",gesture:"circular-drag",scale:"1 revolution = 2 seconds"},node:"controller.seek"},{id:"pause",control:"button",label:"PAUSE",node:"controller.pause"},{id:"stop",control:"button",label:"STOP",node:"controller.stop"},{id:"record",control:"hold",label:"HOLD TO RECORD",node:"controller.record"}],sources:[{id:"source.freesound",type:"networkAudio",mode:"preview"},{id:"source.jamendo",type:"networkAudio",mode:"stream"}],actions:[{id:"action.select",type:"selectAudio"},{id:"action.seek",type:"seek"},{id:"action.pause",type:"pause"},{id:"action.stop",type:"stop"},{id:"action.record",type:"savePcm"}],nodes:{connections:[["controller.source","action.select"],["controller.seek","action.seek"],["controller.pause","action.pause"],["controller.stop","action.stop"],["controller.record","action.record"],["source.freesound","action.record"],["source.jamendo","action.record"]]}});
 })(window);
