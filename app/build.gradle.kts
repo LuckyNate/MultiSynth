@@ -12,7 +12,6 @@ android {
     val signingKeyPassword = System.getenv("MULTISYNTH_KEY_PASSWORD")
     val hasCiSigning = listOf(signingStore, signingStorePassword, signingAlias, signingKeyPassword).all { !it.isNullOrBlank() }
     val freesoundApiKey = (System.getenv("FREESOUND_API_KEY") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
-    val jamendoClientId = (System.getenv("JAMENDO_CLIENT_ID") ?: "").replace("\\", "\\\\").replace("\"", "\\\"")
 
     if (hasCiSigning) {
         signingConfigs {
@@ -34,7 +33,6 @@ android {
         versionCode = ciRun ?: 18
         versionName = if (ciRun != null) "1.${ciRun}" else "1.17"
         buildConfigField("String", "FREESOUND_API_KEY", "\"$freesoundApiKey\"")
-        buildConfigField("String", "JAMENDO_CLIENT_ID", "\"$jamendoClientId\"")
     }
 
     buildTypes {
