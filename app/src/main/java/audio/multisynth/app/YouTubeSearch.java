@@ -47,7 +47,7 @@ final class YouTubeSearch {
         String q = query == null ? "" : query.trim();
         if (random || q.isEmpty()) q = RANDOM_SEEDS[RNG.nextInt(RANDOM_SEEDS.length)];
         String endpoint = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
-                "&videoEmbeddable=true&videoSyndicated=true&maxResults=" + count +
+                "&videoEmbeddable=true&videoSyndicated=true&videoLicense=creativeCommon&maxResults=" + count +
                 "&q=" + URLEncoder.encode(q, StandardCharsets.UTF_8.name()) +
                 "&key=" + URLEncoder.encode(key, StandardCharsets.UTF_8.name());
         HttpURLConnection c = (HttpURLConnection) new URL(endpoint).openConnection();
