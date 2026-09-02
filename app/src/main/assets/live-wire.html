@@ -14,11 +14,11 @@
   <div class="libraryHead"><div><small>FREESOUND MEDIA LIBRARY</small><strong id="playingLabel">—</strong></div><span id="seekReadout">0:00 / 0:00</span></div>
   <audio id="player" preload="auto"></audio>
   <div class="libraryQueue">
-    <button class="libraryRow current" type="button" data-slot="current"><span>NOW</span><strong id="currentTitle">—</strong><small id="currentDuration">—</small></button>
-    <button class="libraryRow" type="button" data-slot="0"><span>01</span><strong id="queueLabel">—</strong><small id="queueDuration">—</small></button>
-    <button class="libraryRow" type="button" data-slot="1"><span>02</span><strong id="backup1">—</strong><small id="backup1Duration">—</small></button>
-    <button class="libraryRow" type="button" data-slot="2"><span>03</span><strong id="backup2">—</strong><small id="backup2Duration">—</small></button>
-    <button class="libraryRow" type="button" data-slot="3"><span>04</span><strong id="backup3">—</strong><small id="backup3Duration">—</small></button>
+    <div class="libraryRow current" role="button" tabindex="0" data-slot="current"><span>NOW</span><strong id="currentTitle">—</strong><small id="currentDuration">—</small></div>
+    <div class="libraryRow" role="button" tabindex="0" data-slot="0"><span>01</span><strong id="queueLabel">—</strong><small id="queueDuration">—</small></div>
+    <div class="libraryRow" role="button" tabindex="0" data-slot="1"><span>02</span><strong id="backup1">—</strong><small id="backup1Duration">—</small></div>
+    <div class="libraryRow" role="button" tabindex="0" data-slot="2"><span>03</span><strong id="backup2">—</strong><small id="backup2Duration">—</small></div>
+    <div class="libraryRow" role="button" tabindex="0" data-slot="3"><span>04</span><strong id="backup3">—</strong><small id="backup3Duration">—</small></div>
   </div>
 </section>
 <form id="searchForm" class="searchStrip" autocomplete="off"><div id="searchFieldHost"></div><div id="searchHost"></div></form>
