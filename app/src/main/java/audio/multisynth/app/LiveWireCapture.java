@@ -130,24 +130,28 @@ final class LiveWireCapture {
             synchronized (bufferLock) {
                 long newest = writeFrame;
                 long oldest = Math.max(0, newest - BUFFER_FRAMES);
-                if (!readHeadValid) {
-                    readFrame = Math.max(oldest, newest - LIVE_LATENCY_FRAMES);
-                    readHeadValid = true;
-                }
-                for (int i = 0; i < out.length; i++) {
-                    if (Math.abs(speed) < 0.02) {
-                        out[i] = 0;
-                        continue;
+                if (newest <= oldest) {
+                    for (int i = 0; i < out.length; i++) out[i] = 0;
+                } else {
+                    if (!readHeadValid) {
+                        readFrame = Math.max(oldest, newest - LIVE_LATENCY_FRAMES);
+                        readHeadValid = true;
                     }
-                    if (readFrame < oldest) readFrame = oldest;
-                    if (readFrame >= newest) readFrame = Math.max(oldest, newest - 1);
-                    long a = (long)Math.floor(readFrame);
-                    long b = Math.min(newest - 1, a + 1);
-                    double frac = readFrame - a;
-                    short sa = mediaBuffer[(int)(a % BUFFER_FRAMES)];
-                    short sb = mediaBuffer[(int)(b % BUFFER_FRAMES)];
-                    out[i] = (short)Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(sa + (sb - sa) * frac)));
-                    readFrame += speed;
+                    for (int i = 0; i < out.length; i++) {
+                        if (Math.abs(speed) < 0.02) {
+                            out[i] = 0;
+                            continue;
+                        }
+                        if (readFrame < oldest) readFrame = oldest;
+                        if (readFrame >= newest) readFrame = Math.max(oldest, newest - 1);
+                        long a = (long)Math.floor(readFrame);
+                        long b = Math.min(newest - 1, a + 1);
+                        double frac = readFrame - a;
+                        short sa = mediaBuffer[(int)(a % BUFFER_FRAMES)];
+                        short sb = mediaBuffer[(int)(b % BUFFER_FRAMES)];
+                        out[i] = (short)Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(sa + (sb - sa) * frac)));
+                        readFrame += speed;
+                    }
                 }
             }
             AudioTrack t = valveTrack;
