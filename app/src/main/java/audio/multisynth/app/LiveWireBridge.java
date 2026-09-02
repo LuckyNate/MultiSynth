@@ -11,14 +11,11 @@ import android.webkit.WebView;
 final class LiveWireBridge {
     private final Activity activity;
     private final WebView webView;
-    private final LiveWirePlayerHost playerHost;
 
     LiveWireBridge(Activity activity, WebView webView) {
         this.activity = activity;
         this.webView = webView;
         LiveWireHub.attach(webView);
-        playerHost = new LiveWirePlayerHost(activity, this);
-        playerHost.mute(true);
     }
 
     @JavascriptInterface public boolean startLiveWire() {
@@ -33,20 +30,12 @@ final class LiveWireBridge {
     }
 
     @JavascriptInterface public void stopLiveWire() { LiveWireProjectionService.stop(activity); }
-    @JavascriptInterface public void youtubeSearch(String query, int requestId, boolean random, int max) { YouTubeSearch.execute(query, requestId, random, max); }
-    @JavascriptInterface public void liveWirePlay(String id) { playerHost.play(id); }
-    @JavascriptInterface public void liveWirePause() { playerHost.pause(); }
-    @JavascriptInterface public void liveWireResume() { playerHost.resume(); }
-    @JavascriptInterface public void liveWireStopPlayer() { playerHost.stop(); }
-    @JavascriptInterface public void liveWireMute(boolean muted) { playerHost.mute(muted); }
-    @JavascriptInterface public void liveWireSeek(double seconds) { playerHost.seek(seconds); }
-    @JavascriptInterface public void liveWirePlayerEvent(String type, String json) { activity.runOnUiThread(() -> webView.evaluateJavascript("window.MultiSynthLiveWire&&window.MultiSynthLiveWire.playerEvent(" + org.json.JSONObject.quote(type) + "," + org.json.JSONObject.quote(json) + ");", null)); }
+    @JavascriptInterface public void audioSourceSearch(String query, int requestId, boolean random, int max) {
+        AudioSourceSearch.execute(query, requestId, random, max);
+    }
 
     void destroy() {
         LiveWireProjectionService.stop(activity);
-        playerHost.stop();
-        playerHost.mute(true);
         LiveWireHub.detach(webView);
-        playerHost.destroy();
     }
 }
