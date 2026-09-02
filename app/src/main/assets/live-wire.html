@@ -11,17 +11,17 @@
 <main class="wire">
 <header class="wireHead"><div class="bolt">ϟ</div><div class="brand"><small>MULTISYNTH SOURCE MODULE</small><h1>LIVE WIRE</h1></div><div id="lamp" class="lamp" aria-label="signal lamp"></div></header>
 <section class="crtControlRow">
-  <section class="crtShell" aria-label="Live Wire source display"><div class="crtBezel"><div class="crtGlass"><audio id="player" preload="auto"></audio><div class="scanlines"></div><div class="crtShade"></div><div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>FREESOUND + JAMENDO</small></div></div></div><div class="crtBadge">LW-5 AUDIO RECEIVER</div></section>
+  <section class="crtShell" aria-label="Live Wire source display"><div class="crtBezel"><div class="crtGlass"><audio id="player" preload="auto"></audio><div class="scanlines"></div><div class="crtShade"></div><div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>FREESOUND</small></div></div></div><div class="crtBadge">LW-5 AUDIO RECEIVER</div></section>
   <div id="recordHost" class="recordHost"></div>
 </section>
 <form id="searchForm" class="searchStrip" autocomplete="off"><div id="searchFieldHost"></div><div id="searchHost"></div></form>
 <section class="seekPanel" aria-label="precision seek"><div class="seekCopy"><small>PRECISION SEEK</small><strong id="seekReadout">0:00 / 0:00</strong><span>30 RPM · 1 REVOLUTION = 2 SECONDS</span></div><div id="seekHost" class="seekHost"></div></section>
 <section id="transportHost" class="switchRow" aria-label="source controls"></section>
 <section class="queuePanel" aria-label="audio queue"><div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div><div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div><div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div><div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div><div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div></section>
-<div id="status" class="status">READY</div><div class="note">FREESOUND PREVIEWS + JAMENDO STREAMS · HOLD RECORD TO SAMPLE</div>
+<div id="status" class="status">READY</div><div class="note">FREESOUND PREVIEWS · HOLD RECORD TO SAMPLE</div>
 </main>
 <script src="control-surface-library.js"></script><script src="control-surface-spec.js"></script><script src="control-surface-renderer.js"></script>
-<script>(()=>{const host=document.getElementById("searchFieldHost");if(!host)return;const input=document.createElement("input");input.id="search";input.type="search";input.inputMode="search";input.enterKeyHint="search";input.placeholder="SEARCH SOUNDS OR MUSIC";input.setAttribute("aria-label","Search Freesound and Jamendo");host.appendChild(input)})();</script>
+<script>(()=>{const host=document.getElementById("searchFieldHost");if(!host)return;const input=document.createElement("input");input.id="search";input.type="search";input.inputMode="search";input.enterKeyHint="search";input.placeholder="SEARCH SOUNDS";input.setAttribute("aria-label","Search Freesound");host.appendChild(input)})();</script>
 <script src="pcm-library.js"></script><script src="native-live-wire.js"></script><script src="live-wire.js"></script>
 </body>
 </html>
