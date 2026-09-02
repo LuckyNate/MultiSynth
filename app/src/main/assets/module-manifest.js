@@ -10,9 +10,9 @@
   const row=(id,category,color,capabilities=[],resources=[],routing={})=>{const ident=I.identityFor(id);if(!ident)throw new Error("Missing module identity: "+id);const caps=Object.freeze(capabilities.slice()),route=routingFor(caps,routing),role=B?.infer(caps,route)||"root",ports=B?.require(role)?.ports?.slice?.()||[],theme=B?.theme?.(ident,color)||Object.freeze({key:ident.themeKey||ident.id,color,decal:null});return Object.freeze({id:ident.id,displayName:ident.displayName,editorUrl:ident.editorUrl,moduleScript:ident.moduleScript,themeKey:theme.key||ident.themeKey||ident.id,theme,decal:theme.decal||null,category,color,capabilities:caps,resources:Object.freeze(resources.slice()),boilerplateRole:role,boilerplatePorts:Object.freeze(ports),routing:route});};
   const M=Object.freeze({
     [I.LIVE_WIRE]:row(I.LIVE_WIRE,"input","#72d7ff",["audioOutput","generator"],["nativeAudio"]),
-    [I.BEAT_RED]:row(I.BEAT_RED,"rhythm","#d64b4b",["audioInput","audioOutput","clockFollower","cvInput"],[],{carrierBehavior:"add"}),
+    [I.BEAT_RED]:row(I.BEAT_RED,"rhythm","#d64b4b",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput"],[],{carrierBehavior:"add"}),
     [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput","midi"],["midi","storage"],{audioRole:"passthrough",carrierBehavior:"passthrough"}),
-    [I.WS]:row(I.WS,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockFollower","cvInput","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
+    [I.WS]:row(I.WS,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockSource","clockFollower","cvInput","cvOutput","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
     [I.TIME_BANDITS]:row(I.TIME_BANDITS,"rhythm","#c89b52",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput"],[],{carrierBehavior:"add"}),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
     [I.SAMPLE_SURGERY]:row(I.SAMPLE_SURGERY,"utility","#7fc9b2",["pcm"],["pcm","storage"]),
@@ -37,8 +37,8 @@
     [I.STINGER]:row(I.STINGER,"instrument","#ffe64a",["audioInput","audioOutput","generator","noteInput","cvInput"],[]),
     [I.NO_QUARTER]:row(I.NO_QUARTER,"instrument","#77a4ff",["audioInput","audioOutput","generator","noteInput","cvInput"],[]),
     [I.RANDRONE]:row(I.RANDRONE,"generator","#9efcff",["audioInput","audioOutput","generator","cvInput","clockFollower"],[]),
-    [I.HOOKWORM]:row(I.HOOKWORM,"looper","#e98232",["audioInput","audioOutput","mic","clockFollower"],["mic","storage"]),
-    [I.TAPEWORM]:row(I.TAPEWORM,"looper","#f58ab3",["audioInput","audioOutput","mic","clockFollower"],["mic","storage"]),
+    [I.HOOKWORM]:row(I.HOOKWORM,"looper","#e98232",["audioInput","audioOutput","mic"],["mic","storage"]),
+    [I.TAPEWORM]:row(I.TAPEWORM,"looper","#f58ab3",["audioInput","audioOutput","mic"],["mic","storage"]),
     [I.TAIL_GATOR]:row(I.TAIL_GATOR,"routing","#5aa66f",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal",carrierBehavior:"passthrough"}),
     [I.BLUETOOTH_OUTPUT]:row(I.BLUETOOTH_OUTPUT,"routing","#6fb7ff",["audioInput","audioOutput","terminalOutput"],["nativeAudio"],{audioRole:"terminal",carrierBehavior:"passthrough"})
   });
