@@ -10,18 +10,24 @@
 <body>
 <main class="wire">
 <header class="wireHead"><div class="bolt">ϟ</div><div class="brand"><small>MULTISYNTH SOURCE MODULE</small><h1>LIVE WIRE</h1></div><div id="lamp" class="lamp" aria-label="signal lamp"></div></header>
-<section class="crtControlRow">
-  <section class="crtShell" aria-label="Live Wire source display"><div class="crtBezel"><div class="crtGlass"><audio id="player" preload="auto"></audio><div class="scanlines"></div><div class="crtShade"></div><div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>FREESOUND</small></div></div></div><div class="crtBadge">LW-5 AUDIO RECEIVER</div></section>
-  <div id="recordHost" class="recordHost"></div>
+<section class="libraryScreen" aria-label="Freesound media library">
+  <div class="libraryHead"><div><small>FREESOUND MEDIA LIBRARY</small><strong id="playingLabel">—</strong></div><span id="seekReadout">0:00 / 0:00</span></div>
+  <audio id="player" preload="auto"></audio>
+  <div class="libraryQueue">
+    <button class="libraryRow current" type="button" data-slot="current"><span>NOW</span><strong id="currentTitle">—</strong><small id="currentDuration">—</small></button>
+    <button class="libraryRow" type="button" data-slot="0"><span>01</span><strong id="queueLabel">—</strong><small id="queueDuration">—</small></button>
+    <button class="libraryRow" type="button" data-slot="1"><span>02</span><strong id="backup1">—</strong><small id="backup1Duration">—</small></button>
+    <button class="libraryRow" type="button" data-slot="2"><span>03</span><strong id="backup2">—</strong><small id="backup2Duration">—</small></button>
+    <button class="libraryRow" type="button" data-slot="3"><span>04</span><strong id="backup3">—</strong><small id="backup3Duration">—</small></button>
+  </div>
 </section>
 <form id="searchForm" class="searchStrip" autocomplete="off"><div id="searchFieldHost"></div><div id="searchHost"></div></form>
-<section class="seekPanel" aria-label="precision seek"><div class="seekCopy"><small>PRECISION SEEK</small><strong id="seekReadout">0:00 / 0:00</strong><span>30 RPM · 1 REVOLUTION = 2 SECONDS</span></div><div id="seekHost" class="seekHost"></div></section>
+<section class="seekPanel" aria-label="precision seek"><div class="seekCopy"><small>PRECISION SEEK</small><span>30 RPM · 1 REVOLUTION = 2 SECONDS</span></div><div id="seekHost" class="seekHost"></div></section>
 <section id="transportHost" class="switchRow" aria-label="source controls"></section>
-<section class="queuePanel" aria-label="audio queue"><div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div><div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div><div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div><div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div><div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div></section>
-<div id="status" class="status">READY</div><div class="note">FREESOUND PREVIEWS · HOLD RECORD TO SAMPLE</div>
+<div id="status" class="status">READY</div><div class="note">FREESOUND PREVIEWS · TAP A QUEUED SOUND TO LOAD IT</div>
 </main>
 <script src="control-surface-library.js"></script><script src="control-surface-spec.js"></script><script src="control-surface-renderer.js"></script>
-<script>(()=>{const host=document.getElementById("searchFieldHost");if(!host)return;const input=document.createElement("input");input.id="search";input.type="search";input.inputMode="search";input.enterKeyHint="search";input.placeholder="SEARCH SOUNDS";input.setAttribute("aria-label","Search Freesound");host.appendChild(input)})();</script>
+<script>(()=>{const host=document.getElementById("searchFieldHost");if(!host)return;const input=document.createElement("input");input.id="search";input.type="search";input.inputMode="search";input.enterKeyHint="search";input.placeholder="SEARCH FREESOUND";input.setAttribute("aria-label","Search Freesound");host.appendChild(input)})();</script>
 <script src="pcm-library.js"></script><script src="native-live-wire.js"></script><script src="live-wire.js"></script>
 </body>
 </html>
