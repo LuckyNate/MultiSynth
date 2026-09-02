@@ -1,36 +1,70 @@
 "use strict";
 (()=>{
-const host=(window.parent&&window.parent!==window)?window.parent:window,MS=window.MultiSynth||{},N=host.MultiSynth?.LiveWireNative||MS.LiveWireNative,L=MS.PCMLibrary,R=window.MultiSynth?.ControlSurfaceRenderer;if(!R)return;
-const $=id=>document.getElementById(id),status=$("status"),lamp=$("lamp"),message=$("crtMessage"),searchForm=$("searchForm"),search=$("search"),recordHost=$("recordHost"),searchHost=$("searchHost"),seekHost=$("seekHost"),transportHost=$("transportHost"),seekReadout=$("seekReadout"),playing=$("playingLabel"),queuedLabel=$("queueLabel"),backup1=$("backup1"),backup2=$("backup2"),backup3=$("backup3");
-let held=false,chunks=[],frames=0,rate=48000,captureReady=false,captureRequest=false,seekDragging=false,seekAngle=0,visualPlayer=null,visualReady=false,preloadPlayer=null,preloadReady=false,preloadedId="",currentId="",currentTitle="",duration=0,current=0,paused=false,queue=[];
-const mount=(p,d,v={})=>R.mount(p,{...d,meta:{...(d.meta||{}),visual:{...(d.meta?.visual||{}),...v}}}),button=(p,id,label,fn)=>{const n=mount(p,{id,control:"button",label},{variant:"rect"});n.onclick=fn;return n};
-function setStatus(t){status.textContent=String(t||"");lamp.classList.toggle("live",/PLAYING|RECORD|CAPTURE|SEEK/.test(String(t||"")))}
+const host=(window.parent&&window.parent!==window)?window.parent:window;
+const MS=window.MultiSynth||{};
+const N=host.MultiSynth?.LiveWireNative||MS.LiveWireNative;
+const L=MS.PCMLibrary;
+const R=MS.ControlSurfaceRenderer;
+if(!R)return;
+
+const $=id=>document.getElementById(id);
+const status=$("status"),lamp=$("lamp"),message=$("crtMessage"),searchForm=$("searchForm"),search=$("search"),recordHost=$("recordHost"),searchHost=$("searchHost"),seekHost=$("seekHost"),transportHost=$("transportHost"),seekReadout=$("seekReadout"),playing=$("playingLabel"),queuedLabel=$("queueLabel"),backup1=$("backup1"),backup2=$("backup2"),backup3=$("backup3");
+
+let player=null,playerReady=false,currentId="",currentTitle="",current=0,duration=0,paused=false,queue=[];
+let seekDragging=false,seekAngle=0,seekTarget=0,seekWasPlaying=false;
+let captureReady=false,captureRequest=false,recording=false,chunks=[],frames=0,sampleRate=48000;
+
+const mount=(parent,desc,visual={})=>R.mount(parent,{...desc,meta:{...(desc.meta||{}),visual:{...(desc.meta?.visual||{}),...visual}}});
+const button=(parent,id,label,fn)=>{const node=mount(parent,{id,control:"button",label},{variant:"rect"});node.onclick=fn;return node};
+const go=button(searchHost,"search-go","GO",()=>searchForm?.requestSubmit?.());
+const pause=button(transportHost,"pause","PAUSE",pauseResume);
+const stop=button(transportHost,"stop","STOP",stopPlayer);
+const record=button(recordHost,"record","HOLD TO RECORD",()=>{});record.onclick=null;
+const seek=mount(seekHost,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",valueReadout:false});
+const platter=seek.querySelector(".ms-control-face")||seek;
+
+function setStatus(text){text=String(text||"");status.textContent=text;lamp.classList.toggle("live",/PLAYING|RECORDING|CAPTURE/.test(text))}
 function fmt(sec){sec=Math.max(0,Math.floor(Number(sec)||0));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
-const go=button(searchHost,"search-go","GO",()=>searchForm?.requestSubmit?.()),pause=button(transportHost,"pause","PAUSE",pauseResume),stop=button(transportHost,"stop","STOP",stopPlayer),record=button(recordHost,"record","HOLD TO RECORD",()=>{});record.onclick=null;
-const seek=mount(seekHost,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",valueReadout:false}),platter=seek.querySelector(".ms-control-face");
-try{N?.setMuted?.(true)}catch(_){}
+function clampTime(sec){const max=duration>0?duration:Number.MAX_SAFE_INTEGER;return Math.max(0,Math.min(max,Number(sec)||0))}
 function paintQueue(){const q=queue.slice(0,4);if(queuedLabel)queuedLabel.textContent=q[0]?.title||"—";if(backup1)backup1.textContent=q[1]?.title||"—";if(backup2)backup2.textContent=q[2]?.title||"—";if(backup3)backup3.textContent=q[3]?.title||"—"}
-function paint(){message.classList.toggle("hidden",!!currentId);if(playing)playing.textContent=currentTitle||currentId||"—";if(platter)platter.style.transform=`rotate(${current*180}deg)`;seekReadout.textContent=`30 RPM · ${fmt(current)} / ${fmt(duration)}`;pause.querySelector(".ms-control-label").textContent=paused?"RESUME":"PAUSE";paintQueue()}
-function createPreloader(){if(preloadPlayer||!window.YT?.Player)return;const node=document.createElement("div");node.id="liveWirePreloadPlayer";node.style.cssText="position:fixed;left:-9999px;top:-9999px;width:2px;height:2px;overflow:hidden;pointer-events:none";document.body.appendChild(node);preloadPlayer=new YT.Player(node,{width:"2",height:"2",playerVars:{playsinline:1,controls:0,rel:0,fs:0,autoplay:0,enablejsapi:1},events:{onReady(){preloadReady=true;preloadNext()},onStateChange(e){if(e.data===YT.PlayerState.PLAYING){try{preloadPlayer.pauseVideo()}catch(_){}}}})}
-function preloadNext(){const next=queue[0];if(!preloadReady||!preloadPlayer||!next||next.id===preloadedId)return;preloadedId=next.id;try{preloadPlayer.mute();preloadPlayer.loadVideoById(next.id);setTimeout(()=>{try{preloadPlayer.pauseVideo()}catch(_){}},180)}catch(_){}}
-async function refillQueue(seed=""){if(queue.length>=4)return;try{const items=await N.search(seed,{random:!seed,max:10});const seen=new Set([currentId,...queue.map(x=>x.id)]);for(const x of items||[]){const id=String(x?.id||"");if(!/^[A-Za-z0-9_-]{11}$/.test(id)||seen.has(id))continue;seen.add(id);queue.push({id,title:String(x.title||id)});if(queue.length>=4)break}paint();preloadNext()}catch(_){}}
-function setQueue(items){const seen=new Set([currentId]);queue=[];for(const x of items||[]){const id=String(x?.id||"");if(!/^[A-Za-z0-9_-]{11}$/.test(id)||seen.has(id))continue;seen.add(id);queue.push({id,title:String(x.title||id)});if(queue.length>=4)break}preloadedId="";paint();preloadNext()}
-function loadVideo(id,title){currentId=String(id||"");currentTitle=String(title||currentId);current=0;duration=0;paused=false;paint();if(!visualReady||!visualPlayer)return;try{visualPlayer.loadVideoById(currentId);visualPlayer.unMute();visualPlayer.playVideo()}catch(_){}}
-async function advanceQueue(){let next=queue.shift();preloadedId="";if(!next){await refillQueue("");next=queue.shift()}if(!next)return;loadVideo(next.id,next.title);paint();refillQueue("");preloadNext()}
-window.onYouTubeIframeAPIReady=()=>{visualPlayer=new YT.Player("player",{width:"100%",height:"100%",playerVars:{playsinline:1,controls:0,rel:0,fs:0,autoplay:1,enablejsapi:1},events:{onReady(){visualReady=true;try{visualPlayer.unMute()}catch(_){}createPreloader();if(currentId)loadVideo(currentId,currentTitle)},onStateChange(e){paused=e.data===YT.PlayerState.PAUSED;if(e.data===YT.PlayerState.PLAYING&&!seekDragging)setStatus("PLAYING · "+(currentTitle||"YOUTUBE"));if(e.data===YT.PlayerState.ENDED)advanceQueue();paint()},onError(){setStatus("VIDEO PLAYBACK FAILED")}}});createPreloader()};
-setInterval(()=>{if(!visualReady||!visualPlayer||seekDragging)return;try{current=Number(visualPlayer.getCurrentTime())||0;duration=Number(visualPlayer.getDuration())||0;paint()}catch(_){}},250);
-function extractVideoId(text){text=String(text||"").trim();if(/^[A-Za-z0-9_-]{11}$/.test(text))return text;try{const u=new URL(text);if(u.hostname==="youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;if(/(^|\.)youtube\.com$/.test(u.hostname)||/(^|\.)youtube-nocookie\.com$/.test(u.hostname)){if(u.searchParams.get("v"))return u.searchParams.get("v");const p=u.pathname.split("/").filter(Boolean),i=p.findIndex(x=>x==="embed"||x==="shorts"||x==="live");if(i>=0&&p[i+1])return p[i+1]}}catch(_){}return null}
-async function chooseVideo(q){q=String(q||"").trim();const direct=extractVideoId(q);if(direct){loadVideo(direct,"YOUTUBE · "+direct);setQueue([]);refillQueue("");return}const random=!q;setStatus(random?"TUNING RANDOM SOURCE…":"SEARCHING · "+q.toUpperCase());try{const items=await N.search(q,{random,max:10});const first=items?.[0];if(!first){setStatus(random?"NO RANDOM SOURCE AVAILABLE":"NO PLAYABLE RESULTS");return}loadVideo(first.id,first.title);setQueue(items.slice(1));if(queue.length<4)refillQueue(random?"":q)}catch(e){setStatus(String(e?.message||(random?"RANDOM SEARCH FAILED":"SEARCH FAILED")).toUpperCase())}}
+function paint(){message?.classList.toggle("hidden",!!currentId);if(playing)playing.textContent=currentTitle||currentId||"—";const t=seekDragging?seekTarget:current;if(platter)platter.style.transform=`rotate(${t*180}deg)`;if(seekReadout)seekReadout.textContent=`${fmt(t)} / ${fmt(duration)}`;const label=pause.querySelector(".ms-control-label");if(label)label.textContent=paused?"RESUME":"PAUSE";paintQueue()}
+
+function extractVideoId(text){text=String(text||"").trim();if(/^[A-Za-z0-9_-]{11}$/.test(text))return text;try{const u=new URL(text);if(u.hostname==="youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;if(/(^|\.)youtube\.com$/.test(u.hostname)||/(^|\.)youtube-nocookie\.com$/.test(u.hostname)){const v=u.searchParams.get("v");if(v)return v;const p=u.pathname.split("/").filter(Boolean);const i=p.findIndex(x=>x==="embed"||x==="shorts"||x==="live");if(i>=0&&p[i+1])return p[i+1]}}catch(_){}return null}
+function loadVideo(id,title){currentId=String(id||"");currentTitle=String(title||currentId);current=0;duration=0;paused=false;paint();if(!playerReady||!player||!currentId)return;try{player.loadVideoById(currentId);player.unMute();player.playVideo()}catch(_){setStatus("PLAYBACK FAILED")}}
+async function refillQueue(seed=""){if(queue.length>=4||!N?.search)return;try{const items=await N.search(seed,{random:!seed,max:12});const seen=new Set([currentId,...queue.map(x=>x.id)]);for(const x of items||[]){const id=String(x?.id||"");if(!/^[A-Za-z0-9_-]{11}$/.test(id)||seen.has(id))continue;seen.add(id);queue.push({id,title:String(x.title||id)});if(queue.length>=4)break}paint()}catch(_){}}
+function setQueue(items){queue=[];const seen=new Set([currentId]);for(const x of items||[]){const id=String(x?.id||"");if(!/^[A-Za-z0-9_-]{11}$/.test(id)||seen.has(id))continue;seen.add(id);queue.push({id,title:String(x.title||id)});if(queue.length>=4)break}paint()}
+async function nextVideo(){let next=queue.shift();if(!next){await refillQueue("");next=queue.shift()}if(!next){setStatus("NO SOURCE AVAILABLE");return}loadVideo(next.id,next.title);refillQueue("")}
+async function chooseVideo(query){const q=String(query||"").trim();const direct=extractVideoId(q);if(direct){loadVideo(direct,"YOUTUBE · "+direct);setQueue([]);refillQueue("");return}setStatus(q?"SEARCHING · "+q.toUpperCase():"TUNING RANDOM SOURCE…");try{const items=await N.search(q,{random:!q,max:12});const first=items?.[0];if(!first){setStatus("NO PLAYABLE RESULTS");return}loadVideo(first.id,first.title);setQueue(items.slice(1));if(queue.length<4)refillQueue(q)}catch(e){setStatus(String(e?.message||"SEARCH FAILED").toUpperCase())}}
+
+window.onYouTubeIframeAPIReady=()=>{
+ player=new YT.Player("player",{width:"100%",height:"100%",playerVars:{playsinline:1,controls:0,rel:0,fs:0,autoplay:1,enablejsapi:1},events:{
+  onReady(){playerReady=true;if(currentId)loadVideo(currentId,currentTitle)},
+  onStateChange(e){paused=e.data===YT.PlayerState.PAUSED;if(e.data===YT.PlayerState.PLAYING)setStatus("PLAYING · "+(currentTitle||"YOUTUBE"));if(e.data===YT.PlayerState.ENDED)nextVideo();paint()},
+  onError(){setStatus("VIDEO PLAYBACK FAILED")}
+ }});
+};
+
+setInterval(()=>{if(!playerReady||!player||seekDragging)return;try{current=Number(player.getCurrentTime())||0;duration=Number(player.getDuration())||0;paint()}catch(_){}},200);
+
 searchForm?.addEventListener("submit",e=>{e.preventDefault();const q=String(search?.value||"").trim();search?.blur?.();try{host.MultiSynthDismissKeyboard?.()}catch(_){}chooseVideo(q)});
-function pauseResume(){if(!visualPlayer)return;try{if(paused){visualPlayer.playVideo();paused=false}else{visualPlayer.pauseVideo();paused=true}paint()}catch(_){}}
-function stopPlayer(){try{visualPlayer?.stopVideo?.()}catch(_){}current=0;paused=false;seekDragging=false;paint();setStatus("STOPPED")}
-function pointerAngle(e){const r=(platter||seek).getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;return Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI}
-function applySeekDelta(a){let d=a-seekAngle;if(d>180)d-=360;else if(d<-180)d+=360;seekAngle=a;const max=duration>0?duration:Number.MAX_SAFE_INTEGER;current=Math.max(0,Math.min(max,current+d/180));paint()}
-seek.oncontextmenu=e=>e.preventDefault();seek.onpointerdown=e=>{e.preventDefault();seekDragging=true;seekAngle=pointerAngle(e);seek.setPointerCapture?.(e.pointerId);try{visualPlayer?.pauseVideo?.()}catch(_){}setStatus("PRECISION SEEK · 30 RPM");paint()};seek.onpointermove=e=>{if(!seekDragging)return;e.preventDefault();applySeekDelta(pointerAngle(e))};const endSeek=e=>{if(!seekDragging)return;seekDragging=false;try{seek.releasePointerCapture?.(e.pointerId)}catch(_){}try{visualPlayer?.seekTo?.(current,true);visualPlayer?.unMute?.();visualPlayer?.playVideo?.()}catch(_){}setStatus("PLAYING · "+(currentTitle||"YOUTUBE"));paint()};seek.onpointerup=endSeek;seek.onpointercancel=endSeek;
-function requestCapture(){if(captureReady)return true;if(captureRequest)return false;if(!N?.available?.()){setStatus("ANDROID PLAYBACK CAPTURE UNAVAILABLE");return false}if(!N.start()){setStatus("CAPTURE PERMISSION REQUIRED");return false}captureRequest=true;setStatus("ALLOW RECORDING ONCE · THEN HOLD AGAIN");return false}
-N?.onChunk?.((pcm,sr)=>{captureReady=true;captureRequest=false;rate=sr||rate;if(held){chunks.push(pcm.slice());frames+=pcm.length}});window.addEventListener("multisynth-live-wire-status",e=>{const t=String(e.detail||"");if(/CAPTURE LIVE/.test(t)){captureReady=true;captureRequest=false;setStatus("RECORD READY · HOLD TO RECORD");return}if(/FAILED|STOPPED/.test(t)){captureReady=false;captureRequest=false}setStatus(t)});
-function recordStart(e){e.preventDefault();if(held)return;if(!captureReady){requestCapture();return}held=true;chunks=[];frames=0;record.dataset.active="1";record.querySelector(".ms-control-label").textContent="RECORDING — RELEASE";record.setPointerCapture?.(e.pointerId);setStatus("RECORDING SAMPLE")}
-async function recordStop(e){e?.preventDefault?.();if(!held)return;held=false;record.dataset.active="0";record.querySelector(".ms-control-label").textContent="HOLD TO RECORD";if(!frames){setStatus("NO AUDIO CAPTURED");return}const pcm=new Float32Array(frames);let at=0;for(const c of chunks){pcm.set(c,at);at+=c.length}chunks=[];frames=0;try{const rec=await L.saveCapture({pcm,sampleRate:rate},{name:(currentTitle||"LIVE WIRE").slice(0,64),source:"live-wire",tags:["youtube","live-wire"]});setStatus("SAVED SAMPLE · "+rec.duration.toFixed(2)+" SEC")}catch(_){setStatus("SAMPLE SAVE FAILED")}}
+function pauseResume(){if(!playerReady||!player)return;try{if(paused){player.playVideo();paused=false}else{player.pauseVideo();paused=true}paint()}catch(_){} }
+function stopPlayer(){try{player?.stopVideo?.()}catch(_){}current=0;paused=false;seekDragging=false;paint();setStatus("STOPPED")}
+
+function pointerAngle(e){const r=platter.getBoundingClientRect();return Math.atan2(e.clientY-(r.top+r.height/2),e.clientX-(r.left+r.width/2))*180/Math.PI}
+function deltaAngle(now,prev){let d=now-prev;if(d>180)d-=360;else if(d<-180)d+=360;return d}
+seek.oncontextmenu=e=>e.preventDefault();
+seek.onpointerdown=e=>{if(!playerReady||!player)return;e.preventDefault();seekDragging=true;seekAngle=pointerAngle(e);seekTarget=current;seekWasPlaying=!paused;seek.setPointerCapture?.(e.pointerId);try{player.pauseVideo()}catch(_){}paint()};
+seek.onpointermove=e=>{if(!seekDragging)return;e.preventDefault();const a=pointerAngle(e);const d=deltaAngle(a,seekAngle);seekAngle=a;seekTarget=clampTime(seekTarget+d/180);paint()};
+function finishSeek(e){if(!seekDragging)return;seekDragging=false;try{seek.releasePointerCapture?.(e.pointerId)}catch(_){}current=clampTime(seekTarget);try{player?.seekTo?.(current,true);if(seekWasPlaying)player?.playVideo?.()}catch(_){}paused=!seekWasPlaying;paint();setStatus(seekWasPlaying?"PLAYING · "+(currentTitle||"YOUTUBE"):"PAUSED")}
+seek.onpointerup=finishSeek;seek.onpointercancel=finishSeek;seek.onlostpointercapture=finishSeek;
+
+function requestCapture(){if(captureReady)return true;if(captureRequest)return false;if(!N?.available?.()){setStatus("ANDROID PLAYBACK CAPTURE UNAVAILABLE");return false}captureRequest=true;const started=N.start();if(!started){captureRequest=false;setStatus("CAPTURE PERMISSION REQUIRED");return false}setStatus("ALLOW RECORDING · THEN HOLD AGAIN");return false}
+N?.onChunk?.((pcm,sr)=>{captureReady=true;captureRequest=false;sampleRate=sr||sampleRate;if(recording){chunks.push(pcm.slice());frames+=pcm.length}});
+window.addEventListener("multisynth-live-wire-status",e=>{const t=String(e.detail||"");if(/CAPTURE LIVE/.test(t)){captureReady=true;captureRequest=false;setStatus("RECORD READY");return}if(/FAILED|STOPPED|CAPTURE OFF/.test(t)){captureReady=false;captureRequest=false}setStatus(t)});
+function recordStart(e){e.preventDefault();if(recording)return;if(!captureReady){requestCapture();return}recording=true;chunks=[];frames=0;record.dataset.active="1";const label=record.querySelector(".ms-control-label");if(label)label.textContent="RECORDING — RELEASE";record.setPointerCapture?.(e.pointerId);setStatus("RECORDING SAMPLE")}
+async function recordStop(e){e?.preventDefault?.();if(!recording)return;recording=false;record.dataset.active="0";const label=record.querySelector(".ms-control-label");if(label)label.textContent="HOLD TO RECORD";if(!frames){setStatus("NO AUDIO CAPTURED");return}const pcm=new Float32Array(frames);let at=0;for(const c of chunks){pcm.set(c,at);at+=c.length}chunks=[];frames=0;try{const rec=await L.saveCapture({pcm,sampleRate},{name:(currentTitle||"LIVE WIRE").slice(0,64),source:"live-wire",tags:["youtube","live-wire"]});setStatus("SAVED SAMPLE · "+rec.duration.toFixed(2)+" SEC")}catch(_){setStatus("SAMPLE SAVE FAILED")}}
 record.onpointerdown=recordStart;record.onpointerup=recordStop;record.onpointercancel=recordStop;record.onlostpointercapture=recordStop;
-paint();chooseVideo("");window.addEventListener("pagehide",()=>{try{visualPlayer?.stopVideo?.();preloadPlayer?.stopVideo?.();N?.stopPlayer?.()}catch(_){}});
+
+paint();chooseVideo("");
+window.addEventListener("pagehide",()=>{try{player?.stopVideo?.();N?.stopPlayer?.();N?.stop?.()}catch(_){}});
 })();
