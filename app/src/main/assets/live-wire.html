@@ -14,7 +14,7 @@
   <section class="crtShell" aria-label="Live Wire CRT"><div class="crtBezel"><div class="crtGlass"><div id="player"></div><div class="scanlines"></div><div class="crtShade"></div><div id="crtMessage" class="crtMessage">LIVE WIRE<br><small>SEARCH OR RANDOM</small></div></div></div><div class="crtBadge">LW-5 VIDEO RECEIVER</div></section>
   <div id="recordHost" class="recordHost"></div>
 </section>
-<form id="searchForm" class="searchStrip" autocomplete="off"><input id="search" type="search" inputmode="search" enterkeyhint="search" placeholder="SEARCH YOUTUBE OR PASTE URL" aria-label="Search YouTube"><div id="searchHost"></div></form>
+<form id="searchForm" class="searchStrip" autocomplete="off"><div id="searchFieldHost"></div><div id="searchHost"></div></form>
 <section class="seekPanel" aria-label="precision seek"><div class="seekCopy"><small>PRECISION SEEK</small><strong id="seekReadout">0:00 / 0:00</strong><span>TURN THROUGH FULL VIDEO RANGE · RELEASE TO RESUME</span></div><div id="seekHost" class="seekHost"></div></section>
 <section id="transportHost" class="switchRow" aria-label="source controls"></section>
 <section class="queuePanel" aria-label="video queue"><div class="queueCell current"><small>PLAYING</small><strong id="playingLabel">—</strong></div><div class="queueCell"><small>QUEUED</small><strong id="queueLabel">—</strong></div><div class="queueCell backup"><small>BACKUP 1</small><strong id="backup1">—</strong></div><div class="queueCell backup"><small>BACKUP 2</small><strong id="backup2">—</strong></div><div class="queueCell backup"><small>BACKUP 3</small><strong id="backup3">—</strong></div></section>
@@ -22,6 +22,7 @@
 </main>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script src="control-surface-library.js"></script><script src="control-surface-spec.js"></script><script src="control-surface-renderer.js"></script>
+<script>(()=>{const host=document.getElementById("searchFieldHost");if(!host)return;const input=document.createElement("input");input.id="search";input.type="search";input.inputMode="search";input.enterKeyHint="search";input.placeholder="SEARCH YOUTUBE OR PASTE URL";input.setAttribute("aria-label","Search YouTube");host.appendChild(input)})();</script>
 <script src="pcm-library.js"></script><script src="native-live-wire.js"></script><script src="live-wire.js"></script>
 </body>
 </html>
