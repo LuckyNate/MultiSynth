@@ -19,9 +19,12 @@ import java.util.Random;
 
 final class YouTubeSearch {
     private static final String[] RANDOM_SEEDS = {
-            "sound", "music", "live", "demo", "field recording", "nature", "instrument", "radio",
-            "street", "archive", "performance", "noise", "rhythm", "voice", "ambient", "session",
-            "documentary", "tutorial", "jam", "drums", "synth", "guitar", "piano", "found sound"
+            "free to use sound effects", "royalty free sound effects", "free sound effects", "weird sound effects",
+            "strange noises sound effect", "weird noises free to use", "foley sound effects", "found sound recording",
+            "field recording sound effects", "ambient sound effects free to use", "experimental sound effects",
+            "industrial sound effects", "mechanical sound effects", "electronic sound effects", "synth sound effects",
+            "glitch sound effects", "drone sound effects", "noise sound effects", "nature sound effects",
+            "creature sound effects", "space sound effects", "science fiction sound effects", "public domain sound effects"
     };
     private static final Random RNG = new Random();
 
@@ -47,7 +50,7 @@ final class YouTubeSearch {
         String q = query == null ? "" : query.trim();
         if (random || q.isEmpty()) q = RANDOM_SEEDS[RNG.nextInt(RANDOM_SEEDS.length)];
         String endpoint = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video" +
-                "&videoEmbeddable=true&videoSyndicated=true&videoLicense=creativeCommon&maxResults=" + count +
+                "&videoEmbeddable=true&videoSyndicated=true&maxResults=" + count +
                 "&q=" + URLEncoder.encode(q, StandardCharsets.UTF_8.name()) +
                 "&key=" + URLEncoder.encode(key, StandardCharsets.UTF_8.name());
         HttpURLConnection c = (HttpURLConnection) new URL(endpoint).openConnection();
