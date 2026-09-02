@@ -34,7 +34,7 @@ final class AudioSourceSearch {
                     LiveWireHub.searchResult(requestId, out.toString());
                 } catch (Exception ignored) { LiveWireHub.searchResult(requestId, "{\"error\":\"SOURCE SEARCH FAILED\"}"); }
             }
-        }, "LiveWireAudioSearch").start();
+        }, "LiveWireFreesoundSearch").start();
     }
 
     private static String run(String query, boolean random, int max) throws Exception {
@@ -42,35 +42,13 @@ final class AudioSourceSearch {
         String q = query == null ? "" : query.trim();
         if (random || q.isEmpty()) q = RANDOM_SEEDS[RNG.nextInt(RANDOM_SEEDS.length)];
 
-        List<JSONObject> freesound = new ArrayList<>();
-        List<JSONObject> jamendo = new ArrayList<>();
         String freeKey = BuildConfig.FREESOUND_API_KEY == null ? "" : BuildConfig.FREESOUND_API_KEY.trim();
-        String jamendoId = BuildConfig.JAMENDO_CLIENT_ID == null ? "" : BuildConfig.JAMENDO_CLIENT_ID.trim();
-        StringBuilder errors = new StringBuilder();
+        if (freeKey.isEmpty()) throw new IllegalStateException("FREESOUND KEY NOT CONFIGURED");
 
-        if (!freeKey.isEmpty()) {
-            try { freesound.addAll(searchFreesound(q, count, freeKey)); }
-            catch (Exception e) { errors.append("FREESOUND: ").append(message(e)); }
-        }
-        if (!jamendoId.isEmpty()) {
-            try { jamendo.addAll(searchJamendo(q, count, jamendoId)); }
-            catch (Exception e) { if (errors.length() > 0) errors.append(" · "); errors.append("JAMENDO: ").append(message(e)); }
-        }
-        if (freeKey.isEmpty() && jamendoId.isEmpty()) throw new IllegalStateException("FREESOUND AND JAMENDO KEYS NOT CONFIGURED");
-
-        List<JSONObject> merged = new ArrayList<>();
-        int i = 0;
-        while (merged.size() < count && (i < freesound.size() || i < jamendo.size())) {
-            if (i < freesound.size()) merged.add(freesound.get(i));
-            if (merged.size() >= count) break;
-            if (i < jamendo.size()) merged.add(jamendo.get(i));
-            i++;
-        }
-        if (random) Collections.shuffle(merged, RNG);
-        if (merged.isEmpty() && errors.length() > 0) throw new IllegalStateException(errors.toString());
-
+        List<JSONObject> results = searchFreesound(q, count, freeKey);
+        if (random) Collections.shuffle(results, RNG);
         JSONArray items = new JSONArray();
-        for (JSONObject item : merged) items.put(item);
+        for (JSONObject item : results) items.put(item);
         JSONObject out = new JSONObject();
         out.put("items", items);
         return out.toString();
@@ -102,34 +80,6 @@ final class AudioSourceSearch {
         return out;
     }
 
-    private static List<JSONObject> searchJamendo(String q, int max, String clientId) throws Exception {
-        String endpoint = "https://api.jamendo.com/v3.0/tracks/?client_id=" + enc(clientId) +
-                "&format=json&limit=" + max +
-                "&audioformat=mp32&search=" + enc(q);
-        JSONObject root = getJson(endpoint);
-        JSONObject headers = root.optJSONObject("headers");
-        if (headers != null && !"success".equalsIgnoreCase(headers.optString("status", "success")))
-            throw new IllegalStateException(headers.optString("error_message", "JAMENDO SEARCH FAILED"));
-        JSONArray results = root.optJSONArray("results");
-        List<JSONObject> out = new ArrayList<>();
-        if (results == null) return out;
-        for (int i = 0; i < results.length(); i++) {
-            JSONObject r = results.optJSONObject(i); if (r == null) continue;
-            String url = r.optString("audio", ""); if (url.isEmpty()) continue;
-            String artist = r.optString("artist_name", "");
-            String name = r.optString("name", "Jamendo");
-            JSONObject item = new JSONObject();
-            item.put("id", "jamendo:" + r.optString("id"));
-            item.put("title", artist.isEmpty() ? name : artist + " · " + name);
-            item.put("url", url);
-            item.put("provider", "JAMENDO");
-            item.put("license", r.optString("license_ccurl", ""));
-            item.put("duration", r.optDouble("duration", 0));
-            out.add(item);
-        }
-        return out;
-    }
-
     private static JSONObject getJson(String endpoint) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(endpoint).openConnection();
         c.setConnectTimeout(7000); c.setReadTimeout(10000); c.setRequestMethod("GET"); c.setRequestProperty("Accept", "application/json");
@@ -140,7 +90,6 @@ final class AudioSourceSearch {
     }
 
     private static String enc(String s) throws Exception { return URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8.name()); }
-    private static String message(Exception e) { return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(); }
     private static String read(InputStream in) throws Exception {
         if (in == null) return "";
         StringBuilder s = new StringBuilder();
