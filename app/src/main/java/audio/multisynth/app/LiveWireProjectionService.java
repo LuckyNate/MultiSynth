@@ -17,13 +17,16 @@ public final class LiveWireProjectionService extends Service {
     static final String ACTION_START = "audio.multisynth.livewire.START";
     static final String ACTION_STOP = "audio.multisynth.livewire.STOP";
     static final String ACTION_VALVE = "audio.multisynth.livewire.VALVE";
+    static final String ACTION_RATE = "audio.multisynth.livewire.RATE";
     static final String EXTRA_RESULT_CODE = "resultCode";
     static final String EXTRA_RESULT_DATA = "resultData";
     static final String EXTRA_VALVE = "valve";
+    static final String EXTRA_RATE = "rate";
     private static final String CHANNEL = "live-wire-capture";
     private static final int NOTIFICATION_ID = 4701;
     private static volatile boolean active;
     private static volatile boolean desiredValve;
+    private static volatile double desiredRate = 1.0;
 
     private final LiveWireCapture capture = new LiveWireCapture();
 
@@ -39,6 +42,13 @@ public final class LiveWireProjectionService extends Service {
         desiredValve = open;
         if (!active) return;
         try { context.startService(new Intent(context, LiveWireProjectionService.class).setAction(ACTION_VALVE).putExtra(EXTRA_VALVE, open)); }
+        catch (Exception ignored) {}
+    }
+
+    static void setRate(Context context, double rate) {
+        desiredRate = rate;
+        if (!active) return;
+        try { context.startService(new Intent(context, LiveWireProjectionService.class).setAction(ACTION_RATE).putExtra(EXTRA_RATE, rate)); }
         catch (Exception ignored) {}
     }
 
@@ -62,6 +72,11 @@ public final class LiveWireProjectionService extends Service {
             capture.setValve(desiredValve);
             return START_NOT_STICKY;
         }
+        if (ACTION_RATE.equals(action)) {
+            desiredRate = intent.getDoubleExtra(EXTRA_RATE, 1.0);
+            capture.setTransportRate(desiredRate);
+            return START_NOT_STICKY;
+        }
         if (!ACTION_START.equals(action)) return START_NOT_STICKY;
 
         startProjectionForeground();
@@ -79,6 +94,7 @@ public final class LiveWireProjectionService extends Service {
             MediaProjectionManager manager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
             MediaProjection projection = manager.getMediaProjection(resultCode, resultData);
             active = capture.start(this, projection);
+            capture.setTransportRate(desiredRate);
             capture.setValve(desiredValve);
             if (!active) stopSelf();
         } catch (Exception e) {
