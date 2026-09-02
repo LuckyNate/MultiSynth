@@ -7,7 +7,7 @@
   const px=n=>`${Number(n)}px`;
   const TYPES=freeze({
     [C.KNOB]:freeze({variant:"cap",size:64,touch:76,travel:270,startAngle:-135,endAngle:135,ticks:11,pointer:"line",labelGap:8,valueReadout:true}),
-    [C.DIAL]:freeze({variant:"rotary",size:72,touch:82,travel:300,startAngle:-150,endAngle:150,ticks:12,pointer:"wedge",labelGap:8,valueReadout:true}),
+    [C.DIAL]:freeze({variant:"rotary",size:128,touch:140,travel:300,startAngle:-150,endAngle:150,ticks:12,pointer:"wedge",labelGap:8,valueReadout:true}),
     [C.TURNTABLE]:freeze({variant:"platter",size:128,touch:140,travel:360,startAngle:0,endAngle:360,ticks:0,pointer:"none",labelGap:8,valueReadout:true}),
     [C.FADER]:freeze({variant:"vertical",width:46,height:160,touchWidth:62,touchHeight:174,trackWidth:8,thumbWidth:38,thumbHeight:22,labelGap:8,valueReadout:true}),
     [C.RIBBON]:freeze({variant:"horizontal",width:220,height:44,touchWidth:220,touchHeight:56,corner:12,labelGap:8,valueReadout:true}),
