@@ -11,6 +11,8 @@ const api={
  available(){const b=bridge();return !!b&&typeof b.startLiveWire==="function"},
  start(){const b=bridge();return b&&typeof b.startLiveWire==="function"?!!b.startLiveWire():false},
  stop(){const b=bridge();if(b&&typeof b.stopLiveWire==="function")b.stopLiveWire()},
+ setValve(open){bridge()?.liveWireValve?.(!!open)},
+ setTransportRate(rate){bridge()?.liveWireTransportRate?.(Number(rate)||0)},
  play(id){const b=bridge();if(b&&typeof b.liveWirePlay==="function")b.liveWirePlay(String(id||""))},
  pause(){bridge()?.liveWirePause?.()},resume(){bridge()?.liveWireResume?.()},
  stopPlayer(){bridge()?.liveWireStopPlayer?.();playerState={...playerState,state:-1,current:0};api.emit()},
