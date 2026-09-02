@@ -12,13 +12,24 @@ import android.os.Process;
 final class LiveWireCapture {
     static final int SAMPLE_RATE = 48000;
     private static final int CHUNK_FRAMES = 1024;
+    private static final int BUFFER_SECONDS = 120;
+    private static final int BUFFER_FRAMES = SAMPLE_RATE * BUFFER_SECONDS;
+    private static final int LIVE_LATENCY_FRAMES = CHUNK_FRAMES * 3;
+
+    private final Object bufferLock = new Object();
+    private final short[] mediaBuffer = new short[BUFFER_FRAMES];
 
     private AudioRecord record;
     private AudioTrack valveTrack;
     private MediaProjection projection;
-    private Thread thread;
+    private Thread captureThread;
+    private Thread playbackThread;
     private volatile boolean running;
     private volatile boolean valve;
+    private volatile double transportRate = 1.0;
+    private long writeFrame;
+    private double readFrame;
+    private boolean readHeadValid;
 
     synchronized boolean start(Context context, MediaProjection mediaProjection) {
         if (running) return true;
@@ -69,10 +80,18 @@ final class LiveWireCapture {
                     .build();
             valveTrack.play();
 
+            synchronized (bufferLock) {
+                writeFrame = 0;
+                readFrame = 0;
+                readHeadValid = false;
+            }
+            transportRate = 1.0;
             record.startRecording();
             running = true;
-            thread = new Thread(this::loop, "LiveWireCapture");
-            thread.start();
+            captureThread = new Thread(this::captureLoop, "LiveWireCapture");
+            playbackThread = new Thread(this::playbackLoop, "LiveWireMediaBuffer");
+            captureThread.start();
+            playbackThread.start();
             LiveWireHub.status("PLAYBACK CAPTURE LIVE");
             return true;
         } catch (Exception e) {
@@ -82,7 +101,7 @@ final class LiveWireCapture {
         }
     }
 
-    private void loop() {
+    private void captureLoop() {
         short[] pcm = new short[CHUNK_FRAMES];
         while (running) {
             AudioRecord r = record;
@@ -91,26 +110,89 @@ final class LiveWireCapture {
             try { n = r.read(pcm, 0, pcm.length, AudioRecord.READ_BLOCKING); }
             catch (Exception e) { break; }
             if (n <= 0) continue;
-            if (valve) {
-                AudioTrack t = valveTrack;
-                if (t != null) try { t.write(pcm, 0, n, AudioTrack.WRITE_NON_BLOCKING); } catch (Exception ignored) {}
+            synchronized (bufferLock) {
+                for (int i = 0; i < n; i++) mediaBuffer[(int)((writeFrame + i) % BUFFER_FRAMES)] = pcm[i];
+                writeFrame += n;
             }
             LiveWireHub.pcm(pcm, n, SAMPLE_RATE);
         }
         if (running) LiveWireHub.status("PLAYBACK CAPTURE STOPPED");
     }
 
-    void setValve(boolean open) { valve = open; }
+    private void playbackLoop() {
+        short[] out = new short[CHUNK_FRAMES];
+        while (running) {
+            if (!valve) {
+                try { Thread.sleep(8); } catch (InterruptedException ignored) {}
+                continue;
+            }
+            final double speed = transportRate;
+            synchronized (bufferLock) {
+                long newest = writeFrame;
+                long oldest = Math.max(0, newest - BUFFER_FRAMES);
+                if (!readHeadValid) {
+                    readFrame = Math.max(oldest, newest - LIVE_LATENCY_FRAMES);
+                    readHeadValid = true;
+                }
+                for (int i = 0; i < out.length; i++) {
+                    if (Math.abs(speed) < 0.02) {
+                        out[i] = 0;
+                        continue;
+                    }
+                    if (readFrame < oldest) readFrame = oldest;
+                    if (readFrame >= newest) readFrame = Math.max(oldest, newest - 1);
+                    long a = (long)Math.floor(readFrame);
+                    long b = Math.min(newest - 1, a + 1);
+                    double frac = readFrame - a;
+                    short sa = mediaBuffer[(int)(a % BUFFER_FRAMES)];
+                    short sb = mediaBuffer[(int)(b % BUFFER_FRAMES)];
+                    out[i] = (short)Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(sa + (sb - sa) * frac)));
+                    readFrame += speed;
+                }
+            }
+            AudioTrack t = valveTrack;
+            if (t != null) {
+                try { t.write(out, 0, out.length, AudioTrack.WRITE_BLOCKING); }
+                catch (Exception ignored) {}
+            }
+        }
+    }
+
+    void setValve(boolean open) {
+        synchronized (bufferLock) {
+            if (open && !valve) {
+                long oldest = Math.max(0, writeFrame - BUFFER_FRAMES);
+                readFrame = Math.max(oldest, writeFrame - LIVE_LATENCY_FRAMES);
+                readHeadValid = true;
+            }
+        }
+        valve = open;
+    }
+
+    void setTransportRate(double rate) {
+        if (!Double.isFinite(rate)) rate = 0.0;
+        transportRate = Math.max(-8.0, Math.min(8.0, rate));
+    }
+
     boolean isRunning() { return running; }
 
     synchronized void stop() {
         running = false;
+        valve = false;
         AudioRecord r = record; record = null;
         AudioTrack t = valveTrack; valveTrack = null;
         MediaProjection p = projection; projection = null;
         if (r != null) { try { r.stop(); } catch (Exception ignored) {} try { r.release(); } catch (Exception ignored) {} }
         if (t != null) { try { t.pause(); } catch (Exception ignored) {} try { t.flush(); } catch (Exception ignored) {} try { t.release(); } catch (Exception ignored) {} }
         if (p != null) try { p.stop(); } catch (Exception ignored) {}
-        thread = null;
+        Thread c = captureThread; captureThread = null;
+        Thread o = playbackThread; playbackThread = null;
+        if (c != null) c.interrupt();
+        if (o != null) o.interrupt();
+        synchronized (bufferLock) {
+            writeFrame = 0;
+            readFrame = 0;
+            readHeadValid = false;
+        }
     }
 }
