@@ -148,6 +148,14 @@ The canonical knob uses the shared control library construction:
 
 Patchable parameters may have nearby or integrated jack hardware without forcing every control into a huge generic card.
 
+### Live-control audio rule
+
+Live controls update canonical module state and the existing DSP runtime. They must **never** call `NodeAudioGraph.rebuild()` from knob, dial, fader, ribbon, pad/step-drag, or other continuous performance/control movement.
+
+An audio-graph rebuild is structural-only: module insertion/removal, routing/topology changes, or another operation that actually changes graph structure. Rebuilding during live control movement tears down/reconnects audio while the user is playing and causes audible crackling.
+
+This rule applies to shared editors and module-specific editors alike. A module that needs a parameter change to affect sound must apply that state to its existing runtime rather than using graph reconstruction as a parameter-update mechanism.
+
 ## 8. Module definition
 
 A module definition owns:
