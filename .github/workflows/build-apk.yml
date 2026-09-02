@@ -88,7 +88,8 @@ jobs:
 
       - run: gradle assembleDebug --stacktrace
         env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          FREESOUND_API_KEY: ${{ secrets.FREESOUND_API_KEY }}
+          JAMENDO_CLIENT_ID: ${{ secrets.JAMENDO_CLIENT_ID }}
       - name: Rename APK with build number
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MultiSynth-build-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v6
