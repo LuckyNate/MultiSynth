@@ -46,7 +46,7 @@
     function clearKeyLights(){bed.querySelectorAll('.ms-pk-key[data-ribbon="1"]').forEach(k=>k.dataset.ribbon="0")}
     function lineForMidi(midi){const x=bedXForMidi(midi);pitchLine.style.left=clamp(x,0,pitchRibbon.scrollWidth||pitchRibbon.offsetWidth)+"px";pitchRibbon.style.setProperty("--pk-touch-x",`${x}px`);pitchRibbon.dataset.active="1"}
     function retune(anchor,target){return audio.retuneNote?.(anchor,target)||0}
-    function bendTarget(base){return clamp(base+state.expression*BEND_RANGE,MIDI_MIN,MIDI_MAX)}
+    function bendTarget(base){return clamp(base-state.expression*BEND_RANGE,MIDI_MIN,MIDI_MAX)}
     function applyBend(){for(const h of held.values())retune(h.midi,bendTarget(h.midi));if(ribbonVoice)retune(ribbonVoice.anchor,bendTarget(ribbonVoice.pitch))}
     function on(pid,key){if(!key)return;const midi=Number(key.dataset.note);if(midi<MIDI_MIN||midi>MIDI_MAX)return;noteOn(state,pid,midi);held.set(pid,{midi,key});key.dataset.active="1";lineForMidi(midi);try{audio.resume?.();audio.noteOn(midi,state.velocity);if(state.expression)retune(midi,bendTarget(midi))}catch(e){console.error("Performance keyboard noteOn",e)}}
     function move(pid,key){const h=held.get(pid);if(!h||!key)return;const next=Number(key.dataset.note);if(next<MIDI_MIN||next>MIDI_MAX||next===h.midi)return;try{audio.noteOff(h.midi)}catch(_){}h.key.dataset.active="0";const result=moveTouch(state,pid,next),midi=result.on;held.set(pid,{midi,key});key.dataset.active="1";lineForMidi(midi);try{audio.noteOn(midi,state.velocity);if(state.expression)retune(midi,bendTarget(midi))}catch(e){console.error("Performance keyboard noteOn",e)}}
