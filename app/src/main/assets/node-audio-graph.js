@@ -1,16 +1,20 @@
 "use strict";
 (function(global){
 const MS=global.MultiSynth=global.MultiSynth||{},E=()=>MS.NodeGraphEngine,C=()=>MS.ModuleContract,M=()=>MS.ModuleManifest,I=()=>MS.ModuleIds;
-let ctx=null,collector=null,master=null,limiter=null,masterAnalyser=null,started=false,queued=false;let links=[];const ribbonBaseFrequency=new WeakMap();
+let ctx=null,collector=null,master=null,limiter=null,masterAnalyser=null,started=false,queued=false;const links=new Map(),collectorLinks=new Map(),routeFlags=new Map(),ribbonBaseFrequency=new WeakMap();
 function ensureContext(){if(ctx)return ctx;const A=global.AudioContext||global.webkitAudioContext;if(!A)throw new Error("Web Audio unavailable");ctx=new A({latencyHint:"interactive"});collector=ctx.createGain();master=ctx.createGain();master.gain.value=1;limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-3;limiter.ratio.value=20;masterAnalyser=ctx.createAnalyser();masterAnalyser.fftSize=1024;collector.connect(master);master.connect(limiter);limiter.connect(masterAnalyser);limiter.connect(ctx.destination);return ctx}
 function caps(m){try{return M()?.get?.(m.type)?.capabilities||[]}catch(_){return[]}}
 function has(m,cap){return caps(m).includes(cap)}
 function runtime(m){try{return C().getRuntime(m.id)}catch(_){return E().createModuleRuntime(m.id,{audioContext:ensureContext(),native:null,node:{hasUpstream:false,hasDownstream:false}})}}
-function clearLinks(){for(const[a,b]of links)try{a.disconnect(b)}catch(_){}links=[]}
-function link(a,b){if(!a||!b)return;try{a.connect(b);links.push([a,b])}catch(e){console.error("Node audio link",e)}}
-function rebuildNow(){queued=false;ensureContext();clearLinks();const g=E().graph(),by=new Map(g.modules.map(m=>[m.id,m])),incoming=new Set(),outgoing=new Set();for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier")continue;incoming.add(b.id);outgoing.add(a.id)}for(const m of g.modules){const rt=runtime(m);if(rt?.node){rt.node.hasUpstream=incoming.has(m.id);rt.node.hasDownstream=outgoing.has(m.id)}try{C().update(m.id,{})}catch(_){}}
-for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to),ma=by.get(a?.id),mb=by.get(b?.id);if(!ma||!mb||a.signal!=="carrier"||b.signal!=="carrier")continue;const ra=runtime(ma),rb=runtime(mb),target=b.index!=null?rb?.user?.input?.(b.index):rb?.input;link(ra?.output,target)}for(const m of g.modules)if(m.type===I()?.ALCHEMY_MIXER){const rt=runtime(m);if(rt?.output)link(rt.output,collector)}}
-function rebuild(){if(queued)return;queued=true;queueMicrotask(rebuildNow)}
+function connectRecord(map,key,a,b){if(!a||!b||map.has(key))return;try{a.connect(b);map.set(key,{a,b})}catch(e){console.error("Node audio link",e)}}
+function disconnectRecord(map,key){const rec=map.get(key);if(!rec)return;try{rec.a.disconnect(rec.b)}catch(_){}map.delete(key)}
+function syncNow(){queued=false;ensureContext();const g=E().graph(),by=new Map(g.modules.map(m=>[m.id,m])),incoming=new Set(),outgoing=new Set(),desired=new Map();for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier")continue;const ma=by.get(a.id),mb=by.get(b.id);if(!ma||!mb)continue;incoming.add(b.id);outgoing.add(a.id);desired.set(e.id,{edge:e,a,b,ma,mb})}
+for(const key of [...links.keys()])if(!desired.has(key))disconnectRecord(links,key);
+for(const [key,d] of desired){if(links.has(key))continue;const ra=runtime(d.ma),rb=runtime(d.mb),target=d.b.index!=null?rb?.user?.input?.(d.b.index):rb?.input;connectRecord(links,key,ra?.output,target)}
+for(const m of g.modules){const rt=runtime(m),nextIn=incoming.has(m.id),nextOut=outgoing.has(m.id),prev=routeFlags.get(m.id);if(rt?.node){rt.node.hasUpstream=nextIn;rt.node.hasDownstream=nextOut}if(!prev||prev.in!==nextIn||prev.out!==nextOut){routeFlags.set(m.id,{in:nextIn,out:nextOut});try{C().update(m.id,{})}catch(_){}}}
+for(const id of [...routeFlags.keys()])if(!by.has(id))routeFlags.delete(id);
+const desiredMixers=new Set(g.modules.filter(m=>m.type===I()?.ALCHEMY_MIXER).map(m=>m.id));for(const id of [...collectorLinks.keys()])if(!desiredMixers.has(id))disconnectRecord(collectorLinks,id);for(const id of desiredMixers){if(collectorLinks.has(id))continue;const m=by.get(id),rt=m?runtime(m):null;connectRecord(collectorLinks,id,rt?.output,collector)}}
+function rebuild(){if(queued)return;queued=true;queueMicrotask(syncNow)}
 function start(){ensureContext();if(!started){E().on("graph-changed",rebuild);started=true}rebuild();return api}
 function resume(){ensureContext();return ctx.state==="suspended"?ctx.resume():Promise.resolve()}
 function eachNote(fn){for(const m of E().graph().modules)if(m.enabled!==false&&has(m,"noteInput")){runtime(m);try{fn(m)}catch(e){console.error(e)}}}
