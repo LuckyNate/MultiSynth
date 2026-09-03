@@ -12,8 +12,9 @@ const mount=(parent,desc,visual={})=>R.mount(parent,{...desc,meta:{...(desc.meta
 const button=(parent,id,label,fn)=>{const node=mount(parent,{id,control:"button",label},{variant:"rect"});node.onclick=fn;return node};
 button(searchHost,"search-go","GO",()=>searchForm?.requestSubmit?.());
 const pause=button(transportHost,"pause","PAUSE",pauseResume),copy=button(transportHost,"copy","COPY TO SAMPLE",copyToSample),record=button(transportHost,"record","HOLD TO RECORD",()=>{});record.onclick=null;
-const seek=mount(seekHost,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",size:112,touch:124,valueReadout:false}),platter=seek.querySelector(".ms-control-face")||seek;
-const triggerPad=mount(seekHost,{id:"trigger",control:"pad",label:"TRIGGER"},{variant:"round",valueReadout:false});
+const platterSlot=document.createElement("div"),triggerSlot=document.createElement("div");platterSlot.className="seekPlatterSlot";triggerSlot.className="seekTriggerSlot";seekHost.append(platterSlot,triggerSlot);
+const seek=mount(platterSlot,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",size:112,touch:124,valueReadout:false}),platter=seek.querySelector(".ms-control-face")||seek;
+const triggerPad=mount(triggerSlot,{id:"trigger",control:"pad",label:"TRIGGER"},{variant:"round",valueReadout:false});
 triggerPad.onclick=triggerSelected;
 function setStatus(text){text=String(text||"");status.textContent=text;lamp.classList.toggle("live",/PLAYING|RECORDING|CAPTURE|COPYING/.test(text))}
 function fmt(sec){sec=Math.max(0,Math.floor(Number(sec)||0));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
