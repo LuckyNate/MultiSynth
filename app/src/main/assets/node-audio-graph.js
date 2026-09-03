@@ -6,14 +6,14 @@ function ensureContext(){if(ctx)return ctx;const A=global.AudioContext||global.w
 function caps(m){try{return M()?.get?.(m.type)?.capabilities||[]}catch(_){return[]}}
 function has(m,cap){return caps(m).includes(cap)}
 function runtime(m){try{return C().getRuntime(m.id)}catch(_){return E().createModuleRuntime(m.id,{audioContext:ensureContext(),native:null,node:{hasUpstream:false,hasDownstream:false}})}}
-function connectRecord(map,key,a,b){if(!a||!b||map.has(key))return;try{a.connect(b);map.set(key,{a,b})}catch(e){console.error("Node audio link",e)}}
+function connectRecord(map,key,a,b,signature=""){if(!a||!b||map.has(key))return;try{a.connect(b);map.set(key,{a,b,signature})}catch(e){console.error("Node audio link",e)}}
 function disconnectRecord(map,key){const rec=map.get(key);if(!rec)return;try{rec.a.disconnect(rec.b)}catch(_){}map.delete(key)}
-function syncNow(){queued=false;ensureContext();const g=E().graph(),by=new Map(g.modules.map(m=>[m.id,m])),incoming=new Set(),outgoing=new Set(),desired=new Map();for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier")continue;const ma=by.get(a.id),mb=by.get(b.id);if(!ma||!mb)continue;incoming.add(b.id);outgoing.add(a.id);desired.set(e.id,{edge:e,a,b,ma,mb})}
-for(const key of [...links.keys()])if(!desired.has(key))disconnectRecord(links,key);
-for(const [key,d] of desired){if(links.has(key))continue;const ra=runtime(d.ma),rb=runtime(d.mb),target=d.b.index!=null?rb?.user?.input?.(d.b.index):rb?.input;connectRecord(links,key,ra?.output,target)}
+function syncNow(){queued=false;ensureContext();const g=E().graph(),by=new Map(g.modules.map(m=>[m.id,m])),incoming=new Set(),outgoing=new Set(),desired=new Map();for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier")continue;const ma=by.get(a.id),mb=by.get(b.id);if(!ma||!mb)continue;incoming.add(b.id);outgoing.add(a.id);desired.set(e.id,{edge:e,a,b,ma,mb,signature:`${e.from}>${e.to}`})}
+for(const key of [...links.keys()]){const d=desired.get(key),rec=links.get(key);if(!d||rec?.signature!==d.signature)disconnectRecord(links,key)}
+for(const [key,d] of desired){if(links.has(key))continue;const ra=runtime(d.ma),rb=runtime(d.mb),target=d.b.index!=null?rb?.user?.input?.(d.b.index):rb?.input;connectRecord(links,key,ra?.output,target,d.signature)}
 for(const m of g.modules){const rt=runtime(m),nextIn=incoming.has(m.id),nextOut=outgoing.has(m.id),prev=routeFlags.get(m.id);if(rt?.node){rt.node.hasUpstream=nextIn;rt.node.hasDownstream=nextOut}if(!prev||prev.in!==nextIn||prev.out!==nextOut){routeFlags.set(m.id,{in:nextIn,out:nextOut});try{C().update(m.id,{})}catch(_){}}}
 for(const id of [...routeFlags.keys()])if(!by.has(id))routeFlags.delete(id);
-const desiredMixers=new Set(g.modules.filter(m=>m.type===I()?.ALCHEMY_MIXER).map(m=>m.id));for(const id of [...collectorLinks.keys()])if(!desiredMixers.has(id))disconnectRecord(collectorLinks,id);for(const id of desiredMixers){if(collectorLinks.has(id))continue;const m=by.get(id),rt=m?runtime(m):null;connectRecord(collectorLinks,id,rt?.output,collector)}}
+const desiredMixers=new Set(g.modules.filter(m=>m.type===I()?.ALCHEMY_MIXER).map(m=>m.id));for(const id of [...collectorLinks.keys()])if(!desiredMixers.has(id))disconnectRecord(collectorLinks,id);for(const id of desiredMixers){if(collectorLinks.has(id))continue;const m=by.get(id),rt=m?runtime(m):null;connectRecord(collectorLinks,id,rt?.output,collector,id)}}
 function rebuild(){if(queued)return;queued=true;queueMicrotask(syncNow)}
 function start(){ensureContext();if(!started){E().on("graph-changed",rebuild);started=true}rebuild();return api}
 function resume(){ensureContext();return ctx.state==="suspended"?ctx.resume():Promise.resolve()}
