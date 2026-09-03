@@ -13,7 +13,7 @@ const button=(parent,id,label,fn)=>{const node=mount(parent,{id,control:"button"
 button(searchHost,"search-go","GO",()=>searchForm?.requestSubmit?.());
 const pause=button(transportHost,"pause","PAUSE",pauseResume),copy=button(transportHost,"copy","COPY TO SAMPLE",copyToSample),record=button(transportHost,"record","HOLD TO RECORD",()=>{});record.onclick=null;
 const platterSlot=document.createElement("div"),triggerSlot=document.createElement("div");platterSlot.className="seekPlatterSlot";triggerSlot.className="seekTriggerSlot";seekHost.append(platterSlot,triggerSlot);
-const seek=mount(platterSlot,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",size:220,touch:228,valueReadout:false}),platter=seek.querySelector(".ms-control-face")||seek;
+const seek=mount(platterSlot,{id:"seek",control:"turntable",label:"PRECISION SEEK · 30 RPM",value:{default:0,min:0,max:1,step:.001}},{variant:"platter",size:240,touch:248,valueReadout:false}),platter=seek.querySelector(".ms-control-face")||seek;
 const triggerPad=mount(triggerSlot,{id:"trigger",control:"pad",label:"TRIGGER"},{variant:"round",valueReadout:false});
 triggerPad.onclick=triggerSelected;
 function setStatus(text){text=String(text||"");status.textContent=text;lamp.classList.toggle("live",/PLAYING|RECORDING|CAPTURE|COPYING/.test(text))}
