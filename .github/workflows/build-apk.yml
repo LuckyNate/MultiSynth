@@ -93,6 +93,9 @@ jobs:
           print("Rearranger smoke passed")
           PY
 
+      - name: Shared rotary smoke
+        run: node tools/shared-rotary-smoke.mjs
+
       - name: Shared control CSS contract
         run: node scripts/audit-shared-control-ownership.mjs
 
