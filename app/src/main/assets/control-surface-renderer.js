@@ -8,20 +8,23 @@
   function applyVars(node,vars){for(const [k,v] of Object.entries(vars||{}))node.style.setProperty(k,v)}
   function shell(d,visual){const root=el("div",`ms-control ms-${d.control} ms-${d.control}--${visual.variant}`);root.dataset.control=d.control;if(d.id)root.dataset.controlId=d.id;if(d.state)root.dataset.stateKey=d.state;root.dataset.variant=visual.variant;applyVars(root,SPEC.cssVars(d.control,visual));const face=el("div","ms-control-face");root.appendChild(face);if(d.label){if(d.control===C.BUTTON){const l=el("div","ms-control-label ms-control-face-label",d.label);l.style.cssText="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;white-space:normal;text-align:center;pointer-events:none";face.appendChild(l)}else{const l=el("div","ms-control-label",d.label);root.appendChild(l)}}if(visual.valueReadout&&d.value){const value=el("output","ms-control-value",String(d.value.default??d.value.value??""));root.appendChild(value)}return{root,face}}
   function isCircular(d,visual){return d.control===C.KNOB||d.control===C.DIAL||d.control===C.TURNTABLE||d.control===C.JACK||(d.control===C.LED&&visual.variant==="round")||(d.control===C.PAD&&visual.variant==="round")||(d.control===C.BUTTON&&(visual.variant==="round"||visual.variant==="arcade"))}
+  function circularDiameter(visual){const s=Number(visual.size),w=Number(visual.width),h=Number(visual.height);if(Number.isFinite(s)&&s>0)return s;const values=[w,h].filter(v=>Number.isFinite(v)&&v>0);return values.length?Math.min(...values):null}
   function installCircularFit(root,face,d,visual){
     if(!isCircular(d,visual))return;
-    const w=Number(visual.width),h=Number(visual.height),s=Number(visual.size);
-    const nominal=Number.isFinite(s)&&s>0?s:Math.min(Number.isFinite(w)&&w>0?w:Infinity,Number.isFinite(h)&&h>0?h:Infinity);
-    function sync(){
-      const parent=root.parentElement,pr=parent?.getBoundingClientRect?.(),rr=root.getBoundingClientRect?.();
-      const aw=Number(pr?.width)||Number(rr?.width)||nominal,ah=Number(pr?.height)||Number(rr?.height)||nominal;
-      let diameter=Math.min(nominal,aw,ah);if(!Number.isFinite(diameter)||diameter<=0)diameter=nominal;if(!Number.isFinite(diameter)||diameter<=0)return;
-      if(Number.isFinite(s)&&s>0)root.style.setProperty("--ms-size",`${diameter}px`);else{root.style.setProperty("--ms-width",`${diameter}px`);root.style.setProperty("--ms-height",`${diameter}px`)}
-      face.style.width=`${diameter}px`;face.style.height=`${diameter}px`;face.style.maxWidth="100%";face.style.aspectRatio="1 / 1";
-    }
-    sync();
-    if(global.ResizeObserver){const ro=new ResizeObserver(()=>sync());if(root.parentElement)ro.observe(root.parentElement);ro.observe(root)}else requestAnimationFrame(sync);
+    const diameter=circularDiameter(visual);if(!diameter)return;
+    root.style.width=`${diameter}px`;
+    root.style.maxWidth="100%";
+    if(Number.isFinite(Number(visual.size))&&Number(visual.size)>0)root.style.setProperty("--ms-size",`${diameter}px`);
+    else{root.style.setProperty("--ms-width",`${diameter}px`);root.style.setProperty("--ms-height",`${diameter}px`)}
+    face.style.width="100%";
+    face.style.height="auto";
+    face.style.aspectRatio="1 / 1";
+    face.style.maxWidth="100%";
+    face.style.flex="0 0 auto";
   }
+  function rotaryAngle(d,visual,value){const n=Number(value),min=Number(d.value?.min),max=Number(d.value?.max),start=Number(visual.startAngle),end=Number(visual.endAngle);if(!Number.isFinite(n)||!Number.isFinite(min)||!Number.isFinite(max)||max===min||!Number.isFinite(start)||!Number.isFinite(end))return null;const t=Math.max(0,Math.min(1,(n-min)/(max-min)));return start+(end-start)*t}
+  function paintValue(root,value,display=value){const d=root.__msDescriptor,visual=root.__msVisual;if(!d||!visual)return root;const out=root.querySelector?.(".ms-control-value");if(out&&display!==undefined)out.textContent=String(display);if(d.control===C.KNOB||d.control===C.DIAL){const angle=rotaryAngle(d,visual,value);if(angle!=null){root.dataset.value=String(value);root.style.setProperty("--ms-angle",`${angle}deg`);const pointer=root.querySelector?.(".ms-control-pointer");if(pointer)pointer.style.transform=`translateX(-50%) rotate(${angle}deg)`}}return root}
+  function installValueVisual(root,d,visual){root.__msDescriptor=d;root.__msVisual=visual;if(d.control!==C.KNOB&&d.control!==C.DIAL)return;const initial=d.value?.value??d.value?.default;if(initial!=null)paintValue(root,initial);const out=root.querySelector?.(".ms-control-value");if(!out||!global.MutationObserver)return;new MutationObserver(()=>{const n=Number(out.textContent);if(Number.isFinite(n))paintValue(root,n,out.textContent)}).observe(out,{childList:true,characterData:true,subtree:true})}
   function installScrollableScreen(root,face){
     face.classList.add("ms-scroll-face");
     face.style.paddingRight="44px";
@@ -51,11 +54,12 @@
     case C.JACK:{face.appendChild(el("span","ms-jack-ring"));face.appendChild(el("span","ms-jack-hole"));break}
     case C.DECAL:{const img=el("img","ms-decal-image");const src=d.meta?.src;if(src)img.src=String(src);img.alt=d.meta?.alt?String(d.meta.alt):"";img.draggable=false;face.appendChild(img);break}
   }return root}
-  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})}),parts=shell(d,visual);decorate(d,parts);installCircularFit(parts.root,parts.face,d,visual);return parts.root}
+  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})}),parts=shell(d,visual);decorate(d,parts);installCircularFit(parts.root,parts.face,d,visual);installValueVisual(parts.root,d,visual);return parts.root}
   function mount(parent,spec,options={}){const node=render(spec,options);parent.appendChild(node);return node}
+  function setValue(node,value,display=value){return paintValue(node,value,display)}
   function paintLibraryWaveform(canvas,data,node){const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);if(!data?.length)return;const accent=getComputedStyle(node).getPropertyValue("--ms-control-accent").trim()||"#d8d8d8";ctx.strokeStyle=accent;ctx.lineWidth=1;ctx.beginPath();const mid=h/2,step=Math.max(1,Math.floor(data.length/w));for(let x=0;x<w;x++){let lo=1,hi=-1;const a=x*step,b=Math.min(data.length,a+step);for(let i=a;i<b;i++){const v=Number(data[i])||0;if(v<lo)lo=v;if(v>hi)hi=v}ctx.moveTo(x,mid+lo*mid*.82);ctx.lineTo(x,mid+hi*mid*.82)}ctx.stroke()}
   function previewLibraryChoice(data,sampleRate=44100){if(!data?.length)return;try{libraryPreviewSource?.stop();libraryPreviewSource?.disconnect()}catch(_){}const AC=global.AudioContext||global.webkitAudioContext;if(!AC)return;libraryPreviewContext=libraryPreviewContext||new AC();libraryPreviewContext.resume?.();const pcm=data instanceof Float32Array?data:new Float32Array(data),buffer=libraryPreviewContext.createBuffer(1,pcm.length,sampleRate||44100);buffer.copyToChannel(pcm,0);const src=libraryPreviewContext.createBufferSource();src.buffer=buffer;src.connect(libraryPreviewContext.destination);src.onended=()=>{if(libraryPreviewSource===src)libraryPreviewSource=null};libraryPreviewSource=src;src.start()}
   function selectLibraryChoice(node){const scope=node.closest(".ms-control-face")||node.parentElement;if(scope)scope.querySelectorAll(".ms-library-choice").forEach(choice=>choice.dataset.active=choice===node?"1":"0");else node.dataset.active="1"}
   function mountLibraryChoice(parent,{id,label,data,sampleRate,onSelect,active=false}={}){const node=mount(parent,{id,control:C.BUTTON,label},{visual:{variant:"rect"}});node.classList.add("ms-library-choice");node.dataset.active=active?"1":"0";node.style.width="100%";node.style.minWidth="0";const face=node.querySelector(".ms-control-face"),labelNode=node.querySelector(".ms-control-label");if(face){face.style.width="100%";face.style.maxWidth="100%";face.style.minWidth="0";face.style.overflow="hidden";const canvas=el("canvas","ms-library-waveform");canvas.width=360;canvas.height=48;canvas.style.position="absolute";canvas.style.inset="0";canvas.style.width="100%";canvas.style.height="100%";canvas.style.opacity=".72";canvas.style.pointerEvents="none";face.appendChild(canvas);paintLibraryWaveform(canvas,data,node)}if(labelNode){labelNode.style.width="100%";labelNode.style.whiteSpace="normal";labelNode.style.overflowWrap="anywhere";labelNode.style.textAlign="left";labelNode.style.justifyContent="flex-start"}node.onclick=e=>{selectLibraryChoice(node);previewLibraryChoice(data,sampleRate);onSelect?.(e,node)};return node}
-  MS.ControlSurfaceRenderer=Object.freeze({render,mount,applyVars,mountLibraryChoice,previewLibraryChoice});
+  MS.ControlSurfaceRenderer=Object.freeze({render,mount,setValue,applyVars,mountLibraryChoice,previewLibraryChoice});
 })(window);
