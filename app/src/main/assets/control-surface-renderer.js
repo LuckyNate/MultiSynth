@@ -7,6 +7,21 @@
   function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n}
   function applyVars(node,vars){for(const [k,v] of Object.entries(vars||{}))node.style.setProperty(k,v)}
   function shell(d,visual){const root=el("div",`ms-control ms-${d.control} ms-${d.control}--${visual.variant}`);root.dataset.control=d.control;if(d.id)root.dataset.controlId=d.id;if(d.state)root.dataset.stateKey=d.state;root.dataset.variant=visual.variant;applyVars(root,SPEC.cssVars(d.control,visual));const face=el("div","ms-control-face");root.appendChild(face);if(d.label){if(d.control===C.BUTTON){const l=el("div","ms-control-label ms-control-face-label",d.label);l.style.cssText="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;white-space:normal;text-align:center;pointer-events:none";face.appendChild(l)}else{const l=el("div","ms-control-label",d.label);root.appendChild(l)}}if(visual.valueReadout&&d.value){const value=el("output","ms-control-value",String(d.value.default??d.value.value??""));root.appendChild(value)}return{root,face}}
+  function isCircular(d,visual){return d.control===C.KNOB||d.control===C.DIAL||d.control===C.TURNTABLE||d.control===C.JACK||(d.control===C.LED&&visual.variant==="round")||(d.control===C.PAD&&visual.variant==="round")||(d.control===C.BUTTON&&(visual.variant==="round"||visual.variant==="arcade"))}
+  function installCircularFit(root,face,d,visual){
+    if(!isCircular(d,visual))return;
+    const w=Number(visual.width),h=Number(visual.height),s=Number(visual.size);
+    const nominal=Number.isFinite(s)&&s>0?s:Math.min(Number.isFinite(w)&&w>0?w:Infinity,Number.isFinite(h)&&h>0?h:Infinity);
+    function sync(){
+      const parent=root.parentElement,pr=parent?.getBoundingClientRect?.(),rr=root.getBoundingClientRect?.();
+      const aw=Number(pr?.width)||Number(rr?.width)||nominal,ah=Number(pr?.height)||Number(rr?.height)||nominal;
+      let diameter=Math.min(nominal,aw,ah);if(!Number.isFinite(diameter)||diameter<=0)diameter=nominal;if(!Number.isFinite(diameter)||diameter<=0)return;
+      if(Number.isFinite(s)&&s>0)root.style.setProperty("--ms-size",`${diameter}px`);else{root.style.setProperty("--ms-width",`${diameter}px`);root.style.setProperty("--ms-height",`${diameter}px`)}
+      face.style.width=`${diameter}px`;face.style.height=`${diameter}px`;face.style.maxWidth="100%";face.style.aspectRatio="1 / 1";
+    }
+    sync();
+    if(global.ResizeObserver){const ro=new ResizeObserver(()=>sync());if(root.parentElement)ro.observe(root.parentElement);ro.observe(root)}else requestAnimationFrame(sync);
+  }
   function installScrollableScreen(root,face){
     face.classList.add("ms-scroll-face");
     face.style.paddingRight="44px";
@@ -36,7 +51,7 @@
     case C.JACK:{face.appendChild(el("span","ms-jack-ring"));face.appendChild(el("span","ms-jack-hole"));break}
     case C.DECAL:{const img=el("img","ms-decal-image");const src=d.meta?.src;if(src)img.src=String(src);img.alt=d.meta?.alt?String(d.meta.alt):"";img.draggable=false;face.appendChild(img);break}
   }return root}
-  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})});return decorate(d,shell(d,visual))}
+  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})}),parts=shell(d,visual);decorate(d,parts);installCircularFit(parts.root,parts.face,d,visual);return parts.root}
   function mount(parent,spec,options={}){const node=render(spec,options);parent.appendChild(node);return node}
   function paintLibraryWaveform(canvas,data,node){const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);if(!data?.length)return;const accent=getComputedStyle(node).getPropertyValue("--ms-control-accent").trim()||"#d8d8d8";ctx.strokeStyle=accent;ctx.lineWidth=1;ctx.beginPath();const mid=h/2,step=Math.max(1,Math.floor(data.length/w));for(let x=0;x<w;x++){let lo=1,hi=-1;const a=x*step,b=Math.min(data.length,a+step);for(let i=a;i<b;i++){const v=Number(data[i])||0;if(v<lo)lo=v;if(v>hi)hi=v}ctx.moveTo(x,mid+lo*mid*.82);ctx.lineTo(x,mid+hi*mid*.82)}ctx.stroke()}
   function previewLibraryChoice(data,sampleRate=44100){if(!data?.length)return;try{libraryPreviewSource?.stop();libraryPreviewSource?.disconnect()}catch(_){}const AC=global.AudioContext||global.webkitAudioContext;if(!AC)return;libraryPreviewContext=libraryPreviewContext||new AC();libraryPreviewContext.resume?.();const pcm=data instanceof Float32Array?data:new Float32Array(data),buffer=libraryPreviewContext.createBuffer(1,pcm.length,sampleRate||44100);buffer.copyToChannel(pcm,0);const src=libraryPreviewContext.createBufferSource();src.buffer=buffer;src.connect(libraryPreviewContext.destination);src.onended=()=>{if(libraryPreviewSource===src)libraryPreviewSource=null};libraryPreviewSource=src;src.start()}
