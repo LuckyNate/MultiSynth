@@ -61,6 +61,38 @@ jobs:
           fi
           echo "Architecture smoke passed"
 
+      - name: Rearranger smoke
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+
+          assets = Path("app/src/main/assets")
+          html = (assets / "rearranger.html").read_text()
+          face = (assets / "rearranger.js").read_text()
+          runtime = (assets / "modules/rearranger.js").read_text()
+          renderer = (assets / "control-surface-renderer.js").read_text()
+          checks = {
+              "canonical Rearranger face is loaded": 'src="rearranger.js"' in html,
+              "obsolete face is not loaded": 'src="rearranger-face.js"' not in html,
+              "live patch selector uses shared scroll screen": 'variant:"scroll"' in face and 'LIVE PATCH LIST' in face,
+              "live patch list is graph-driven": 'function outputs()' in face and 'patchSignature()' in face,
+              "touch controls use pointer events": 'pointerdown' in face and 'pointerup' in face,
+              "perform mode queues live sections": 'state.mode==="perform"' in face and 'queueSection' in face,
+              "song stops at first empty section": 'stopSong(u,time)' in runtime and 'Number(s.repeats)<=0' in runtime,
+              "loop song is implemented": 'u.state.mode==="loop"' in runtime,
+              "section transitions change only changed gates": 'u.activeGates' in runtime and 'wanted.has(ref)' in runtime,
+              "shared renderer owns circular fitting": 'installCircularFit' in renderer and 'isCircular' in renderer,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              print("Rearranger smoke FAILED:")
+              for name in failed:
+                  print("-", name)
+              sys.exit(1)
+          print("Rearranger smoke passed")
+          PY
+
       - name: Shared control CSS contract
         run: node scripts/audit-shared-control-ownership.mjs
 
