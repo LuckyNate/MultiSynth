@@ -13,7 +13,7 @@
     [C.RIBBON]:freeze({variant:"horizontal",width:220,height:44,touchWidth:220,touchHeight:56,corner:12,labelGap:8,valueReadout:true}),
     [C.PAD]:freeze({variant:"square",width:72,height:72,touchWidth:80,touchHeight:80,corner:12,labelGap:7,valueReadout:false}),
     [C.BUTTON]:freeze({variant:"rect",width:92,height:48,touchWidth:100,touchHeight:56,corner:8,labelGap:6,valueReadout:false}),
-    [C.SWITCH]:freeze({variant:"rocker",width:58,height:34,touchWidth:70,touchHeight:48,corner:17,labelGap:7,valueReadout:false}),
+    [C.SWITCH]:freeze({variant:"rocker",width:68,height:34,touchWidth:76,touchHeight:48,corner:17,labelGap:7,valueReadout:false}),
     [C.XY]:freeze({variant:"pad",width:220,height:180,touchWidth:220,touchHeight:180,corner:10,labelGap:8,valueReadout:true}),
     [C.SCREEN]:freeze({variant:"screen",width:240,height:120,touchWidth:240,touchHeight:120,corner:10,labelGap:8,valueReadout:false}),
     [C.OSCILLOSCOPE]:freeze({variant:"scope",width:240,height:120,touchWidth:240,touchHeight:120,corner:10,labelGap:8,valueReadout:false}),
