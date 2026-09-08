@@ -1,14 +1,6 @@
 "use strict";
 (function(global){
-  global.MultiSynthReleaseNotes=Object.freeze([
-    Object.freeze({
-      id:"2026-09-03-time-bandits",
-      title:"HEY — HEADS UP",
-      lines:Object.freeze([
-        "Beat Red has been retired.",
-        "Time Bandits is now the full 16-voice drum machine, with probability applied across the selected drum channel's sequenced hits.",
-        "Old Beat Red patch instances automatically migrate to Time Bandits when loaded."
-      ])
-    })
-  ]);
+  // Main-branch APK builds replace this file in CI from GitHub commit subjects.
+  // The repository copy stays empty so patch notes have one authored source: GitHub history.
+  global.MultiSynthReleaseNotes=Object.freeze([]);
 })(window);
