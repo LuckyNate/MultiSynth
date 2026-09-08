@@ -37,6 +37,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
           import subprocess
           import urllib.request
           from pathlib import Path
@@ -80,14 +81,34 @@ jobs:
           if not subjects:
               subjects = [subprocess.check_output(["git", "show", "-s", "--format=%s", current], text=True).strip()]
 
+          friendly_verbs = {
+              "add": "Added", "fix": "Fixed", "update": "Updated", "replace": "Replaced",
+              "remove": "Removed", "simplify": "Simplified", "register": "Registered",
+              "wire": "Wired", "style": "Styled", "scale": "Scaled", "align": "Aligned",
+              "make": "Made", "give": "Gave", "show": "Now showing", "generate": "Generated",
+          }
+          def friendly(subject):
+              s = re.sub(r"^(feat|fix|chore|refactor|style|docs|test)(\([^)]*\))?:\s*", "", subject, flags=re.I).strip()
+              parts = s.split(None, 1)
+              if parts:
+                  replacement = friendly_verbs.get(parts[0].lower())
+                  if replacement:
+                      s = replacement + (" " + parts[1] if len(parts) > 1 else "")
+              if s:
+                  s = s[0].upper() + s[1:]
+              if s and s[-1] not in ".!?":
+                  s += "."
+              return s
+          lines = [friendly(s) for s in subjects]
+
           note = {
               "id": f"build-{run_number}-{current[:12]}",
-              "title": f"WHAT CHANGED · BUILD {run_number}",
-              "lines": subjects,
+              "title": f"WHAT'S NEW · BUILD {run_number}",
+              "lines": lines,
           }
           payload = "\"use strict\";\n(function(global){\n  global.MultiSynthReleaseNotes=Object.freeze([Object.freeze(" + json.dumps(note, ensure_ascii=False) + ")]);\n})(window);\n"
           Path("app/src/main/assets/release-notes.js").write_text(payload, encoding="utf-8")
-          print(f"Generated {len(subjects)} patch note line(s) from GitHub history")
+          print(f"Generated {len(lines)} friendly patch note line(s) from GitHub history")
           if previous:
               print(f"Baseline successful build SHA: {previous}")
           else:
