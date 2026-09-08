@@ -99,7 +99,16 @@ jobs:
               if s and s[-1] not in ".!?":
                   s += "."
               return s
-          lines = [friendly(s) for s in subjects]
+          updates = [friendly(s) for s in subjects]
+          lines = [
+              "The MultiSynth Team made these updates just for you:",
+              "",
+              "Updates",
+              *updates,
+              "",
+              "Thanks for playing with MultiSynth!",
+              "Now go make some crazy noises!",
+          ]
 
           note = {
               "id": f"build-{run_number}-{current[:12]}",
@@ -108,7 +117,7 @@ jobs:
           }
           payload = "\"use strict\";\n(function(global){\n  global.MultiSynthReleaseNotes=Object.freeze([Object.freeze(" + json.dumps(note, ensure_ascii=False) + ")]);\n})(window);\n"
           Path("app/src/main/assets/release-notes.js").write_text(payload, encoding="utf-8")
-          print(f"Generated {len(lines)} friendly patch note line(s) from GitHub history")
+          print(f"Generated {len(updates)} friendly patch note update(s) from GitHub history")
           if previous:
               print(f"Baseline successful build SHA: {previous}")
           else:
