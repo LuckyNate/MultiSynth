@@ -19,5 +19,6 @@ row=bank("8 · BUTTONS",8);for(let i=0;i<8;i++)mount(row,C.BUTTON);
 row=bank("4 · SWITCHES",4);for(let i=0;i<4;i++){const n=mount(row,C.SWITCH);n.dataset.on=i%2?"1":"0"}
 row=bank("8 · METERS",8);for(let i=0;i<8;i++)mount(row,C.METER,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
 row=bank("8 · LEDS",8);for(let i=0;i<8;i++){const n=mount(row,C.LED);n.dataset.on=i%2?"1":"0"}
-row=bank("1 · DECAL",1);mount(row,C.DECAL,{meta:{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180' viewBox='0 0 360 180'%3E%3Crect width='360' height='180' fill='%23202020'/%3E%3Ctext x='180' y='98' text-anchor='middle' fill='%23d8d8d8' font-family='sans-serif' font-size='28' font-weight='700'%3EDECAL%3C/text%3E%3C/svg%3E",alt:"Test decal"}});
+const tint=`hsl(${Math.floor(Math.random()*360)} 72% 58%)`;
+row=bank("1 · DECAL",1);mount(row,C.DECAL,{meta:{src:"decals/skull-256.png",alt:"Skull test decal",visual:{scale:1.8,rotation:-11,tint}}});
 })();
