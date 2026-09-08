@@ -3,8 +3,8 @@
   const MS=global.MultiSynth=global.MultiSynth||{};
 
   const CONTROL=Object.freeze({
-    KNOB:"knob", DIAL:"dial", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
-    PAD:"pad", BUTTON:"button", SWITCH:"switch", KEY:"key", XY:"xy",
+    KNOB:"knob", ENCODER:"encoder", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
+    PAD:"pad", BUTTON:"button", SWITCH:"switch", XY:"xy",
     SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack",
     // DECAL is a silent, non-interactive faceplate styling primitive. It does not bind state,
     // gestures, routing, or DSP. Modules opt in explicitly when they want printed artwork.
@@ -30,14 +30,13 @@
 
   const DEFAULT_GESTURES=Object.freeze({
     [CONTROL.KNOB]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
-    [CONTROL.DIAL]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
+    [CONTROL.ENCODER]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
     [CONTROL.TURNTABLE]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.FADER]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.RIBBON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.PAD]:Object.freeze([GESTURE.TAP,GESTURE.PRESS]),
     [CONTROL.BUTTON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.HOLD,GESTURE.RELEASE]),
     [CONTROL.SWITCH]:Object.freeze([GESTURE.TAP]),
-    [CONTROL.KEY]:Object.freeze([GESTURE.PRESS,GESTURE.RELEASE]),
     [CONTROL.XY]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.SCREEN]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.DRAG,GESTURE.SWIPE]),
     [CONTROL.OSCILLOSCOPE]:Object.freeze([GESTURE.DRAG,GESTURE.RELEASE]),
