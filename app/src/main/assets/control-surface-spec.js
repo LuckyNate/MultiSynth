@@ -17,7 +17,7 @@
     [C.XY]:freeze({variant:"pad",width:220,height:180,touchWidth:220,touchHeight:180,corner:10,labelGap:8,valueReadout:true}),
     [C.SCREEN]:freeze({variant:"screen",width:240,height:120,touchWidth:240,touchHeight:120,corner:10,labelGap:8,valueReadout:false}),
     [C.OSCILLOSCOPE]:freeze({variant:"scope",width:240,height:120,touchWidth:240,touchHeight:120,corner:10,labelGap:8,valueReadout:false}),
-    [C.METER]:freeze({variant:"bar",width:34,height:132,touchWidth:46,touchHeight:140,corner:5,labelGap:7,valueReadout:true}),
+    [C.METER]:freeze({variant:"bar",width:34,height:132,touchWidth:46,touchHeight:140,corner:5,labelGap:7,valueReadout:false}),
     [C.LED]:freeze({variant:"round",size:18,touch:36,corner:50,labelGap:6,valueReadout:false}),
     [C.JACK]:freeze({variant:"socket",size:34,touch:50,corner:50,labelGap:6,valueReadout:false}),
     [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,opacity:1,rotation:0,fit:"contain",blend:"normal",labelGap:0,valueReadout:false})
