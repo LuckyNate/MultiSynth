@@ -29,6 +29,7 @@
     [I.CONTROL_FREAK]:row(I.CONTROL_FREAK,"controller","#75b7ff",["noteInput","midi","cvOutput"],["midi"]),
     [I.LOWRIDER_LFO]:row(I.LOWRIDER_LFO,"modulator","#d6aa3c",["audioOutput","generator","cvOutput"],[],{audioRole:"generator",cvBehavior:"source"}),
     [I.UNSTABLE_DIFFUSION]:row(I.UNSTABLE_DIFFUSION,"instrument","#e8e8e8",["audioInput","audioOutput","generator","noteInput","pcm"],["pcm","storage"],{audioRole:"processor",carrierBehavior:"transform"}),
+    [I.KEYLESS88]:row(I.KEYLESS88,"instrument","#7ee7ff",["audioInput","audioOutput","generator"],[],{audioRole:"processor",carrierBehavior:"transform"}),
     [I.PURE_SYNTH]:row(I.PURE_SYNTH,"instrument","#f4f4f0",["audioInput","audioOutput","generator","noteInput","cvInput"],[]),
     [I.QUAD_SYNTH]:row(I.QUAD_SYNTH,"instrument","#ffb000",["audioInput","audioOutput","generator","noteInput","cvInput"],[]),
     [I.PULSYNTH]:row(I.PULSYNTH,"instrument","#58ff78",["audioInput","audioOutput","generator","noteInput","cvInput"],[]),
