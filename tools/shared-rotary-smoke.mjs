@@ -24,26 +24,26 @@ vm.createContext(context);
 for(const file of ["control-surface-library.js","control-surface-spec.js","control-surface-renderer.js"]){vm.runInContext(fs.readFileSync(path.join(assets,file),"utf8"),context,{filename:file})}
 
 const renderer=context.MultiSynth.ControlSurfaceRenderer;
-function makeRotary(control,variant,value){
+function makeRotary(control,variant,value,markerClass){
   const host=new Element("section");
   const node=renderer.mount(host,{id:`smoke-${control}`,control,label:"SMOKE",value,meta:{visual:{variant,valueReadout:true}}});
-  const face=node.querySelector(".ms-control-face"),pointer=node.querySelector(".ms-control-pointer"),readout=node.querySelector(".ms-control-value");
-  if(!face||!pointer||!readout)throw new Error(`${control} did not render face/pointer/readout`);
+  const face=node.querySelector(".ms-control-face"),marker=node.querySelector(markerClass),readout=node.querySelector(".ms-control-value");
+  if(!face||!marker||!readout)throw new Error(`${control} did not render face/marker/readout`);
   if(face.style.aspectRatio!=="1 / 1")throw new Error(`${control} face is not locked circular`);
   if(node.style["--ms-width"]!==node.style["--ms-height"])throw new Error(`${control} width/height are not equal`);
-  return{node,pointer,readout};
+  return{node,marker,readout};
 }
 
-const knob=makeRotary("knob","cap",{default:0,min:0,max:1,step:.01});
+const knob=makeRotary("knob","cap",{default:0,min:0,max:1,step:.01},".ms-control-pointer");
 renderer.setValue(knob.node,.75,"75%");
 if(knob.readout.textContent!=="75%")throw new Error(`knob display text did not update: ${knob.readout.textContent}`);
-if(!String(knob.pointer.style.transform||"").includes("rotate(67.5deg)"))throw new Error(`knob pointer did not rotate from numeric value: ${knob.pointer.style.transform||""}`);
+if(!String(knob.marker.style.transform||"").includes("rotate(67.5deg)"))throw new Error(`knob pointer did not rotate from numeric value: ${knob.marker.style.transform||""}`);
 
-const dial=makeRotary("dial","indexed",{default:0,min:0,max:2,step:1});
-renderer.setValue(dial.node,1,"LOOP");
-if(dial.readout.textContent!=="LOOP")throw new Error(`dial display text did not remain independent of numeric value: ${dial.readout.textContent}`);
-if(!String(dial.pointer.style.transform||"").includes("rotate(0deg)"))throw new Error(`dial pointer did not rotate to midpoint: ${dial.pointer.style.transform||""}`);
-renderer.setValue(dial.node,2,"LIVE");
-if(!String(dial.pointer.style.transform||"").includes("rotate(150deg)"))throw new Error(`dial pointer did not rotate to max: ${dial.pointer.style.transform||""}`);
+const encoder=makeRotary("encoder","indexed",{default:0,min:0,max:2,step:1},".ms-encoder-dot");
+renderer.setValue(encoder.node,1,"LOOP");
+if(encoder.readout.textContent!=="LOOP")throw new Error(`encoder display text did not remain independent of numeric value: ${encoder.readout.textContent}`);
+if(encoder.node.style["--ms-angle"]!=="0deg")throw new Error(`encoder dot did not rotate to midpoint: ${encoder.node.style["--ms-angle"]||""}`);
+renderer.setValue(encoder.node,2,"LIVE");
+if(encoder.node.style["--ms-angle"]!=="150deg")throw new Error(`encoder dot did not rotate to max: ${encoder.node.style["--ms-angle"]||""}`);
 
 console.log("shared rotary contract smoke passed");
