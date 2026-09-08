@@ -6,7 +6,7 @@ function fit(node,control){const face=node.querySelector(".ms-control-face"),v=S
 const mount=(host,control,label,extra={})=>{const cell=document.createElement("div");cell.className="test-cell";host.appendChild(cell);const node=R.mount(cell,{id:`test-${control}-${host.children.length}`,control,label,...extra});fit(node,control);return node};
 let row;
 row=bank("1 · TURNTABLE",1);mount(row,C.TURNTABLE,"TURNTABLE",{value:{default:0,min:0,max:1,step:0}});
-row=bank("1 · DIAL / ENCODER CANDIDATE",1,"Current library name is DIAL; this is the form we are evaluating as ENCODER.");mount(row,C.DIAL,"DIAL",{value:{default:50,min:0,max:100,step:1}});
+row=bank("2 · ENCODERS",2);for(let i=0;i<2;i++)mount(row,C.ENCODER,`ENCODER ${i+1}`,{value:{default:50,min:0,max:100,step:1}});
 row=bank("1 · TOUCHSCREEN",1);mount(row,C.SCREEN,"SCREEN");
 row=bank("1 · OSCILLOSCOPE",1);mount(row,C.OSCILLOSCOPE,"OSCILLOSCOPE");
 row=bank("1 · XY",1);mount(row,C.XY,"XY",{value:{default:.5,min:0,max:1,step:.01}});
