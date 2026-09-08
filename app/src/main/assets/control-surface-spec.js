@@ -20,13 +20,13 @@
     [C.METER]:freeze({variant:"bar",width:34,height:132,touchWidth:46,touchHeight:140,corner:5,labelGap:7,valueReadout:false}),
     [C.LED]:freeze({variant:"round",size:18,touch:36,corner:50,labelGap:6,valueReadout:false}),
     [C.JACK]:freeze({variant:"socket",size:34,touch:50,corner:50,labelGap:6,valueReadout:false}),
-    [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,opacity:1,rotation:0,fit:"contain",blend:"normal",labelGap:0,valueReadout:false})
+    [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,scale:1,translateX:0,translateY:0,rotation:0,tint:"#ffffff",opacity:1,fit:"contain",labelGap:0,valueReadout:false})
   });
   const VARIANTS=freeze({
     knob:freeze(["cap","skirted","pointer","encoder"]),encoder:freeze(["rotary","selector","indexed"]),turntable:freeze(["platter"]),fader:freeze(["vertical","horizontal"]),ribbon:freeze(["horizontal","vertical"]),pad:freeze(["square","round","strip"]),button:freeze(["rect","round","arcade"]),switch:freeze(["rocker","slide","toggle"]),xy:freeze(["pad"]),screen:freeze(["screen","scroll"]),oscilloscope:freeze(["scope"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),decal:freeze(["screenprint","sticker","stencil","plate"])
   });
   function defaults(control){const d=TYPES[control];if(!d)throw new Error("No control visual spec for "+control);return d}
   function resolve(control,overrides={}){const base=defaults(control),r={...base,...overrides};if(VARIANTS[control]&&!VARIANTS[control].includes(r.variant))throw new Error("Unsupported "+control+" variant: "+r.variant);return freeze(r)}
-  function cssVars(control,overrides={}){const s=resolve(control,overrides),out={};for(const [k,v] of Object.entries(s)){if(typeof v==="number"){const unitless=new Set(["travel","startAngle","endAngle","ticks","opacity","rotation"]);out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=unitless.has(k)?String(v):px(v)}else if(typeof v==="boolean")out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=v?"1":"0";else if(v!=null)out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=String(v)}return freeze(out)}
+  function cssVars(control,overrides={}){const s=resolve(control,overrides),out={};for(const [k,v] of Object.entries(s)){if(typeof v==="number"){const unitless=new Set(["travel","startAngle","endAngle","ticks","opacity","rotation","scale"]);out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=unitless.has(k)?String(v):px(v)}else if(typeof v==="boolean")out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=v?"1":"0";else if(v!=null)out[`--ms-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}`]=String(v)}return freeze(out)}
   MS.ControlSurfaceSpec=freeze({TYPES,VARIANTS,defaults,resolve,cssVars});
 })(window);
