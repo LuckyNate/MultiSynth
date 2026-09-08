@@ -16,7 +16,7 @@ row=bank("2 · HORIZONTAL SLIDERS",2);for(let i=0;i<2;i++)mount(row,C.FADER,`SLI
 row=bank("4 · KNOBS",4);for(let i=0;i<4;i++)mount(row,C.KNOB,`KNOB ${i+1}`,{value:{default:(i+1)/5,min:0,max:1,step:.01}});
 row=bank("8 · VERTICAL FADERS",8);for(let i=0;i<8;i++)mount(row,C.FADER,`${i+1}`,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
 row=bank("8 · BUTTONS",8);for(let i=0;i<8;i++)mount(row,C.BUTTON,`${i+1}`);
-row=bank("8 · SWITCHES",8);for(let i=0;i<8;i++)mount(row,C.SWITCH,`${i+1}`);
+row=bank("8 · SWITCHES",8);for(let i=0;i<8;i++){const n=mount(row,C.SWITCH,null);n.dataset.on=i%2?"1":"0"}
 row=bank("8 · METERS",8);for(let i=0;i<8;i++)mount(row,C.METER,`${i+1}`,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
 row=bank("8 · LEDS",8);for(let i=0;i<8;i++){const n=mount(row,C.LED,`${i+1}`);n.dataset.on=i%2?"1":"0"}
 row=bank("1 · DECAL",1);mount(row,C.DECAL,"DECAL",{meta:{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='180' viewBox='0 0 360 180'%3E%3Crect width='360' height='180' fill='%23202020'/%3E%3Ctext x='180' y='98' text-anchor='middle' fill='%23d8d8d8' font-family='sans-serif' font-size='28' font-weight='700'%3EDECAL%3C/text%3E%3C/svg%3E",alt:"Test decal"}});
