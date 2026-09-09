@@ -12,6 +12,16 @@ MULTISYNTH TODO
    - Map each module leaf implementation onto the canonical shared controllers.
    - The only unique module code should be the leaf implementation: what each control connects to and what its value means.
 
+CANONICAL CONTROL LOCK — ACTIVE
+   - The shared control library, including READOUT, is pure canon and untouchable by default.
+   - Canon covers shared control appearance, geometry, interaction, generic I/O behavior, renderer behavior, and readout behavior/styling.
+   - Module/leaf code may consume canonical controls and use their supported theme/CSS hooks without modifying canon.
+   - Any change to an existing canonical control requires two explicit approvals for that exact change:
+     1) Nate explicitly authorizes the specific proposed canonical change.
+     2) The exact authorized scope is repeated back and Nate explicitly confirms it again.
+   - Only after both approvals may that exact canonical change be executed.
+   - Authorization is single-use and applies only to the confirmed change. It does not imply permission for related cleanup, refactors, adjacent controls, styling changes, behavior changes, or follow-up work.
+
 LEAF CODE STATUS — SETTLED FOR NOW
    - Existing leaf implementations that currently work are considered settled for this pass.
    - Do not redesign, refactor, improve, or otherwise alter working leaf behavior while mapping modules to the shared controllers.
