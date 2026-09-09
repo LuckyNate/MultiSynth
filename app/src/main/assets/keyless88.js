@@ -5,7 +5,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const xy=R.mount(host,{id:"keyless-xy",control:C.XY,label:"PITCH / AMP"},{freewheel:true});
 function fitXY(){xy.style.transform="";xy.style.transformOrigin="top center";const r=stage.getBoundingClientRect(),remaining=Math.max(180,innerHeight-r.top-12);stage.style.height=`${remaining}px`;const baseW=Math.max(1,xy.offsetWidth),baseH=Math.max(1,xy.offsetHeight),scale=Math.min(stage.clientWidth/baseW,stage.clientHeight/baseH);xy.style.transform=`scale(${scale})`}
 fitXY();addEventListener("resize",fitXY);
-function push(touching){const x=clamp(Number(xy.dataset.x)||0,0,1),y=clamp(Number(xy.dataset.y)||0,0,1),pitch=21+x*87,amp=1-y;try{E.setModuleState(instance,{pitch,amp,touching})}catch(err){console.error(err)}}
+function push(touching){const x=clamp(Number(xy.dataset.x)||0,-1,1),y=clamp(Number(xy.dataset.y)||0,-1,1),pitch=21+((x+1)*.5)*87,amp=y;try{E.setModuleState(instance,{pitch,amp,touching})}catch(err){console.error(err)}}
 xy.addEventListener("pointerdown",()=>{A?.resume?.();push(true)});
 xy.addEventListener("pointermove",e=>{if(e.buttons===0&&e.pressure===0)return;push(true)});
 xy.addEventListener("pointerup",()=>push(false));
