@@ -17,6 +17,7 @@ row=bank("4 · KNOBS",4);for(let i=0;i<4;i++)mount(row,C.KNOB,{value:{default:(i
 row=bank("8 · VERTICAL FADERS",8);for(let i=0;i<8;i++)mount(row,C.FADER,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
 row=bank("8 · BUTTONS",8);for(let i=0;i<8;i++)mount(row,C.BUTTON);
 row=bank("4 · SWITCHES",4);for(let i=0;i<4;i++){const n=mount(row,C.SWITCH);n.dataset.on=i%2?"1":"0"}
+row=bank("8 · VERTICAL SWITCHES",8);for(let i=0;i<8;i++){const n=mount(row,C.SWITCH,{meta:{visual:{variant:"vertical"}}});n.dataset.on=i%2?"1":"0"}
 row=bank("8 · METERS",8);for(let i=0;i<8;i++)mount(row,C.METER,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
 row=bank("8 · LEDS",8);for(let i=0;i<8;i++){const n=mount(row,C.LED);n.dataset.on=i%2?"1":"0"}
 const tint=`hsl(${Math.floor(Math.random()*360)} 72% 58%)`;
