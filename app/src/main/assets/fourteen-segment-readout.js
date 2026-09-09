@@ -1,4 +1,8 @@
 "use strict";
+// CANON LOCK: READOUT is part of the shared canonical control library and is untouchable by default.
+// Any change to its appearance, segment geometry, scrolling, routing, lit/unlit behavior, or generic I/O
+// requires Nate's explicit authorization for that exact change, followed by a repeat of the exact scope
+// and a second explicit confirmation before execution. Approval is single-use.
 (function(global){
 const MS=global.MultiSynth=global.MultiSynth||{};
 // Character masks adapted from dmadison/LED-Segment-ASCII (MIT), 14-segment ASCII table.
