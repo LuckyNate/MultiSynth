@@ -11,3 +11,10 @@ MULTISYNTH TODO
    - After controller ownership is complete, review every module.
    - Map each module leaf implementation onto the canonical shared controllers.
    - The only unique module code should be the leaf implementation: what each control connects to and what its value means.
+
+LEAF CODE STATUS — SETTLED FOR NOW
+   - Existing leaf implementations that currently work are considered settled for this pass.
+   - Do not redesign, refactor, improve, or otherwise alter working leaf behavior while mapping modules to the shared controllers.
+   - This is not a declaration that leaf implementations are permanently frozen or final.
+   - Individual leaf behavior may be revisited later as the instruments evolve.
+   - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
