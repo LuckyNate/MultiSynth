@@ -4,7 +4,7 @@
 
   const CONTROL=Object.freeze({
     KNOB:"knob", ENCODER:"encoder", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
-    PAD:"pad", BUTTON:"button", SWITCH:"switch", XY:"xy",
+    PAD:"pad", BUTTON:"button", SWITCH:"switch", XY:"xy", READOUT:"readout",
     SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack",
     // DECAL is a silent, non-interactive faceplate styling primitive. It does not bind state,
     // gestures, routing, or DSP. Modules opt in explicitly when they want printed artwork.
@@ -39,6 +39,7 @@
     [CONTROL.BUTTON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.HOLD,GESTURE.RELEASE]),
     [CONTROL.SWITCH]:Object.freeze([GESTURE.TAP]),
     [CONTROL.XY]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
+    [CONTROL.READOUT]:Object.freeze([]),
     [CONTROL.SCREEN]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.DRAG,GESTURE.SWIPE]),
     [CONTROL.OSCILLOSCOPE]:Object.freeze([GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.METER]:Object.freeze([GESTURE.TAP]),
@@ -58,6 +59,8 @@
   function actionFor(descriptor,gesture){return descriptor?.gestures?.[gesture]||null}
   function validate(spec){try{return{ok:true,descriptor:define(spec),error:null}}catch(error){return{ok:false,descriptor:null,error}}}
   function compose(base,override){const a=base||{},b=override||{};return define({...a,...b,value:{...(a.value||{}),...(b.value||{})},gestures:{...(a.gestures||{}),...(b.gestures||{})},meta:{...(a.meta||{}),...(b.meta||{})}})}
+  function mountReadout(host,spec={}){const D=MS.FourteenSegmentReadout;if(!D?.mount)return null;const d=spec?.control?define(spec):define({control:CONTROL.READOUT,id:spec.id,variant:spec.variant,meta:{rows:spec.rows,columns:spec.columns,text:spec.text,look:spec.look}});const meta=d.meta||{};return D.mount(host,{id:d.id,rows:meta.rows??1,columns:meta.columns??1,text:meta.text??"",look:meta.look||d.variant||"glass"})}
+  function valueReadout(readout,value){if(!readout)return;MS.FourteenSegmentReadout?.valueReadout?.(readout,value)}
 
-  MS.ControlSurface=Object.freeze({CONTROL,GESTURE,ACTION,DEFAULT_GESTURES,define,compose,validate,supports,isDefaultGesture,defaultsFor,actionFor,listControls:()=>Object.freeze(Object.values(CONTROL)),listGestures:()=>Object.freeze(Object.values(GESTURE)),listActions:()=>Object.freeze(Object.values(ACTION))});
+  MS.ControlSurface=Object.freeze({CONTROL,GESTURE,ACTION,DEFAULT_GESTURES,define,compose,validate,supports,isDefaultGesture,defaultsFor,actionFor,mountReadout,valueReadout,listControls:()=>Object.freeze(Object.values(CONTROL)),listGestures:()=>Object.freeze(Object.values(GESTURE)),listActions:()=>Object.freeze(Object.values(ACTION))});
 })(window);
