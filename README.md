@@ -68,6 +68,14 @@ That library owns:
 - common rendering quality;
 - standard phone-first module shell/bank/grid layout and responsive reflow.
 
+### Shared control visual canon — NO TOUCH
+
+The currently approved appearance of every existing shared control is strong canon. Existing geometry, proportions, bezels, hardware styling, visual treatment and approved variants must not be redesigned, restyled, normalized, "improved", cleaned up, or changed as collateral work.
+
+Existing canonical controls may be used and new control types or explicitly approved new variants may be added. Any visual change to an existing canonical shared control requires Nate's explicit override of this no-touch rule for that specific change.
+
+This rule applies even when another task touches the same files. If a task does not explicitly include a canon override, preserve the existing shared-control visuals exactly.
+
 A shared control does **not** force every module into the same visual identity.
 
 The same knob may appear on several instruments, but the surrounding materials, color, hierarchy, decoration and genuinely unique composition belong to the module. Ordinary fit/reflow does not.
