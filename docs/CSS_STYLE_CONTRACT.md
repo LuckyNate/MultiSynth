@@ -28,6 +28,14 @@ It owns:
 
 If an ordinary module needs local CSS merely to fit on a phone, the shared control surface is wrong and must be fixed there.
 
+### Shared-control visual canon — NO TOUCH
+
+The current approved appearance of every existing shared control is locked canon. Existing geometry, proportions, bezels, hardware styling, visual treatment, and approved variants are not available for incidental cleanup or redesign.
+
+Do not alter an existing canonical shared control merely because shared CSS or shared renderer code is already being edited for another reason. New control types and explicitly approved new variants may be added. Any visual change to an existing canonical control requires Nate's explicit override of this no-touch rule for that specific change.
+
+The per-control descriptor warnings in `control-surface-spec.js` are part of this contract and must remain attached to their canonical descriptors.
+
 ### `module-instrument-editor.css` owns only editor/page framing
 
 It may own:
@@ -161,11 +169,11 @@ Module CSS may recolor/material-style shared controls through supported variable
 }
 ```
 
-It may style borders/background/shadow of a shared face for the module's material identity.
+It may style borders/background/shadow of a shared face for the module's material identity only within the supported theming contract. It may not alter the canonical control construction, proportions, bezel geometry, or visual anatomy.
 
 It must not recreate the hardware with new local elements/pseudo-elements or define a private knob/pad/switch class.
 
-Geometry changes to shared primitives belong in `control-surface-spec.js` / `control-surface.css` unless the primitive is explicitly authored as a special approved variant.
+Geometry changes to shared primitives are prohibited unless Nate explicitly overrides the no-touch canon for that exact existing control. New explicitly approved variants may be added without modifying existing canonical variants.
 
 ## 8. Screens and module-specific content
 
@@ -213,6 +221,8 @@ The following are architecture violations unless the file is an explicitly share
 - local touch/interaction styling for controls that exist in the library;
 - module-specific repair styles that compensate for a shared CSS defect.
 
+Even inside explicitly shared control implementation files, existing canonical control visuals remain protected by the no-touch rule unless Nate explicitly overrides it for the specific control being changed.
+
 ## 12. First-try module pattern
 
 A normal module should require only:
@@ -225,7 +235,7 @@ A normal module should require only:
 
 The module theme stylesheet should be mostly colors, materials, typography and genuinely unique decoration.
 
-If ordinary knobs/pads/steps/transport require new responsive CSS, stop and improve the shared surface instead.
+If ordinary knobs/pads/steps/transport require new responsive CSS, stop and improve the shared surface without altering the locked visual canon of existing controls.
 
 ## 13. Compliance gate
 
@@ -236,10 +246,11 @@ A finished module style is compliant only when:
 - ordinary banks use shared semantic layout roles;
 - every interactive control comes from the shared library;
 - no private control anatomy exists;
+- existing canonical shared-control visuals are unchanged unless a specific explicit no-touch override was granted;
 - no ordinary bank horizontally overflows;
 - no fixed grid minimum can widen the bank;
 - labels remain contained;
 - phone reflow is provided by the shared surface;
 - module CSS is primarily identity/presentation, not repair/infrastructure.
 
-When this contract and implementation disagree, fix the shared implementation or migrate the module. Do not add another compatibility layer.
+When this contract and implementation disagree, fix the shared implementation or migrate the module without violating the shared-control visual canon. Do not add another compatibility layer.
