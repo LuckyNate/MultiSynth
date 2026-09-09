@@ -25,6 +25,7 @@ class Element{
   addEventListener(type,fn,options){const list=this._listeners.get(type)||[];list.push({fn,capture:options===true||!!options?.capture});this._listeners.set(type,list)}
   dispatchEvent(event){if(!event?.type)throw new Error("event type required");if(!event.target)event.target=this;const path=[];for(let n=this;n;n=n.parentElement)path.push(n);for(let i=path.length-1;i>=0&&!event.__stopped;i--){for(const l of path[i]._listeners?.get(event.type)||[]){if(!l.capture)continue;l.fn.call(path[i],event);if(event.__immediateStopped)break}}for(let i=0;i<path.length&&!event.__stopped;i++){for(const l of path[i]._listeners?.get(event.type)||[]){if(l.capture)continue;l.fn.call(path[i],event);if(event.__immediateStopped)break}}return !event.defaultPrevented}
   querySelector(selector){if(!selector.startsWith("."))return null;const cls=selector.slice(1);const visit=node=>{const names=new Set(String(node.className||"").split(/\s+/).filter(Boolean));for(const x of node.classList?.set||[])names.add(x);if(names.has(cls))return node;for(const child of node.children||[]){const found=visit(child);if(found)return found}return null};return visit(this)}
+  getBoundingClientRect(){return{left:0,top:0,width:100,height:100,right:100,bottom:100}}
 }
 
 const document={createElement:tag=>new Element(tag)};
@@ -69,5 +70,24 @@ encoder.node.dispatchEvent(pointer("pointerdown",2,20,20));
 encoder.node.dispatchEvent(pointer("pointerup",2,20,20));
 if(encoderTaps!==1)throw new Error(`encoder tap event count wrong: ${encoderTaps}`);
 if(encoderClicks!==1)throw new Error(`encoder click event count wrong: ${encoderClicks}`);
+
+if(!context.MultiSynth.ControlSurface.isDefaultGesture("encoder","circularDrag"))throw new Error("encoder circularDrag is not a default shared gesture");
+let dragEvents=0,lastDrag=null;
+encoder.node.addEventListener("multisynth-control-circular-drag",e=>{dragEvents++;lastDrag=e.detail});
+encoder.node.dispatchEvent(pointer("pointerdown",3,100,50));
+encoder.node.dispatchEvent(pointer("pointermove",3,50,100));
+encoder.node.dispatchEvent(pointer("pointermove",3,0,50));
+encoder.node.dispatchEvent(pointer("pointermove",3,50,0));
+encoder.node.dispatchEvent(pointer("pointermove",3,100,50));
+encoder.node.dispatchEvent(pointer("pointermove",3,50,100));
+encoder.node.dispatchEvent(pointer("pointermove",3,0,50));
+encoder.node.dispatchEvent(pointer("pointermove",3,50,0));
+encoder.node.dispatchEvent(pointer("pointermove",3,100,50));
+encoder.node.dispatchEvent(pointer("pointermove",3,50,100));
+encoder.node.dispatchEvent(pointer("pointerup",3,50,100));
+if(dragEvents<10)throw new Error(`encoder circular drag emitted too few events: ${dragEvents}`);
+if(Math.abs(Number(lastDrag?.rotationDegrees)-900)>1e-6)throw new Error(`encoder circular drag did not accumulate unlimited rotation: ${lastDrag?.rotationDegrees}`);
+if(encoder.node.style["--ms-angle"]!=="900deg")throw new Error(`encoder indicator did not follow unbounded circular rotation: ${encoder.node.style["--ms-angle"]}`);
+if(encoderTaps!==1||encoderClicks!==1)throw new Error("encoder circular drag incorrectly fired tap/click");
 
 console.log("shared rotary contract smoke passed");
