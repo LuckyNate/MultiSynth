@@ -11,6 +11,12 @@ current_sha = os.environ["CURRENT_SHA"]
 current_run = int(os.environ["RUN_NUMBER"])
 token = os.environ["GH_TOKEN"]
 
+# Catch-up release notes intentionally begin with the first successful build
+# made by this system. Older repository/build history is not imported.
+# This commit is the epoch: future builds may include successful builds at or
+# after it, while the epoch build itself contains only its own notes.
+RELEASE_NOTES_EPOCH_SHA = "7f85c8998ea875538b4755634cca0650d0ab9718"
+
 headers = {
     "Authorization": f"Bearer {token}",
     "Accept": "application/vnd.github+json",
@@ -35,12 +41,21 @@ while True:
         break
     page += 1
 
+# Only successful builds produced after the release-note epoch participate in
+# catch-up notes. Never walk backward into the old repository history.
 history = []
 seen_runs = set()
 for run in runs:
     number = int(run.get("run_number") or 0)
     sha = run.get("head_sha")
     if not number or not sha or number >= current_run or number in seen_runs:
+        continue
+    is_after_epoch = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", RELEASE_NOTES_EPOCH_SHA, sha],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode == 0
+    if not is_after_epoch:
         continue
     seen_runs.add(number)
     history.append({"build": number, "sha": sha})
@@ -70,10 +85,11 @@ def friendly(subject):
 
 def subjects_between(previous_sha, sha):
     if previous_sha:
-        subprocess.run(["git", "fetch", "--no-tags", "origin", previous_sha], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         rev_range = f"{previous_sha}..{sha}"
         subjects = subprocess.check_output(["git", "log", "--reverse", "--format=%s", rev_range], text=True).splitlines()
     else:
+        # The epoch/current first build deliberately starts here, not at any
+        # older successful build.
         subjects = [subprocess.check_output(["git", "show", "-s", "--format=%s", sha], text=True).strip()]
     return [s.strip() for s in subjects if s.strip()]
 
@@ -106,4 +122,4 @@ payload = (
     + '.map(Object.freeze));\n})(window);\n'
 )
 Path("app/src/main/assets/release-notes.js").write_text(payload, encoding="utf-8")
-print(f"Generated {len(notes)} build note section(s), through build {current_run}")
+print(f"Generated {len(notes)} catch-up build note section(s), through build {current_run}")
