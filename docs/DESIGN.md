@@ -34,6 +34,16 @@ Use `control-surface-library.js`, `control-surface-spec.js`, `control-surface-re
 
 Preserve the compact hardware treatment, radial control faces, tactile switches/pads/faders, mounted displays/jacks, restrained shadows/glows, coherent per-module palettes and predictable touch behavior defined by that shared system.
 
+### 3.1 Shared control visual canon — NO TOUCH
+
+Every currently approved shared-control visual is strong canon. Existing geometry, proportions, bezels, hardware styling, visual treatment, and approved variants are locked.
+
+Do not redesign, restyle, normalize, simplify, modernize, clean up, "improve", or otherwise alter an existing canonical control as part of unrelated work. This includes collateral edits inside the shared-control files themselves.
+
+New control types and explicitly approved new variants may be added. Any visual change to an existing canonical control requires Nate's explicit override of this no-touch rule for that specific change. Without that explicit override, preserve existing canonical visuals exactly.
+
+The descriptor comments in `control-surface-spec.js` are authoritative local warnings for each canonical control and must remain attached to their descriptors.
+
 A module may theme and arrange shared controls. It must not replace them with a parallel control implementation.
 
 ## 4. Four-color theme contract
