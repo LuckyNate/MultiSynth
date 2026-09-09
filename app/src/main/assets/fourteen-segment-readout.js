@@ -1,0 +1,16 @@
+"use strict";
+(function(global){
+const MS=global.MultiSynth=global.MultiSynth||{};
+// Character masks adapted from dmadison/LED-Segment-ASCII (MIT), 14-segment ASCII table.
+// Copyright (c) 2017 David Madison. https://github.com/dmadison/LED-Segment-ASCII
+const MASKS=[0x0000,0x4006,0x0202,0x12CE,0x12ED,0x3FE4,0x2359,0x0200,0x2400,0x0900,0x3FC0,0x12C0,0x0800,0x00C0,0x4000,0x0C00,0x0C3F,0x0406,0x00DB,0x008F,0x00E6,0x2069,0x00FD,0x0007,0x00FF,0x00EF,0x1200,0x0A00,0x2440,0x00C8,0x0980,0x5083,0x02BB,0x00F7,0x128F,0x0039,0x120F,0x0079,0x0071,0x00BD,0x00F6,0x1209,0x001E,0x2470,0x0038,0x0536,0x2136,0x003F,0x00F3,0x203F,0x20F3,0x00ED,0x1201,0x003E,0x0C30,0x2836,0x2D00,0x00EE,0x0C09,0x0039,0x2100,0x000F,0x2800,0x0008,0x0100,0x1058,0x2078,0x00D8,0x088E,0x0858,0x14C0,0x048E,0x1070,0x1000,0x0A10,0x3600,0x0030,0x10D4,0x1050,0x00DC,0x0170,0x0486,0x0050,0x2088,0x0078,0x001C,0x0810,0x2814,0x2D00,0x028E,0x0848,0x0949,0x1200,0x2489,0x0CC0,0x0000];
+const NS="http://www.w3.org/2000/svg";
+const SEG={A:"M18 10 L62 10",B:"M66 14 L66 47",C:"M66 53 L66 86",D:"M18 90 L62 90",E:"M14 53 L14 86",F:"M14 14 L14 47",G1:"M18 50 L38 50",G2:"M42 50 L62 50",H:"M18 14 L38 47",J:"M62 14 L42 47",K:"M38 53 L18 86",L:"M42 53 L62 86",M:"M40 14 L40 47",N:"M40 53 L40 86"};
+const ORDER=["A","B","C","D","E","F","G1","G2","H","J","K","L","M","N"];
+function maskFor(ch){const c=(ch||" ").charCodeAt(0);return c>=32&&c<=127?MASKS[c-32]:MASKS[31]}
+function cell(ch){const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 80 100");svg.setAttribute("class","ms-14seg-cell");const mask=maskFor(ch);ORDER.forEach((name,i)=>{const p=document.createElementNS(NS,"path");p.setAttribute("d",SEG[name]);p.setAttribute("class","ms-14seg-segment"+(mask&(1<<i)?" is-on":""));svg.appendChild(p)});if(mask&0x4000){const dp=document.createElementNS(NS,"circle");dp.setAttribute("cx","73");dp.setAttribute("cy","90");dp.setAttribute("r","3");dp.setAttribute("class","ms-14seg-segment is-on ms-14seg-dp");svg.appendChild(dp)}return svg}
+function mount(host,{id=null,rows=1,columns=1,text="",look="glass"}={}){if(!host)return null;const root=document.createElement("div");root.className=`ms-14seg-readout ms-14seg-${look}`;if(id)root.id=id;root.style.setProperty("--ms-readout-cols",Math.max(1,columns|0));root.style.setProperty("--ms-readout-rows",Math.max(1,rows|0));host.appendChild(root);const api={root,rows:Math.max(1,rows|0),columns:Math.max(1,columns|0),set(value){const capacity=api.rows*api.columns,s=String(value??"").padEnd(capacity," ").slice(0,capacity);root.replaceChildren(...Array.from(s,cell));return api}};return api.set(text)}
+function valueReadout(readout,value){if(!readout)return;const target=typeof readout==="string"?document.getElementById(readout):readout?.root||readout;if(target?.__ms14seg)target.__ms14seg.set(value)}
+const oldMount=mount;function taggedMount(host,opts){const api=oldMount(host,opts);if(api?.root)api.root.__ms14seg=api;return api}
+MS.FourteenSegmentReadout=Object.freeze({mount:taggedMount,valueReadout,maskFor});
+})(window);
