@@ -59,7 +59,7 @@
   function actionFor(descriptor,gesture){return descriptor?.gestures?.[gesture]||null}
   function validate(spec){try{return{ok:true,descriptor:define(spec),error:null}}catch(error){return{ok:false,descriptor:null,error}}}
   function compose(base,override){const a=base||{},b=override||{};return define({...a,...b,value:{...(a.value||{}),...(b.value||{})},gestures:{...(a.gestures||{}),...(b.gestures||{})},meta:{...(a.meta||{}),...(b.meta||{})}})}
-  function mountReadout(host,spec={}){const D=MS.FourteenSegmentReadout;if(!D?.mount)return null;const d=spec?.control?define(spec):define({control:CONTROL.READOUT,id:spec.id,variant:spec.variant,meta:{rows:spec.rows,columns:spec.columns,text:spec.text,look:spec.look}});const meta=d.meta||{};return D.mount(host,{id:d.id,rows:meta.rows??1,columns:meta.columns??1,text:meta.text??"",look:meta.look||d.variant||"glass"})}
+  function mountReadout(host,spec={}){const D=MS.FourteenSegmentReadout;if(!D?.mount)return null;const d=spec?.control?define(spec):define({control:CONTROL.READOUT,id:spec.id,meta:{rows:spec.rows,columns:spec.columns,text:spec.text,lit:spec.lit}});const meta=d.meta||{};return D.mount(host,{id:d.id,rows:meta.rows??1,columns:meta.columns??1,text:meta.text??"",lit:!!meta.lit})}
   function valueReadout(readout,value){if(!readout)return;MS.FourteenSegmentReadout?.valueReadout?.(readout,value)}
 
   MS.ControlSurface=Object.freeze({CONTROL,GESTURE,ACTION,DEFAULT_GESTURES,define,compose,validate,supports,isDefaultGesture,defaultsFor,actionFor,mountReadout,valueReadout,listControls:()=>Object.freeze(Object.values(CONTROL)),listGestures:()=>Object.freeze(Object.values(GESTURE)),listActions:()=>Object.freeze(Object.values(ACTION))});
