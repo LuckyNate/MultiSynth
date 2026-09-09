@@ -54,7 +54,15 @@ These classes are the default module composition API. New modules should use the
 
 `module-instrument-editor.css` is layout-neutral. It provides the page/header/scope frame only. It must never assign a multi-column layout to `#controls`.
 
-## 3. Module CSS does not reimplement geometry
+## 3. Shared control visual canon — NO TOUCH
+
+Every existing approved shared-control visual is strong canon. Existing geometry, proportions, bezels, hardware styling, visual treatment, and approved variants must remain unchanged unless Nate explicitly overrides this no-touch rule for the specific control and specific change.
+
+Normal layout work may move, group, reflow, and place canonical controls, but it must not visually redesign them in order to make a layout fit. New control types and explicitly approved new variants may be added without changing existing canonical controls.
+
+The canonical descriptors in `control-surface-spec.js` are individually marked `CANON CONTROL — DO NOT EDIT` and those warnings are part of this contract.
+
+## 4. Module CSS does not reimplement geometry
 
 Module CSS normally owns only:
 
@@ -78,9 +86,9 @@ A module stylesheet should not normally set:
 - generic knob/dial responsive sizes;
 - generic pad/step/list containment.
 
-If a new module needs those declarations just to become usable on a phone, the shared control surface is missing a reusable rule and should be fixed there instead.
+If a new module needs those declarations just to become usable on a phone, the shared control surface is missing a reusable rule and should be fixed there instead, without altering existing canonical control visuals.
 
-## 4. Phone viewport is the hard constraint
+## 5. Phone viewport is the hard constraint
 
 At every supported phone width, the entire module face must fit the viewport width.
 
@@ -90,7 +98,7 @@ This applies to the module surface, every bank, every grid, every screen and eve
 
 The shared control surface is responsible for enforcing this by default. Module code should not have to perform one-off width repairs.
 
-## 5. Predictable shared reflow
+## 6. Predictable shared reflow
 
 At phone widths the shared roles intentionally reflow as follows:
 
@@ -107,7 +115,7 @@ At wider widths the shared grids expand automatically from their role-specific u
 
 The principle is always the same: reflow vertically before shrinking controls below useful touch size.
 
-## 6. Width arithmetic is centralized
+## 7. Width arithmetic is centralized
 
 The shared grid system uses shrink-safe tracks and `min-width:0` containment. Modules must not introduce fixed grid minimums that can force a bank wider than its parent.
 
@@ -121,7 +129,7 @@ when that minimum can exceed the available phone width.
 
 The shared control surface must solve the common case once.
 
-## 7. Controls remain library controls
+## 8. Controls remain library controls
 
 Interactive hardware comes only from the shared control library: knobs, dials, switches, buttons, pads, faders, ribbons, keys, screens, meters, LEDs, jacks and registered primitives.
 
@@ -129,7 +137,9 @@ Structural DOM is allowed for module surfaces, banks, headings, grids and list c
 
 There is no second interactive-control layer and no retired control implementation inside `control-surface.css`.
 
-## 8. Choosing the semantic role
+Existing canonical library controls are reused as-is. They are not locally restyled into alternate hardware or modified as a layout workaround.
+
+## 9. Choosing the semantic role
 
 Choose the shared role from the musical job of the bank:
 
@@ -142,7 +152,7 @@ Choose the shared role from the musical job of the bank:
 
 This should be enough for a first usable layout without new CSS.
 
-## 9. Choosing the control type
+## 10. Choosing the control type
 
 - knob: set-and-leave parameter with moderate useful range;
 - dial: wide range/high sensitivity/high resolution/indexed precision;
@@ -156,7 +166,7 @@ This should be enough for a first usable layout without new CSS.
 
 Control choice follows intended use, not grid convenience.
 
-## 10. Labels and long text
+## 11. Labels and long text
 
 The shared grid constrains labels to their cells. Module content still has to be sensible:
 
@@ -166,21 +176,23 @@ The shared grid constrains labels to their cells. Module content still has to be
 - long text may wrap inside its own cell but may never establish grid width;
 - list actions use `.ms-list-row` so text and trailing action controls remain separate.
 
-## 11. Screens and lists
+## 12. Screens and lists
 
 A library `screen` mounted directly inside `.ms-module-bank` automatically fills the usable bank width.
 
 Scrollable content may be placed inside the screen face. Ordinary list rows use `.ms-list-row`.
 
-Module-specific CSS may style the screen material/content, but should not repair its width.
+Module-specific CSS may style the screen material/content, but should not repair its width or alter the canonical screen hardware.
 
-## 12. Escape hatch rule
+## 13. Escape hatch rule
 
 A module may deliberately override the shared composition only when its physical design genuinely requires a different arrangement: mixer channel strips, a keyboard surface, a large XY surface, a turntable, or another purpose-built performance face.
 
 An override is not permitted merely because the shared default looks inconvenient. If several modules need the same exception, promote it into a new shared semantic layout role.
 
-## 13. Completion gate
+A composition override is never an implicit override of the shared-control visual no-touch rule.
+
+## 14. Completion gate
 
 A module interface is not complete until:
 
@@ -194,6 +206,7 @@ A module interface is not complete until:
 - screens/lists remain readable;
 - vertical scrolling is deliberate;
 - the persistent app footer does not cover the final usable control;
+- existing canonical control visuals remain unchanged unless a specific explicit no-touch override was granted;
 - module-specific CSS contains no unnecessary generic layout repair.
 
-If a standard module fails this gate, fix the shared control surface rather than patching the individual module.
+If a standard module fails this gate, fix the shared control surface rather than patching the individual module, while preserving the locked visual canon of existing shared controls.
