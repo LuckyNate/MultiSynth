@@ -1,4 +1,0 @@
-.ms-switch--vertical .ms-control-face{width:42px;height:78px;aspect-ratio:auto;border-radius:21px}
-.ms-switch--vertical .ms-switch-track{border-radius:21px}
-.ms-switch--vertical .ms-switch-thumb{left:4px;top:auto;bottom:4px;width:32px;height:32px;border-radius:50%;transition:bottom .06s linear,left .06s linear}
-.ms-switch--vertical[data-on="1"] .ms-switch-thumb{left:4px;bottom:42px}
