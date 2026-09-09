@@ -1,0 +1,13 @@
+MULTISYNTH TODO
+
+1. CONTROLLER OWNERSHIP PASS
+   - Each unique controller type owns its appearance.
+   - Each unique controller type owns its interaction behavior.
+   - Each unique controller type owns its I/O contract.
+   - Identical variants remain grouped under the same controller type.
+   - Module-specific code must not reimplement controller appearance or interaction.
+
+2. MODULE MAPPING PASS
+   - After controller ownership is complete, review every module.
+   - Map each module leaf implementation onto the canonical shared controllers.
+   - The only unique module code should be the leaf implementation: what each control connects to and what its value means.
