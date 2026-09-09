@@ -13,7 +13,8 @@
 
   const GESTURE=Object.freeze({
     TAP:"tap", DOUBLE_TAP:"doubleTap", HOLD:"hold", RELEASE:"release", DRAG:"drag",
-    DRAG_X:"dragX", DRAG_Y:"dragY", SWIPE:"swipe", PRESS:"press", PRESS_DRAG:"pressDrag"
+    DRAG_X:"dragX", DRAG_Y:"dragY", CIRCULAR_DRAG:"circularDrag", SWIPE:"swipe",
+    PRESS:"press", PRESS_DRAG:"pressDrag"
   });
 
   const ACTION=Object.freeze({
@@ -30,7 +31,7 @@
 
   const DEFAULT_GESTURES=Object.freeze({
     [CONTROL.KNOB]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
-    [CONTROL.ENCODER]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.DRAG]),
+    [CONTROL.ENCODER]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.RELEASE,GESTURE.CIRCULAR_DRAG]),
     [CONTROL.TURNTABLE]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.FADER]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.RIBBON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
