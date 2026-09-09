@@ -10,7 +10,7 @@ row=bank("2 · ENCODERS",2);for(let i=0;i<2;i++)mount(row,C.ENCODER,{value:{defa
 row=bank("1 · TOUCHSCREEN",1);mount(row,C.SCREEN);
 row=bank("1 · OSCILLOSCOPE",1);mount(row,C.OSCILLOSCOPE);
 row=bank("1 · XY",1);mount(row,C.XY,{value:{default:.5,min:0,max:1,step:.01}});
-row=bank("1 · RIBBON",1);mount(row,C.RIBBON,{value:{default:.5,min:0,max:1,step:.01}});
+row=bank("1 · RIBBON",1);mount(row,C.RIBBON,{value:{default:0,min:-1,max:1,step:.01}});
 row=bank("2 · PADS",2);for(let i=0;i<2;i++)mount(row,C.PAD);
 row=bank("2 · HORIZONTAL SLIDERS",2);for(let i=0;i<2;i++)mount(row,C.FADER,{value:{default:.5,min:0,max:1,step:.01},meta:{visual:{variant:"horizontal"}}});
 row=bank("4 · KNOBS",4);for(let i=0;i<4;i++)mount(row,C.KNOB,{value:{default:(i+1)/5,min:0,max:1,step:.01}});
