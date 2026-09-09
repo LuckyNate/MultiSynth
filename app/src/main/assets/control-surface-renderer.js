@@ -39,12 +39,16 @@
     const end=e=>{if(e.pointerId!==pointer)return;active=false;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
   function installRibbonFreewheel(root,d,visual){
-    const v=freewheelValueState(root,d),face=root.querySelector(".ms-control-face"),marker=root.querySelector?.(".ms-ribbon-position"),vertical=visual.variant==="vertical";let active=false,pointer=null;
-    const paint=value=>{value=v.set(value);const n=v.norm(value);if(marker){if(vertical){marker.style.top=`${(1-n)*100}%`;marker.style.left="4px"}else marker.style.left=`${n*100}%`}return value};
-    const at=e=>{if(!face)return;const r=face.getBoundingClientRect(),n=vertical?1-v.clamp((e.clientY-r.top)/(r.height||1)):v.clamp((e.clientX-r.left)/(r.width||1));paint(v.min+n*(v.max-v.min))};paint(v.get());
-    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;active=true;pointer=e.pointerId;root.setPointerCapture?.(pointer);at(e);e.preventDefault()});
+    const face=root.querySelector(".ms-control-face"),marker=root.querySelector?.(".ms-ribbon-position"),vertical=visual.variant==="vertical",clamp=v=>Math.max(-1,Math.min(1,Number(v)||0));
+    let value=clamp(d.value?.value??d.value?.default??0),active=false,pointer=null,returnFrame=0,lastReturnTime=0;
+    const paint=next=>{value=clamp(next);root.dataset.value=String(value);paintValue(root,value,value);const n=(value+1)*.5;if(marker){if(vertical){marker.style.top=`${(1-n)*100}%`;marker.style.left="4px"}else marker.style.left=`${n*100}%`}return value};
+    const stopReturn=()=>{if(returnFrame)cancelAnimationFrame(returnFrame);returnFrame=0;lastReturnTime=0};
+    const glide=now=>{if(active){returnFrame=0;lastReturnTime=0;return}if(!lastReturnTime)lastReturnTime=now;const dt=Math.min(.05,Math.max(0,(now-lastReturnTime)/1000));lastReturnTime=now;const magnitude=Math.abs(value);if(magnitude<=.002){paint(0);returnFrame=0;lastReturnTime=0;return}const speed=.35+2.65*magnitude,next=value-Math.sign(value)*speed*dt;if(Math.sign(next)!==Math.sign(value)||Math.abs(next)<=.002){paint(0);returnFrame=0;lastReturnTime=0;return}paint(next);returnFrame=requestAnimationFrame(glide)};
+    const startReturn=()=>{stopReturn();if(Math.abs(value)<=.002){paint(0);return}returnFrame=requestAnimationFrame(glide)};
+    const at=e=>{if(!face)return;const r=face.getBoundingClientRect(),n=vertical?1-Math.max(0,Math.min(1,(e.clientY-r.top)/(r.height||1))):Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1)));paint(n*2-1)};paint(value);
+    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;stopReturn();active=true;pointer=e.pointerId;root.setPointerCapture?.(pointer);at(e);e.preventDefault()});
     root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer)return;at(e);e.preventDefault()});
-    const end=e=>{if(e.pointerId!==pointer)return;active=false;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
+    const end=e=>{if(e.pointerId!==pointer)return;active=false;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;startReturn()};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
   function installSwitchFreewheel(root){root.addEventListener("click",()=>{const on=root.dataset.on!=="1";root.dataset.on=on?"1":"0";root.dataset.active=on?"1":"0"});return root}
   function installButtonFreewheel(root){let pointer=null;const down=e=>{if(e.button!=null&&e.button!==0)return;pointer=e.pointerId;root.dataset.active="1";root.setPointerCapture?.(pointer);e.preventDefault()},up=e=>{if(pointer!=null&&e.pointerId!==pointer)return;root.dataset.active="0";try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerdown",down);root.addEventListener("pointerup",up);root.addEventListener("pointercancel",up);return root}
