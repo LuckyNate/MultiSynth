@@ -3,13 +3,13 @@
 const MS=window.MultiSynth||{},R=MS.ControlSurfaceRenderer,C=MS.ControlSurface?.CONTROL,SPEC=MS.ControlSurfaceSpec,root=document.getElementById("test-controls");if(!R||!C||!SPEC||!root)return;
 const bank=(title,count,note="")=>{const s=document.createElement("section"),h=document.createElement("div"),row=document.createElement("div");s.className="test-bank";h.className="test-bank-title";h.textContent=title;row.className=`test-row test-${count}`;s.append(h,row);if(note){const n=document.createElement("div");n.className="test-note";n.textContent=note;s.append(n)}root.appendChild(s);return row};
 function fit(node,control){const face=node.querySelector(".ms-control-face"),v=SPEC.resolve(control,node.__msVisual||{});node.style.width="100%";node.style.maxWidth="none";if(!face)return;if(Number(v.size)>0){face.style.width="100%";face.style.height="auto";face.style.aspectRatio="1 / 1";return}let w=Number(v.width),h=Number(v.height);if(control===C.FADER&&node.dataset.variant==="horizontal") [w,h]=[h,w];if(control===C.RIBBON&&node.dataset.variant==="vertical") [w,h]=[h,w];if(w>0&&h>0){face.style.width="100%";face.style.height="auto";face.style.aspectRatio=`${w} / ${h}`}}
-const mount=(host,control,extra={})=>{const cell=document.createElement("div");cell.className="test-cell";host.appendChild(cell);const node=R.mount(cell,{id:`test-${control}-${host.children.length}`,control,...extra},{freewheel:true});fit(node,control);return node};
+const mount=(host,control,extra={})=>{const cell=document.createElement("div");cell.className="test-cell";host.appendChild(cell);const node=R.mount(cell,{id:`test-${control}-${host.children.length}`,control,...extra},{freewheel:true});node.querySelector?.(".ms-control-value")?.remove();fit(node,control);return node};
 let row;
 row=bank("1 · TURNTABLE",1);mount(row,C.TURNTABLE,{value:{default:0,min:0,max:1,step:0}});
 row=bank("2 · ENCODERS",2);for(let i=0;i<2;i++)mount(row,C.ENCODER,{value:{default:50,min:0,max:100,step:1}});
 row=bank("1 · TOUCHSCREEN",1);mount(row,C.SCREEN);
 row=bank("1 · OSCILLOSCOPE",1);mount(row,C.OSCILLOSCOPE);
-row=bank("1 · XY",1);mount(row,C.XY,{value:{default:.5,min:0,max:1,step:.01}});
+row=bank("1 · XY",1);mount(row,C.XY);
 row=bank("1 · RIBBON",1);mount(row,C.RIBBON,{value:{default:0,min:-1,max:1,step:.01}});
 row=bank("2 · PADS",2);for(let i=0;i<2;i++)mount(row,C.PAD);
 row=bank("2 · HORIZONTAL SLIDERS",2);for(let i=0;i<2;i++)mount(row,C.FADER,{value:{default:.5,min:0,max:1,step:.01},meta:{visual:{variant:"horizontal"}}});
