@@ -49,6 +49,7 @@
   });
 
   const ACTIONS=new Set(Object.values(ACTION)),CONTROLS=new Set(Object.values(CONTROL)),GESTURES=new Set(Object.values(GESTURE));
+  const readoutScopes=new WeakMap();
   function freezeMap(map){return Object.freeze(Object.fromEntries(Object.entries(map||{}).map(([k,v])=>[k,Object.freeze({...v})])))}
   function normalizeBinding(gesture,binding){if(!GESTURES.has(gesture))throw new Error("Unknown control gesture: "+gesture);const b=typeof binding==="string"?{action:binding}:{...(binding||{})};if(!ACTIONS.has(b.action))throw new Error("Unknown control action for "+gesture+": "+String(b.action));return Object.freeze({action:b.action,args:b.args==null?null:Object.freeze({...b.args})})}
   function normalizeValue(control,value){if(control===CONTROL.SWITCH){const source=value||{};return Object.freeze({default:!!(source.value??source.default??false),value:!!(source.value??source.default??false)})}return value?Object.freeze({...value}):null}
@@ -59,8 +60,9 @@
   function actionFor(descriptor,gesture){return descriptor?.gestures?.[gesture]||null}
   function validate(spec){try{return{ok:true,descriptor:define(spec),error:null}}catch(error){return{ok:false,descriptor:null,error}}}
   function compose(base,override){const a=base||{},b=override||{};return define({...a,...b,value:{...(a.value||{}),...(b.value||{})},gestures:{...(a.gestures||{}),...(b.gestures||{})},meta:{...(a.meta||{}),...(b.meta||{})}})}
-  function mountReadout(host,spec={}){const D=MS.FourteenSegmentReadout;if(!D?.mount)return null;const d=spec?.control?define(spec):define({control:CONTROL.READOUT,id:spec.id,meta:{rows:spec.rows,columns:spec.columns,text:spec.text,lit:spec.lit}});const meta=d.meta||{};return D.mount(host,{id:d.id,rows:meta.rows??1,columns:meta.columns??1,text:meta.text??"",lit:!!meta.lit})}
-  function valueReadout(readout,value){if(!readout)return;MS.FourteenSegmentReadout?.valueReadout?.(readout,value)}
+  function readoutScope(moduleRoot){if(!moduleRoot)return null;let scope=readoutScopes.get(moduleRoot);if(!scope){scope=new Map();readoutScopes.set(moduleRoot,scope)}return scope}
+  function mountReadout(host,spec={}){const D=MS.FourteenSegmentReadout;if(!D?.mount)return null;const d=spec?.control?define(spec):define({control:CONTROL.READOUT,id:spec.id,meta:{rows:spec.rows,columns:spec.columns,text:spec.text,lit:spec.lit,name:spec.name,moduleRoot:spec.moduleRoot}});const meta=d.meta||{},moduleRoot=meta.moduleRoot||spec.moduleRoot||null,name=meta.name??spec.name??d.id;const api=D.mount(host,{rows:meta.rows??1,columns:meta.columns??1,text:meta.text??"",lit:!!meta.lit});if(moduleRoot&&name!=null){const scope=readoutScope(moduleRoot),key=String(name);if(scope.has(key))throw new Error("Duplicate readout name in module scope: "+key);scope.set(key,api);api.root.dataset.readoutName=key}return api}
+  function valueReadout(moduleRoot,readout,value){if(arguments.length<3){MS.FourteenSegmentReadout?.valueReadout?.(moduleRoot,readout);return}if(!moduleRoot||!readout)return;const target=readoutScopes.get(moduleRoot)?.get(String(readout));if(target)MS.FourteenSegmentReadout?.valueReadout?.(target,value)}
 
   MS.ControlSurface=Object.freeze({CONTROL,GESTURE,ACTION,DEFAULT_GESTURES,define,compose,validate,supports,isDefaultGesture,defaultsFor,actionFor,mountReadout,valueReadout,listControls:()=>Object.freeze(Object.values(CONTROL)),listGestures:()=>Object.freeze(Object.values(GESTURE)),listActions:()=>Object.freeze(Object.values(ACTION))});
 })(window);
