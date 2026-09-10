@@ -198,9 +198,10 @@ Rearranger therefore supports both internally timed arrangement playback and syn
 
 A dedicated timing strip sits at the bottom of the Rearranger working surface, immediately above the pinned keyboard:
 
-**TAP PAD | 3-DIGIT BPM READOUT | BPM KNOB**
+**TAP PAD | TEMPO LED | 3-DIGIT BPM READOUT | BPM KNOB**
 
 - The TAP pad derives the internal BPM from repeated taps.
+- The tempo LED blinks once per beat at the effective current BPM.
 - The three-digit BPM readout always shows the effective BPM.
 - The BPM knob sets the internal BPM directly.
 - When Rearranger is synchronized from incoming CV timing, the BPM readout reflects the effective derived tempo.
