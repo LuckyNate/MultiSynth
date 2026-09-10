@@ -28,9 +28,12 @@ Semantic grid roles supplied by the shared control surface are:
 - `.ms-layout-pads`
 - `.ms-layout-steps`
 - `.ms-layout-list`
+- `.ms-layout-hardware-grid` for deliberate hardware-style fixed-column compositions
 - `.ms-layout-fill` when controls should fill their grid cell
 
 List rows use `.ms-list-row`.
+
+Hardware-style compositions use `.ms-layout-hardware-grid` and shared `.ms-hardware-slot` placement. A module declares `--ms-hardware-columns`, `--ms-hardware-col`, `--ms-hardware-span`, and `--ms-hardware-row` values; the shared control surface owns the actual CSS grid geometry. Modules must not assign `grid-template-columns`, `grid-column`, or `grid-row` directly.
 
 These classes are the default module composition API. New modules should use them before writing any module-specific geometry.
 
