@@ -8,7 +8,7 @@
     context:"CLIP",
     contexts:{
       CLIP:makeContext(0,1,.8,0,1,1),
-      STANZA:makeContext(0,1,1,4,1,0),
+      STANZA:makeContext(0,1,1,.25,1,0),
       SONG:makeContext(0,1,1,0,1,1),
       LIVE:makeContext(0,1,1,0,1,0)
     }
