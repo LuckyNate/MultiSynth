@@ -8,7 +8,7 @@
   const MS=global.MultiSynth=global.MultiSynth||{};
 
   const CONTROL=Object.freeze({
-    KNOB:"knob", ENCODER:"encoder", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon",
+    KNOB:"knob", ENCODER:"encoder", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon", EXPRESSION:"expression",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", XY:"xy", READOUT:"readout",
     SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led", JACK:"jack",
     // DECAL is a silent, non-interactive faceplate styling primitive. It does not bind state,
@@ -40,6 +40,7 @@
     [CONTROL.TURNTABLE]:Object.freeze([GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.FADER]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.RIBBON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
+    [CONTROL.EXPRESSION]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.PAD]:Object.freeze([GESTURE.TAP,GESTURE.PRESS]),
     [CONTROL.BUTTON]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.HOLD,GESTURE.RELEASE]),
     [CONTROL.SWITCH]:Object.freeze([GESTURE.TAP]),
