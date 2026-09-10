@@ -1,13 +1,40 @@
 MULTISYNTH TODO
 
-1. CONTROLLER OWNERSHIP PASS
+1. CANONICAL CONTROL STATE AUDIT
+   - Audit every canonical control type for all state it carries.
+   - Classify each field as persistent parameter/context state or transient physical interaction state.
+   - Persistent contextual state belongs to module saved state, not to the physical control instance.
+   - Identify lock/unlock, pickup/catch, automation hold, cached/display state, gesture history, pointer/drag ownership, latch/highlight, and any other state that can leak when a control is rebound.
+   - Verify external state changes can fully redraw/refresh each canonical control.
+   - Audit only first; do not alter locked canon without the required explicit two-step authorization.
+
+2. CONTEXTUAL BINDING AUDIT — ALL MODULES
+   - Audit every module for any physical control whose semantic target can change while the control remains mounted.
+   - Give every contextual target a stable binding identity/key.
+   - Binding selects which saved module state the physical control currently represents; the control must not infer context by inspecting the app.
+   - Record each contextual use as: module | control | binding key | persistent fields | transient fields | rebind source | redraw complete? | leak risk.
+   - Find and remove architectural dependence on hidden per-control persistent context state only after the audit and an explicitly agreed implementation plan.
+
+3. REBIND / STATE-REFLECTION CONTRACT
+   - On context change, the same physical control must bind to the newly selected saved-state target and completely reflect that target.
+   - Rebinding must refresh every persistent property represented by the control, including value and per-binding lock/unlock state where applicable.
+   - Example: Time Bandits probability must preserve independent probability + lock state for each drum; switching drums must show that drum's saved value and lock state immediately.
+   - Interaction writes through the current binding into module state; changing context reads the new binding from module state back into the control.
+   - No old binding's temporary interaction state may bleed into the new binding.
+
+4. PERSISTENCE / RELOAD AUDIT
+   - Verify contextual binding-associated persistent state survives save/reload for every affected module.
+   - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
+   - Verify switching among contexts after reload produces the same control state as before reload.
+
+5. CONTROLLER OWNERSHIP PASS
    - Each unique controller type owns its appearance.
    - Each unique controller type owns its interaction behavior.
    - Each unique controller type owns its I/O contract.
    - Identical variants remain grouped under the same controller type.
    - Module-specific code must not reimplement controller appearance or interaction.
 
-2. MODULE MAPPING PASS
+6. MODULE MAPPING PASS
    - After controller ownership is complete, review every module.
    - Map each module leaf implementation onto the canonical shared controllers.
    - The only unique module code should be the leaf implementation: what each control connects to and what its value means.
