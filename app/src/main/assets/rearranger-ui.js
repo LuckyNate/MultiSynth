@@ -54,7 +54,7 @@
   readoutHost.style.gridRow="1";
   readoutHost.style.minWidth="0";
   grid.appendChild(readoutHost);
-  const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:6,columns:24,text:"REARRANGER  CLIP",lit:false});
+  const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:20,text:"REARRANGER  CLIP",lit:false});
 
   const encLeft=slot(R.mount(grid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}}),"1 / span 12",2);
   const encRight=slot(R.mount(grid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}}),"13 / span 12",2);
