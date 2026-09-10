@@ -68,13 +68,24 @@ That library owns:
 - common rendering quality;
 - standard phone-first module shell/bank/grid layout and responsive reflow.
 
-### Shared control visual canon — NO TOUCH
+### Shared control canon — TWO CONFIRMATIONS REQUIRED
 
-The currently approved appearance of every existing shared control is strong canon. Existing geometry, proportions, bezels, hardware styling, visual treatment and approved variants must not be redesigned, restyled, normalized, "improved", cleaned up, or changed as collateral work.
+Existing canonical shared controls are locked across all three canonical layers:
 
-Existing canonical controls may be used and new control types or explicitly approved new variants may be added. Any visual change to an existing canonical shared control requires Nate's explicit override of this no-touch rule for that specific change.
+- `control-surface-library.js` — control contract, shared semantics and generic I/O;
+- `control-surface-spec.js` — appearance, geometry, proportions and approved variants;
+- `control-surface-renderer.js` — interaction, rendering and binding behavior.
 
-This rule applies even when another task touches the same files. If a task does not explicitly include a canon override, preserve the existing shared-control visuals exactly.
+Any change to an existing canonical control in any of those three layers requires two explicit confirmations for that exact proposed change:
+
+1. Nate explicitly authorizes the exact proposed canonical change.
+2. The exact authorized scope is repeated back and Nate explicitly confirms it again.
+
+Only after both confirmations may that exact change be executed. Authorization is single-use and does not authorize cleanup, refactors, adjacent controls, styling, behavior, renderer/spec/library changes, or other follow-up work outside the confirmed scope.
+
+The lock applies even when another task already touches one of those files. Editing a canonical file for an approved purpose does not authorize unrelated canonical changes.
+
+Existing canonical controls may be used, and new control types or explicitly approved new variants may be added without altering existing canon.
 
 A shared control does **not** force every module into the same visual identity.
 
