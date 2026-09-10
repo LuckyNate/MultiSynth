@@ -14,11 +14,6 @@ MULTISYNTH TODO
      Turning writes value back only when the bound parameter is unlocked.
      Lock must not be authoritative on the physical knob instance.
 
-   - ENCODER
-     Persistent bound state: { value } plus any real per-binding semantic state already supported by the module.
-     Rebind must repaint the represented value/rotation from the bound state.
-     Turning writes the new value back through the current binding.
-
    - FADER
      Persistent bound state: { value }.
      Add/complete the external reflection path so rebind moves the physical thumb to the bound value.
@@ -60,6 +55,7 @@ MULTISYNTH TODO
      Pointer, active drag, last gesture angle/time, and similar gesture bookkeeping remain transient control state.
 
    CONTROLS NOT INCLUDED IN THIS STATE-OWNERSHIP IMPLEMENTATION
+   - ENCODER: relative increment/decrement + click input only. Indicator rotation is transient physical feedback so the user can see it moving; there is no persistent encoder position to save or repaint on rebind.
    - JACK: connection/routing state remains owned by the patch/routing system; the jack owns only patch gesture interaction.
    - DECAL: presentation only; no binding state.
    - OSCILLOSCOPE: streaming/source-driven display; no persistent controller-owned parameter state.
