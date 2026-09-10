@@ -1,9 +1,10 @@
 "use strict";
-// CANON LOCK: Existing shared controls, including READOUT, are untouchable by default.
-// Any canonical change requires Nate's explicit authorization for the exact change,
-// followed by a repeat of that exact scope and a second explicit confirmation before execution.
-// Approval is single-use and does not authorize cleanup, refactors, adjacent controls, styling,
-// behavior, renderer changes, or other follow-up work beyond the confirmed scope.
+// CANON LOCK — CONTRACT / I/O LAYER.
+// This file is one of the three canonical shared-control layers: library, spec, renderer.
+// Any change to an existing canonical control in ANY of those three layers requires two confirmations:
+// (1) Nate explicitly authorizes the exact proposed change; (2) that exact scope is repeated back and Nate explicitly confirms it again.
+// Only then may that exact change be executed. Approval is single-use and does not authorize cleanup, refactors,
+// adjacent controls, styling, behavior, renderer/spec changes, or other follow-up work outside the confirmed scope.
 (function(global){
   const MS=global.MultiSynth=global.MultiSynth||{};
 
