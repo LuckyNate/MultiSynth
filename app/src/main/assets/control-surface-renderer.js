@@ -1,4 +1,10 @@
 "use strict";
+// CANON LOCK — INTERACTION / RENDERER LAYER.
+// This file is one of the three canonical shared-control layers: library, spec, renderer.
+// Any change to an existing canonical control in ANY of those three layers requires two confirmations:
+// (1) Nate explicitly authorizes the exact proposed change; (2) that exact scope is repeated back and Nate explicitly confirms it again.
+// Only then may that exact change be executed. Approval is single-use and does not authorize cleanup, refactors,
+// adjacent controls, contract/I-O changes, visual/spec changes, or other follow-up work outside the confirmed scope.
 (function(global){
   const MS=global.MultiSynth=global.MultiSynth||{},CS=MS.ControlSurface,SPEC=MS.ControlSurfaceSpec;
   if(!CS||!SPEC)return;
