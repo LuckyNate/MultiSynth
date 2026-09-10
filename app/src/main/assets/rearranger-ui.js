@@ -80,12 +80,42 @@
     label:name
   }),`${1+i*6} / span 6`,5));
 
+  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"}),"1 / span 6",6);
+
+  const bpmReadoutHost=document.createElement("div");
+  bpmReadoutHost.style.gridColumn="7 / span 6";
+  bpmReadoutHost.style.gridRow="6";
+  bpmReadoutHost.style.minWidth="0";
+  grid.appendChild(bpmReadoutHost);
+  const bpmReadout=CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false});
+
+  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),"13 / span 12",6);
+  let internalBpm=120,tapTimes=[];
+  const setBpm=value=>{
+    internalBpm=Math.max(30,Math.min(300,Math.round(Number(value)||120)));
+    R.setValue(bpmKnob,internalBpm,String(internalBpm));
+    bpmReadout.set(String(internalBpm).padStart(3,"0").slice(-3));
+  };
+  timingPad.addEventListener("click",()=>{
+    const now=performance.now();
+    if(tapTimes.length&&now-tapTimes[tapTimes.length-1]>2000)tapTimes=[];
+    tapTimes.push(now);
+    if(tapTimes.length>5)tapTimes.shift();
+    if(tapTimes.length>1){
+      const intervals=[];
+      for(let i=1;i<tapTimes.length;i++)intervals.push(tapTimes[i]-tapTimes[i-1]);
+      setBpm(60000/(intervals.reduce((a,b)=>a+b,0)/intervals.length));
+    }
+  });
+  bpmKnob.addEventListener("multisynth-control-knob-delta",e=>setBpm(internalBpm+(e.detail?.delta||0)*270));
+  setBpm(internalBpm);
+
   const transportNames=["BACK","PLAY","STOP","FWD"];
   const transportButtons=transportNames.map((name,i)=>slot(R.mount(grid,{
     id:"rearranger-transport-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),`${1+i*6} / span 6`,6));
+  }),`${1+i*6} / span 6`,5));
 
   const knobLabels={
     CLIP:["LEVEL","PAN","RATE","LOOP"],
