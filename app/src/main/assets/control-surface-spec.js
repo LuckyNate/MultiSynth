@@ -18,8 +18,10 @@
     [C.TURNTABLE]:freeze({variant:"platter",size:128,touch:140,travel:360,startAngle:0,endAngle:360,ticks:0,pointer:"none",labelGap:8,valueReadout:false}),
     // CANON CONTROL — FADER — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
     [C.FADER]:freeze({variant:"vertical",width:46,height:160,touchWidth:62,touchHeight:174,trackWidth:8,thumbWidth:38,thumbHeight:22,labelGap:8,valueReadout:false}),
-    // CANON CONTROL — RIBBON — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
-    [C.RIBBON]:freeze({variant:"horizontal",width:220,height:44,touchWidth:220,touchHeight:56,corner:12,labelGap:8,valueReadout:false}),
+    // CANON CONTROL — RIBBON — square-corner transient strip.
+    [C.RIBBON]:freeze({variant:"horizontal",width:220,height:44,touchWidth:220,touchHeight:56,corner:0,labelGap:8,valueReadout:false}),
+    // CANON CONTROL — EXPRESSION — rounded spring-return strip.
+    [C.EXPRESSION]:freeze({variant:"horizontal",width:220,height:44,touchWidth:220,touchHeight:56,corner:12,labelGap:8,valueReadout:false}),
     // CANON CONTROL — PAD — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
     [C.PAD]:freeze({variant:"square",width:72,height:72,touchWidth:80,touchHeight:80,corner:12,labelGap:7,valueReadout:false}),
     // CANON CONTROL — BUTTON — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
@@ -45,7 +47,7 @@
   });
   // Every existing canonical variant named below is locked. READOUT variants are candidates until Nate explicitly locks one or more.
   const VARIANTS=freeze({
-    knob:freeze(["cap","skirted","pointer","encoder"]),encoder:freeze(["rotary","selector","indexed"]),turntable:freeze(["platter"]),fader:freeze(["vertical","horizontal"]),ribbon:freeze(["horizontal","vertical"]),pad:freeze(["square","round","strip"]),button:freeze(["rect","round","arcade"]),switch:freeze(["rocker","slide","toggle","vertical"]),xy:freeze(["pad"]),readout:freeze(["glass","amber","inset","banner"]),screen:freeze(["screen","scroll"]),oscilloscope:freeze(["scope"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),decal:freeze(["screenprint","sticker","stencil","plate"])
+    knob:freeze(["cap","skirted","pointer","encoder"]),encoder:freeze(["rotary","selector","indexed"]),turntable:freeze(["platter"]),fader:freeze(["vertical","horizontal"]),ribbon:freeze(["horizontal","vertical"]),expression:freeze(["horizontal","vertical"]),pad:freeze(["square","round","strip"]),button:freeze(["rect","round","arcade"]),switch:freeze(["rocker","slide","toggle","vertical"]),xy:freeze(["pad"]),readout:freeze(["glass","amber","inset","banner"]),screen:freeze(["screen","scroll"]),oscilloscope:freeze(["scope"]),meter:freeze(["bar","needle"]),led:freeze(["round","rect"]),jack:freeze(["socket"]),decal:freeze(["screenprint","sticker","stencil","plate"])
   });
   function defaults(control){const d=TYPES[control];if(!d)throw new Error("No control visual spec for "+control);return d}
   function resolve(control,overrides={}){const base=defaults(control),r={...base,...overrides};if(VARIANTS[control]&&!VARIANTS[control].includes(r.variant))throw new Error("Unsupported "+control+" variant: "+r.variant);if(control===C.SWITCH&&r.variant==="vertical"){if(overrides.width==null)r.width=base.height;if(overrides.height==null)r.height=base.width;if(overrides.touchWidth==null)r.touchWidth=base.touchHeight;if(overrides.touchHeight==null)r.touchHeight=base.touchWidth}return freeze(r)}
