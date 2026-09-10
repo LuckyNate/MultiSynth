@@ -1,5 +1,13 @@
 # MultiSynth Development Log
 
+## 2026-09-09 — Control lab → canon promotion workflow
+
+New shared controls are now developed outside the locked canonical library first. Experimental control implementations are development-only and may be consumed by Test Module/development tooling, but production modules must never depend on them.
+
+When a control is approved, promotion is one cleanup-complete operation: move the final implementation into `control-surface-library.js`, switch Test Module to the canonical `ControlSurface` API, remove the temporary implementation/include/namespace/adapters, search for leftover references, and delete the lab file if it is empty. Promotion must leave one implementation and one intended canonical API rather than development scaffolding or compatibility debris.
+
+The complete build-specific workflow is recorded in `docs/CONTROL_DEVELOPMENT.md`. After promotion, the normal canonical shared-control lock applies.
+
 ## 2026-09-09 — Canonical shared-control lock
 
 The shared control library is now considered pure canon, including READOUT.
