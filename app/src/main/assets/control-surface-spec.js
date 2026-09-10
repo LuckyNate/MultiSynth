@@ -5,10 +5,10 @@
   const C=CS.CONTROL;
   const freeze=o=>Object.freeze(o);
   const px=n=>`${Number(n)}px`;
-  // SHARED CONTROL VISUAL CANON — NO TOUCH.
-  // Existing control appearance, geometry, proportions, bezels, hardware styling, and approved variants are locked canon.
-  // Do not redesign, restyle, normalize, "improve", or alter an existing canonical control unless Nate explicitly overrides this no-touch rule for that specific change.
-  // New control types and explicitly approved new variants may be added without changing existing canon.
+  // SHARED SURFACE VISUAL CANON — NO TOUCH.
+  // Existing control/node-feature appearance, geometry, proportions, bezels, hardware styling, and approved variants are locked canon.
+  // Do not redesign, restyle, normalize, "improve", or alter an existing canonical surface element unless Nate explicitly overrides this no-touch rule for that specific change.
+  // New surface types and explicitly approved new variants may be added without changing existing canon.
   const TYPES=freeze({
     // CANON CONTROL — KNOB — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
     [C.KNOB]:freeze({variant:"cap",size:64,touch:76,travel:270,startAngle:-135,endAngle:135,ticks:11,pointer:"line",labelGap:8,valueReadout:false}),
@@ -40,9 +40,9 @@
     [C.METER]:freeze({variant:"bar",width:34,height:132,touchWidth:46,touchHeight:140,corner:5,labelGap:7,valueReadout:false}),
     // CANON CONTROL — LED — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
     [C.LED]:freeze({variant:"round",size:18,touch:36,corner:50,labelGap:6,valueReadout:false}),
-    // CANON CONTROL — JACK — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
+    // CANON NODE FEATURE — JACK — lives on nodes; visual canon is unchanged.
     [C.JACK]:freeze({variant:"socket",size:34,touch:50,corner:50,labelGap:6,valueReadout:false}),
-    // CANON CONTROL — DECAL — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
+    // CANON NODE FEATURE — DECAL — reuses the canonical decal primitive for node artwork.
     [C.DECAL]:freeze({variant:"screenprint",width:180,height:90,scale:1,translateX:0,translateY:0,rotation:0,tint:"#ffffff",opacity:1,fit:"contain",labelGap:0,valueReadout:false})
   });
   // Every existing canonical variant named below is locked. READOUT variants are candidates until Nate explicitly locks one or more.
