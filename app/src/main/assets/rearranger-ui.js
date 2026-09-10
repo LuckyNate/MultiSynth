@@ -57,6 +57,15 @@
   readoutHost.style.setProperty("--ms-hardware-row","1");
   grid.appendChild(readoutHost);
   const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:20,text:"REARRANGER  CLIP",lit:false});
+  const styleRearrangerReadout=api=>{
+    api.root.style.setProperty("--ms-readout-screen","#d88a18");
+    api.root.style.setProperty("--ms-readout-border","#5a3513");
+    api.root.style.setProperty("--ms-readout-on","#241507");
+    api.root.style.setProperty("--ms-readout-off","rgba(36,21,7,.16)");
+    api.root.style.setProperty("--ms-readout-glow","none");
+    return api;
+  };
+  styleRearrangerReadout(readout);
 
   const encLeft=slot(R.mount(grid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}}),1,12,2);
   const encRight=slot(R.mount(grid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}}),13,12,2);
@@ -82,7 +91,9 @@
     label:name
   }),1+i*6,6,5));
 
-  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"}),1,6,6);
+  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"},{
+    visual:{width:96,height:96,touchWidth:104,touchHeight:104}
+  }),1,7,6);
 
   const tempoLed=slot(R.mount(grid,{
     id:"rearranger-tempo-led",
@@ -92,13 +103,14 @@
 
   const bpmReadoutHost=document.createElement("div");
   bpmReadoutHost.classList.add("ms-hardware-slot");
-  bpmReadoutHost.style.setProperty("--ms-hardware-col","9");
-  bpmReadoutHost.style.setProperty("--ms-hardware-span","4");
+  bpmReadoutHost.style.setProperty("--ms-hardware-col","8");
+  bpmReadoutHost.style.setProperty("--ms-hardware-span","7");
   bpmReadoutHost.style.setProperty("--ms-hardware-row","6");
   grid.appendChild(bpmReadoutHost);
-  const bpmReadout=CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false});
+  const bpmReadout=styleRearrangerReadout(CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false}));
+  bpmReadout.root.style.minHeight="96px";
 
-  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),13,12,6);
+  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),15,10,6);
   let internalBpm=120,tapTimes=[];
   let beatTimer=0;
   const flashBeat=()=>{
