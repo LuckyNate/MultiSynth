@@ -82,8 +82,14 @@
 
   const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"}),"1 / span 6",6);
 
+  const tempoLed=slot(R.mount(grid,{
+    id:"rearranger-tempo-led",
+    control:"led",
+    label:""
+  }),"7 / span 2",6);
+
   const bpmReadoutHost=document.createElement("div");
-  bpmReadoutHost.style.gridColumn="7 / span 6";
+  bpmReadoutHost.style.gridColumn="9 / span 4";
   bpmReadoutHost.style.gridRow="6";
   bpmReadoutHost.style.minWidth="0";
   grid.appendChild(bpmReadoutHost);
@@ -91,10 +97,22 @@
 
   const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),"13 / span 12",6);
   let internalBpm=120,tapTimes=[];
+  let beatTimer=0;
+  const flashBeat=()=>{
+    tempoLed.dataset.on="1";
+    setTimeout(()=>{tempoLed.dataset.on="0"},90);
+  };
+  const restartBeatTimer=()=>{
+    clearInterval(beatTimer);
+    flashBeat();
+    beatTimer=setInterval(flashBeat,60000/internalBpm);
+  };
+
   const setBpm=value=>{
     internalBpm=Math.max(30,Math.min(300,Math.round(Number(value)||120)));
     R.setValue(bpmKnob,internalBpm,String(internalBpm));
     bpmReadout.set(String(internalBpm).padStart(3,"0").slice(-3));
+    restartBeatTimer();
   };
   timingPad.addEventListener("click",()=>{
     const now=performance.now();
@@ -217,6 +235,7 @@
     document.body.classList.add("hasPinnedKeyboard");
     const keyboard=MS.PerformanceKeyboard.mount(keyboardHost,{audio:A});
     const cleanup=()=>{
+      clearInterval(beatTimer);
       document.body.classList.remove("hasPinnedKeyboard");
       try{keyboard?.destroy?.()}catch(_){}
     };
