@@ -316,3 +316,8 @@ Before calling a module complete, verify it looks intentional and plausibly manu
 Before calling the Patch Graph complete, verify it feels like a direct freeform board rather than a conventional boxed node editor, modules preserve their authored hardware faces, pan/zoom is fluid, cables remain correctly attached through transforms, and no primitive can be inserted there.
 
 Passing CI is necessary but does not satisfy this review by itself.
+
+
+## Canonical Rearranger design
+
+Rearranger-specific behavior and terminology are defined in `docs/REARRANGER.md`. That document is the sole active Rearranger design canon; older implementation assumptions must not be treated as design authority.
