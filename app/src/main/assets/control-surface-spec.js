@@ -1,4 +1,10 @@
 "use strict";
+// CANON LOCK — VISUAL / SPEC LAYER.
+// This file is one of the three canonical shared-control layers: library, spec, renderer.
+// Any change to an existing canonical control in ANY of those three layers requires two confirmations:
+// (1) Nate explicitly authorizes the exact proposed change; (2) that exact scope is repeated back and Nate explicitly confirms it again.
+// Only then may that exact change be executed. Approval is single-use and does not authorize cleanup, refactors,
+// adjacent controls, contract/I-O changes, interaction/renderer changes, or other follow-up work outside the confirmed scope.
 (function(global){
   const MS=global.MultiSynth=global.MultiSynth||{},CS=MS.ControlSurface;
   if(!CS)return;
@@ -7,7 +13,7 @@
   const px=n=>`${Number(n)}px`;
   // SHARED SURFACE VISUAL CANON — NO TOUCH.
   // Existing control/node-feature appearance, geometry, proportions, bezels, hardware styling, and approved variants are locked canon.
-  // Do not redesign, restyle, normalize, "improve", or alter an existing canonical surface element unless Nate explicitly overrides this no-touch rule for that specific change.
+  // Do not redesign, restyle, normalize, "improve", or alter an existing canonical surface element unless the two-confirmation canon lock above is satisfied for that exact change.
   // New surface types and explicitly approved new variants may be added without changing existing canon.
   const TYPES=freeze({
     // CANON CONTROL — KNOB — DO NOT EDIT EXISTING VISUALS WITHOUT EXPLICIT NO-TOUCH OVERRIDE.
