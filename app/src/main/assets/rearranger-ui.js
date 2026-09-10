@@ -37,65 +37,68 @@
   const bank=document.createElement("section");
   bank.className="ms-module-bank";
   const grid=document.createElement("div");
-  grid.className="ms-control-grid";
-  grid.style.gridTemplateColumns="repeat(24,minmax(0,1fr))";
+  grid.className="ms-control-grid ms-layout-hardware-grid";
+  grid.style.setProperty("--ms-hardware-columns","24");
   bank.appendChild(grid);
   root.appendChild(bank);
 
-  const slot=(node,column,row)=>{
-    node.style.gridColumn=column;
-    node.style.gridRow=String(row);
-    node.style.minWidth="0";
+  const slot=(node,col,span,row)=>{
+    node.classList.add("ms-hardware-slot");
+    node.style.setProperty("--ms-hardware-col",String(col));
+    node.style.setProperty("--ms-hardware-span",String(span));
+    node.style.setProperty("--ms-hardware-row",String(row));
     return node;
   };
 
   const readoutHost=document.createElement("div");
-  readoutHost.style.gridColumn="1 / span 24";
-  readoutHost.style.gridRow="1";
-  readoutHost.style.minWidth="0";
+  readoutHost.classList.add("ms-hardware-slot");
+  readoutHost.style.setProperty("--ms-hardware-col","1");
+  readoutHost.style.setProperty("--ms-hardware-span","24");
+  readoutHost.style.setProperty("--ms-hardware-row","1");
   grid.appendChild(readoutHost);
   const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:20,text:"REARRANGER  CLIP",lit:false});
 
-  const encLeft=slot(R.mount(grid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}}),"1 / span 12",2);
-  const encRight=slot(R.mount(grid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}}),"13 / span 12",2);
+  const encLeft=slot(R.mount(grid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}}),1,12,2);
+  const encRight=slot(R.mount(grid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}}),13,12,2);
 
   const knobs=[0,1,2,3].map(i=>slot(R.mount(grid,{
     id:"rearranger-knob-"+(i+1),
     control:"knob",
     label:"PARAM "+(i+1),
     value:{default:.5,min:0,max:1,step:.001}
-  }),`${1+i*6} / span 6`,3));
+  }),1+i*6,6,3));
 
   const modes=["CLIP","STANZA","SONG","LIVE"];
   const modeButtons=modes.map((name,i)=>slot(R.mount(grid,{
     id:"rearranger-mode-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),`${1+i*6} / span 6`,4));
+  }),1+i*6,6,4));
 
   const actionNames=["PREV","NEXT","QUEUE","CLEAR"];
   const actionButtons=actionNames.map((name,i)=>slot(R.mount(grid,{
     id:"rearranger-action-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),`${1+i*6} / span 6`,5));
+  }),1+i*6,6,5));
 
-  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"}),"1 / span 6",6);
+  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"}),1,6,6);
 
   const tempoLed=slot(R.mount(grid,{
     id:"rearranger-tempo-led",
     control:"led",
     label:""
-  }),"7 / span 2",6);
+  }),7,2,6);
 
   const bpmReadoutHost=document.createElement("div");
-  bpmReadoutHost.style.gridColumn="9 / span 4";
-  bpmReadoutHost.style.gridRow="6";
-  bpmReadoutHost.style.minWidth="0";
+  bpmReadoutHost.classList.add("ms-hardware-slot");
+  bpmReadoutHost.style.setProperty("--ms-hardware-col","9");
+  bpmReadoutHost.style.setProperty("--ms-hardware-span","4");
+  bpmReadoutHost.style.setProperty("--ms-hardware-row","6");
   grid.appendChild(bpmReadoutHost);
   const bpmReadout=CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false});
 
-  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),"13 / span 12",6);
+  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),13,12,6);
   let internalBpm=120,tapTimes=[];
   let beatTimer=0;
   const flashBeat=()=>{
@@ -133,7 +136,7 @@
     id:"rearranger-transport-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),`${1+i*6} / span 6`,5));
+  }),1+i*6,6,5));
 
   const knobLabels={
     CLIP:["LEVEL","PAN","RATE","LOOP"],
