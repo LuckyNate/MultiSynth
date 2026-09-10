@@ -186,13 +186,13 @@ Arrangement contexts include:
 
 The same physical controls rebind contextually rather than spawning unrelated one-off control implementations.
 
-## Timing and gating
+## Timing
 
-Rearranger does **not** own a separate gate system.
+Rearranger has an internal clock and also consumes incoming CV timing.
 
-MultiSynth CV already supplies gating. Rearranger must use the existing CV/gate infrastructure rather than introducing module-specific gate semantics.
+The internal clock can set BPM directly. When appropriate incoming CV timing is present, Rearranger can derive and synchronize its BPM and musical position from that timing.
 
-Rearranger is clock-driven and must integrate with the established timing/routing systems rather than creating an independent BPM/timing universe.
+Rearranger therefore supports both internally timed arrangement playback and synchronization to incoming CV timing without requiring the arrangement data to change.
 
 ## Design rules
 
@@ -207,4 +207,4 @@ Rearranger is clock-driven and must integrate with the established timing/routin
 9. Existing modules create material; Rearranger arranges it.
 10. Use canonical MultiSynth controls and default styling unless a genuinely missing primitive is identified.
 11. Preserve the reel pair's left/right editing semantics across contexts.
-12. Use CV for gating; do not add a Rearranger-specific gate architecture.
+12. Support both the internal clock and synchronization from incoming CV timing.
