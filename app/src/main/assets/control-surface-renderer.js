@@ -49,12 +49,11 @@
   }
   function installKnobDrag(root,d){
     if(d.control!==C.KNOB)return root;
-    const min=Number.isFinite(Number(d.value?.min))?Number(d.value.min):0,max=Number.isFinite(Number(d.value?.max))?Number(d.value.max):1,step=Number(d.value?.step)||0,state={pointer:null,startY:0,startValue:Number(d.value?.value??d.value?.default??min)};
-    const clamp=v=>Math.min(max,Math.max(min,v)),quant=v=>{v=clamp(Number(v));return step>0?clamp(min+Math.round((v-min)/step)*step):v};
-    root.__msResetKnobDrag=()=>{if(state.pointer!=null){try{root.releasePointerCapture?.(state.pointer)}catch(_){}}state.pointer=null};
-    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0||root.dataset.locked==="1")return;state.pointer=e.pointerId;state.startY=e.clientY;state.startValue=Number.isFinite(Number(root.dataset.value))?Number(root.dataset.value):quant(d.value?.value??d.value?.default??min);root.setPointerCapture?.(state.pointer);e.preventDefault()});
-    root.addEventListener("pointermove",e=>{if(e.pointerId!==state.pointer||root.dataset.locked==="1")return;root.commitControlValue?.(quant(state.startValue+(state.startY-e.clientY)/180*(max-min)));e.preventDefault()});
-    const end=e=>{if(e.pointerId!==state.pointer)return;try{root.releasePointerCapture?.(state.pointer)}catch(_){}state.pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
+    const state={pointer:null,lastY:0};
+    root.__msResetKnobDrag=()=>{if(state.pointer!=null){try{root.releasePointerCapture?.(state.pointer)}catch(_){}}state.pointer=null;state.lastY=0};
+    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0||root.dataset.locked==="1")return;state.pointer=e.pointerId;state.lastY=e.clientY;root.setPointerCapture?.(state.pointer);e.preventDefault()});
+    root.addEventListener("pointermove",e=>{if(e.pointerId!==state.pointer||root.dataset.locked==="1")return;const deltaPixels=state.lastY-e.clientY;state.lastY=e.clientY;if(deltaPixels!==0)root.dispatchEvent(new CustomEvent("multisynth-control-knob-delta",{bubbles:true,detail:{delta:deltaPixels/180,deltaPixels,controlId:d.id,stateKey:d.state,event:e}}));e.preventDefault()});
+    const end=e=>{if(e.pointerId!==state.pointer)return;try{root.releasePointerCapture?.(state.pointer)}catch(_){}state.pointer=null;state.lastY=0};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
   function installFaderDrag(root,d,visual){
     if(d.control!==C.FADER)return root;
