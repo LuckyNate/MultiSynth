@@ -28,8 +28,19 @@ Promotion must leave one implementation and one intended canonical API. Developm
 
 ## Canon lock after promotion
 
-After promotion, the control is covered by the shared-control canon lock. Existing canonical appearance, geometry, interaction behavior, generic I/O behavior, renderer behavior and approved variants are untouchable by default.
+Canonical shared controls are protected across all three control layers:
 
-Any later change to an existing canonical control requires the established two-step authorization for that exact change: explicit authorization, exact scope repeated back, then explicit confirmation before execution. Authorization is single-use and does not extend to cleanup, refactors, adjacent controls, styling, behavior or follow-up work.
+- `control-surface-library.js` — control contract, shared semantics and generic I/O.
+- `control-surface-spec.js` — canonical appearance, geometry, proportions and approved variants.
+- `control-surface-renderer.js` — canonical interaction, rendering and binding behavior.
+
+Any change to an existing canonical control in any of those three layers requires two explicit confirmations for that exact proposed change:
+
+1. Nate explicitly authorizes the exact proposed canonical change.
+2. The assistant repeats the exact authorized scope, and Nate explicitly confirms it again.
+
+Only after both confirmations may that exact change be executed. Authorization is single-use. It does not authorize cleanup, refactors, adjacent controls, styling, behavior, renderer/spec/library changes, or any other follow-up work outside the confirmed scope.
+
+The lock applies even when another task already requires editing one of the three canonical files. Touching the file does not grant permission to alter unrelated canonical control code.
 
 Module-level theme/CSS may consume supported canonical styling hooks without modifying the control implementation.
