@@ -1,12 +1,73 @@
 MULTISYNTH TODO
 
-1. CANONICAL CONTROL STATE AUDIT
-   - Audit every canonical control type for all state it carries.
-   - Classify each field as persistent parameter/context state or transient physical interaction state.
-   - Persistent contextual state belongs to module saved state, not to the physical control instance.
-   - Identify lock/unlock, pickup/catch, automation hold, cached/display state, gesture history, pointer/drag ownership, latch/highlight, and any other state that can leak when a control is rebound.
-   - Verify external state changes can fully redraw/refresh each canonical control.
-   - Audit only first; do not alter locked canon without the required explicit two-step authorization.
+1. CANONICAL CONTROL STATE IMPLEMENTATION
+   Core rule: the module remembers; the control borrows.
+   - On rebind, module state -> control: the newly bound parameter/state object completely repaints the control.
+   - On user interaction, control -> module state: permitted changes are written back to the currently bound parameter/state object.
+   - Physical controls may own only transient interaction state such as pointer ID, drag origin, active/pressed/turning feedback, gesture-local history, pointer capture, and interaction-only animation/timer state.
+   - Freewheel/Test Module remains the intentional exception: when no real module/carrier is bound, the control may maintain temporary dummy state so its gesture and physical behavior can be tested.
+
+   CONTROLS TO IMPLEMENT
+   - KNOB
+     Persistent bound state: { value, locked }.
+     Rebind must repaint value and lock state from the bound parameter object.
+     Turning writes value back only when the bound parameter is unlocked.
+     Lock must not be authoritative on the physical knob instance.
+
+   - ENCODER
+     Persistent bound state: { value } plus any real per-binding semantic state already supported by the module.
+     Rebind must repaint the represented value/rotation from the bound state.
+     Turning writes the new value back through the current binding.
+
+   - FADER
+     Persistent bound state: { value }.
+     Add/complete the external reflection path so rebind moves the physical thumb to the bound value.
+     Dragging writes the new value back through the current binding.
+
+   - RIBBON
+     Persistent bound state: { value } where the module actually stores a lasting ribbon value.
+     Add/complete the external reflection path so rebind moves the marker to the bound value.
+     Touch/drag writes the new value back through the current binding.
+     Return-to-zero/gesture animation remains transient control behavior where applicable.
+
+   - SWITCH
+     Persistent bound state: { on }.
+     Add/complete the external reflection path so rebind immediately shows the bound on/off state.
+     User toggle writes the new on/off state back through the current binding.
+
+   - BUTTON / PAD
+     Momentary press state remains transient physical state.
+     If a module uses the control as latched/selected persistent state, that state belongs to the module binding and must repaint on rebind.
+     User interaction writes any persistent latched/selected change back through the current binding.
+
+   - XY
+     Persistent bound state: { x, y }.
+     Add/complete the external reflection path so rebind moves the dot to the bound X/Y coordinates.
+     Dragging writes new X/Y values back through the current binding.
+
+   - LED
+     Persistent/semantic status is module-owned and normally flows one way: module state -> LED display.
+     Add/complete an external state-reflection path; the LED must not become authority for the module state it indicates.
+
+   - METER
+     Displayed value is module/signal-owned and flows one way: source -> meter.
+     Preserve the existing external repaint path; meter owns presentation only.
+
+   - TURNTABLE
+     Persistent bound state such as position and any existing module-owned playback/scrub state must come from the current binding.
+     Rebind must fully repaint the represented persistent state.
+     Scrub/user changes write permitted persistent changes back through the current binding.
+     Pointer, active drag, last gesture angle/time, and similar gesture bookkeeping remain transient control state.
+
+   CONTROLS NOT INCLUDED IN THIS STATE-OWNERSHIP IMPLEMENTATION
+   - JACK: connection/routing state remains owned by the patch/routing system; the jack owns only patch gesture interaction.
+   - DECAL: presentation only; no binding state.
+   - OSCILLOSCOPE: streaming/source-driven display; no persistent controller-owned parameter state.
+   - READOUT / SCREEN: display surfaces fed by external content/state; retain their existing explicit display/content paths rather than treating them as parameter controls.
+
+   COMPLETION CONDITION
+   - Every included control follows the same bounded contract: rebind reads complete persistent state from the new module binding; user interaction writes permitted changes to that binding; no persistent state from the previous binding leaks through the physical control.
+   - Do not expand this item into unrelated controller redesign, leaf/module refactoring, visual changes, or broader architecture work.
 
 2. CONTEXTUAL BINDING AUDIT — ALL MODULES
    - Audit every module for any physical control whose semantic target can change while the control remains mounted.
