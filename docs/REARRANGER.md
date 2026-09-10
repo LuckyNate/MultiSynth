@@ -194,6 +194,18 @@ The internal clock can set BPM directly. When appropriate incoming CV timing is 
 
 Rearranger therefore supports both internally timed arrangement playback and synchronization to incoming CV timing without requiring the arrangement data to change.
 
+### Dedicated timing strip
+
+A dedicated timing strip sits at the bottom of the Rearranger working surface, immediately above the pinned keyboard:
+
+**TAP PAD | 3-DIGIT BPM READOUT | BPM KNOB**
+
+- The TAP pad derives the internal BPM from repeated taps.
+- The three-digit BPM readout always shows the effective BPM.
+- The BPM knob sets the internal BPM directly.
+- When Rearranger is synchronized from incoming CV timing, the BPM readout reflects the effective derived tempo.
+- This timing strip is dedicated and does not change meaning with Rearranger context.
+
 ## Design rules
 
 1. Keep musical content separate from sound-source assignment where applicable.
