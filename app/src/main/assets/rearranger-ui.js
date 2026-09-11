@@ -47,7 +47,7 @@
   const readoutGrid=makeGrid("ms-layout-list");
   const readoutHost=document.createElement("div");
   readoutGrid.appendChild(readoutHost);
-  const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:20,text:"REARRANGER  CLIP",lit:false});
+  const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:24,text:"REARRANGER  CLIP",lit:false});
   const styleRearrangerReadout=api=>{
     api.root.style.setProperty("--ms-readout-screen","#d88a18");
     api.root.style.setProperty("--ms-readout-border","#5a3513");
@@ -57,6 +57,9 @@
     return api;
   };
   styleRearrangerReadout(readout);
+  readout.root.querySelectorAll(".ms-14seg-segment").forEach(segment=>segment.style.strokeWidth="10");
+  const readoutObserver=new MutationObserver(()=>readout.root.querySelectorAll(".ms-14seg-segment").forEach(segment=>segment.style.strokeWidth="10"));
+  readoutObserver.observe(readout.root,{childList:true});
 
   const encoderGrid=makeGrid("ms-layout-pair");
   const encLeft=R.mount(encoderGrid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}});
@@ -95,23 +98,43 @@
   }));
 
   const timingGrid=makeGrid("ms-layout-timing");
+  const timingSize=84;
   const timingPad=R.mount(timingGrid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"},{
-    visual:{width:84,height:84,touchWidth:92,touchHeight:92}
+    visual:{width:timingSize,height:timingSize,touchWidth:92,touchHeight:92}
   });
 
-  const tempoLed=R.mount(timingGrid,{
+  const tempoIndicator=document.createElement("div");
+  tempoIndicator.style.display="flex";
+  tempoIndicator.style.flexDirection="column";
+  tempoIndicator.style.alignItems="center";
+  tempoIndicator.style.justifyContent="center";
+  tempoIndicator.style.gap="7px";
+  tempoIndicator.style.minHeight=timingSize+"px";
+  const tapLabel=document.createElement("div");
+  tapLabel.textContent="TAP";
+  tapLabel.className="ms-control-label";
+  tempoIndicator.appendChild(tapLabel);
+  timingGrid.appendChild(tempoIndicator);
+  const tempoLed=R.mount(tempoIndicator,{
     id:"rearranger-tempo-led",
     control:"led",
     label:""
   });
+  const bpmLabel=document.createElement("div");
+  bpmLabel.textContent="BPM";
+  bpmLabel.className="ms-control-label";
+  tempoIndicator.appendChild(bpmLabel);
 
   const bpmReadoutHost=document.createElement("div");
   bpmReadoutHost.style.minWidth="0";
+  bpmReadoutHost.style.minHeight=timingSize+"px";
   timingGrid.appendChild(bpmReadoutHost);
   const bpmReadout=styleRearrangerReadout(CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false}));
-  bpmReadout.root.style.minHeight="84px";
+  bpmReadout.root.style.height=timingSize+"px";
 
-  const bpmKnob=R.mount(timingGrid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}});
+  const bpmKnob=R.mount(timingGrid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}},{
+    visual:{size:timingSize,touchSize:92}
+  });
   let internalBpm=120,tapTimes=[];
   let beatTimer=0;
   const flashBeat=()=>{
@@ -245,6 +268,7 @@
     const keyboard=MS.PerformanceKeyboard.mount(keyboardHost,{audio:A});
     const cleanup=()=>{
       clearInterval(beatTimer);
+      readoutObserver.disconnect();
       document.body.classList.remove("hasPinnedKeyboard");
       try{keyboard?.destroy?.()}catch(_){}
     };
