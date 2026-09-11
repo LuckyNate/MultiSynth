@@ -34,28 +34,19 @@
   root.innerHTML="";
   root.classList.add("ms-module-surface");
 
-  const bank=document.createElement("section");
-  bank.className="ms-module-bank";
-  const grid=document.createElement("div");
-  grid.className="ms-control-grid ms-layout-hardware-grid";
-  grid.style.setProperty("--ms-hardware-columns","24");
-  bank.appendChild(grid);
-  root.appendChild(bank);
-
-  const slot=(node,col,span,row)=>{
-    node.classList.add("ms-hardware-slot");
-    node.style.setProperty("--ms-hardware-col",String(col));
-    node.style.setProperty("--ms-hardware-span",String(span));
-    node.style.setProperty("--ms-hardware-row",String(row));
-    return node;
+  const makeGrid=role=>{
+    const bank=document.createElement("section");
+    bank.className="ms-module-bank";
+    const grid=document.createElement("div");
+    grid.className="ms-control-grid "+role;
+    bank.appendChild(grid);
+    root.appendChild(bank);
+    return grid;
   };
 
+  const readoutGrid=makeGrid("ms-layout-list");
   const readoutHost=document.createElement("div");
-  readoutHost.classList.add("ms-hardware-slot");
-  readoutHost.style.setProperty("--ms-hardware-col","1");
-  readoutHost.style.setProperty("--ms-hardware-span","24");
-  readoutHost.style.setProperty("--ms-hardware-row","1");
-  grid.appendChild(readoutHost);
+  readoutGrid.appendChild(readoutHost);
   const readout=CS.mountReadout(readoutHost,{id:"rearranger-readout",rows:8,columns:20,text:"REARRANGER  CLIP",lit:false});
   const styleRearrangerReadout=api=>{
     api.root.style.setProperty("--ms-readout-screen","#d88a18");
@@ -67,50 +58,60 @@
   };
   styleRearrangerReadout(readout);
 
-  const encLeft=slot(R.mount(grid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}}),1,12,2);
-  const encRight=slot(R.mount(grid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}}),13,12,2);
+  const encoderGrid=makeGrid("ms-layout-pair");
+  const encLeft=R.mount(encoderGrid,{id:"rearranger-left",control:"encoder",label:"LEFT",value:{default:0,min:0,max:1,step:.001}});
+  const encRight=R.mount(encoderGrid,{id:"rearranger-right",control:"encoder",label:"RIGHT",value:{default:1,min:0,max:1,step:.001}});
 
-  const knobs=[0,1,2,3].map(i=>slot(R.mount(grid,{
+  const knobGrid=makeGrid("ms-layout-context");
+  const knobs=[0,1,2,3].map(i=>R.mount(knobGrid,{
     id:"rearranger-knob-"+(i+1),
     control:"knob",
     label:"PARAM "+(i+1),
     value:{default:.5,min:0,max:1,step:.001}
-  }),1+i*6,6,3));
+  }));
 
+  const modeGrid=makeGrid("ms-layout-context");
   const modes=["CLIP","STANZA","SONG","LIVE"];
-  const modeButtons=modes.map((name,i)=>slot(R.mount(grid,{
+  const modeButtons=modes.map(name=>R.mount(modeGrid,{
     id:"rearranger-mode-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),1+i*6,6,4));
+  }));
 
+  const actionGrid=makeGrid("ms-layout-context");
   const actionNames=["PREV","NEXT","QUEUE","CLEAR"];
-  const actionButtons=actionNames.map((name,i)=>slot(R.mount(grid,{
+  const actionButtons=actionNames.map(name=>R.mount(actionGrid,{
     id:"rearranger-action-"+name.toLowerCase(),
     control:"button",
     label:name
-  }),1+i*6,6,5));
+  }));
 
-  const timingPad=slot(R.mount(grid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"},{
-    visual:{width:96,height:96,touchWidth:104,touchHeight:104}
-  }),1,7,6);
+  const transportGrid=makeGrid("ms-layout-context");
+  const transportNames=["BACK","PLAY","STOP","FWD"];
+  const transportButtons=transportNames.map(name=>R.mount(transportGrid,{
+    id:"rearranger-transport-"+name.toLowerCase(),
+    control:"button",
+    label:name
+  }));
 
-  const tempoLed=slot(R.mount(grid,{
+  const timingGrid=makeGrid("ms-layout-timing");
+  const timingPad=R.mount(timingGrid,{id:"rearranger-tap-tempo",control:"pad",label:"TAP"},{
+    visual:{width:84,height:84,touchWidth:92,touchHeight:92}
+  });
+
+  const tempoLed=R.mount(timingGrid,{
     id:"rearranger-tempo-led",
     control:"led",
     label:""
-  }),7,2,6);
+  });
 
   const bpmReadoutHost=document.createElement("div");
-  bpmReadoutHost.classList.add("ms-hardware-slot");
-  bpmReadoutHost.style.setProperty("--ms-hardware-col","8");
-  bpmReadoutHost.style.setProperty("--ms-hardware-span","7");
-  bpmReadoutHost.style.setProperty("--ms-hardware-row","6");
-  grid.appendChild(bpmReadoutHost);
+  bpmReadoutHost.style.minWidth="0";
+  timingGrid.appendChild(bpmReadoutHost);
   const bpmReadout=styleRearrangerReadout(CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false}));
-  bpmReadout.root.style.minHeight="96px";
+  bpmReadout.root.style.minHeight="84px";
 
-  const bpmKnob=slot(R.mount(grid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}}),15,10,6);
+  const bpmKnob=R.mount(timingGrid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}});
   let internalBpm=120,tapTimes=[];
   let beatTimer=0;
   const flashBeat=()=>{
@@ -142,13 +143,6 @@
   });
   bpmKnob.addEventListener("multisynth-control-knob-delta",e=>setBpm(internalBpm+(e.detail?.delta||0)*270));
   setBpm(internalBpm);
-
-  const transportNames=["BACK","PLAY","STOP","FWD"];
-  const transportButtons=transportNames.map((name,i)=>slot(R.mount(grid,{
-    id:"rearranger-transport-"+name.toLowerCase(),
-    control:"button",
-    label:name
-  }),1+i*6,6,5));
 
   const knobLabels={
     CLIP:["LEVEL","PAN","RATE","LOOP"],
