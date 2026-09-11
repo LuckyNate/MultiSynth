@@ -1,6 +1,8 @@
 MULTISYNTH TODO
 
 1. CONTEXTUAL BINDING AUDIT — ALL MODULES
+   - Execute this audit by canonical control type across all modules, not module-by-module.
+   - For each control family, gather every module that uses it, classify fixed vs contextual bindings, and audit all contextual uses together before moving to the next control type.
    - Audit every module for any physical control whose semantic target can change while the control remains mounted.
    - Give every contextual target a stable binding identity/key.
    - Binding selects which saved module state the physical control currently represents; the control must not infer context by inspecting the app.
