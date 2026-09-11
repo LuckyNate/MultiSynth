@@ -89,6 +89,32 @@
     root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer||root.dataset.locked==="1")return;v.set(startValue+(startY-e.clientY)/180*(v.max-v.min));e.preventDefault()});
     const end=e=>{if(e.pointerId!==pointer)return;active=false;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
+  function installEncoderFreewheel(root,d){
+    const v=freewheelValueState(root,d);
+    let value=v.get();
+    v.set(value);
+
+    root.addEventListener("multisynth-control-circular-drag",e=>{
+      const detail=e.detail||{};
+      if(!detail.active)return;
+
+      const span=v.max-v.min||1;
+      const delta=Number(detail.deltaRadians)||0;
+
+      value=v.set(
+        value + delta/(Math.PI*2)*span
+      );
+
+      if(Number.isFinite(Number(detail.rotationDegrees))){
+        root.style.setProperty(
+          "--ms-angle",
+          String(Number(detail.rotationDegrees))+"deg"
+        );
+      }
+    });
+
+    return root;
+  }
   function installFaderFreewheel(root,d,visual){
     const v=freewheelValueState(root,d),thumb=root.querySelector?.(".ms-fader-thumb"),horizontal=visual.variant==="horizontal";let active=false,pointer=null,startX=0,startY=0,startValue=v.get();
     const paint=value=>{value=v.set(value);const n=v.norm(value);if(thumb){if(horizontal){thumb.style.left=`${n*100}%`;thumb.style.top="50%"}else thumb.style.top=`${(1-n)*100}%`}return value};paint(startValue);
@@ -134,6 +160,7 @@
   }
   const FREEWHEEL_INSTALLERS=Object.freeze({
     [C.KNOB]:(root,d,visual)=>installKnobFreewheel(root,d,visual),
+    [C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),
     [C.FADER]:(root,d,visual)=>installFaderFreewheel(root,d,visual),
     [C.RIBBON]:(root,d,visual)=>installRibbonFreewheel(root,d,visual),
     [C.EXPRESSION]:(root,d,visual)=>installExpressionFreewheel(root,d,visual),
