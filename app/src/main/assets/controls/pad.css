@@ -1,0 +1,3 @@
+.ms-pad .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);background:linear-gradient(145deg,#343434,#181818)}
+.ms-pad--round .ms-control-face{border-radius:50%}
+.ms-pad--strip .ms-control-face{width:calc(var(--ms-width)*1.8);height:calc(var(--ms-height)*.55)}
