@@ -1,1 +1,3 @@
-/* OSCILLOSCOPE currently has no oscilloscope-only rules in control-surface.css. */
+.ms-oscilloscope{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:30}
+.ms-oscilloscope .ms-control-face{overflow:hidden}
+.ms-oscilloscope-canvas{display:block;width:100%;height:100%;touch-action:none}
