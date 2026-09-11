@@ -26,7 +26,7 @@ for(const file of files){
     const body=text.replace(/<script[\s\S]*?<\/script>/gi,"");
     const raw=RAW_HARDWARE.exec(body);if(raw)violations.push(`${where}:${lineOf(text,raw.index)} contains raw form/button hardware instead of shared controls`);
   }
-  if(ext!==".css"||SHARED_CSS.has(name))continue;
+  if(ext!==".css"||SHARED_CSS.has(name)||path.relative(ROOT,file).replaceAll("\\","/").startsWith("controls/"))continue;
   const css=stripComments(text),rule=/([^{}]+)\{([^{}]*)\}/g;let m;
   while((m=rule.exec(css))){
     const selector=m[1].trim();if(!SHARED_ANATOMY.test(selector))continue;
