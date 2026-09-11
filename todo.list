@@ -1,24 +1,25 @@
 MULTISYNTH TODO
 
 1. FINAL CONTROL AUDIT — COMPLETENESS + MODULARITY
-   - Priority: audit each migrated canonical control package for completeness and modularity.
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: knob
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: encoder
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: turntable
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: fader
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: ribbon
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: expression
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: pad
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: button
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: switch
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: XY
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: readout
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: screen
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: oscilloscope
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: meter
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: LED
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: jack
-   - READY FOR FINAL AUDIT — COMPLETENESS + MODULARITY: decal
+   - NEXT PRIORITY: audit each migrated canonical control package for completeness and modularity.
+   - Execute as the final canonical-control audit queue.
+   - AUDIT QUEUE: knob
+   - AUDIT QUEUE: encoder
+   - AUDIT QUEUE: turntable
+   - AUDIT QUEUE: fader
+   - AUDIT QUEUE: ribbon
+   - AUDIT QUEUE: expression
+   - AUDIT QUEUE: pad
+   - AUDIT QUEUE: button
+   - AUDIT QUEUE: switch
+   - AUDIT QUEUE: XY
+   - AUDIT QUEUE: readout
+   - AUDIT QUEUE: screen
+   - AUDIT QUEUE: oscilloscope
+   - AUDIT QUEUE: meter
+   - AUDIT QUEUE: LED
+   - AUDIT QUEUE: jack
+   - AUDIT QUEUE: decal
 
 2. CONTEXTUAL BINDING AUDIT — ALL MODULES
    - Audit every module for any physical control whose semantic target can change while the control remains mounted.
@@ -46,10 +47,13 @@ MULTISYNTH TODO
    - Identical variants remain grouped under the same controller type.
    - Module-specific code must not reimplement controller appearance or interaction.
 
-6. MODULE MAPPING PASS
-   - After controller ownership is complete, review every module.
-   - Map each module leaf implementation onto the canonical shared controllers.
-   - The only unique module code should be the leaf implementation: what each control connects to and what its value means.
+6. MODULE MAPPING PASS — COMPLETE
+   - All module runtime surfaces are migrated to ModuleContract and mapped onto canonical shared controls/prefabs.
+   - Working leaf behavior was preserved during the migration.
+   - Obsolete Module Builder runtime infrastructure has been fully excised after runtime consumers reached zero.
+   - module-builder-definitions.js and module-builder-catalog.js are removed from runtime.
+   - tools/module-builder/ remains intentionally deferred tooling and was not modified.
+   - COMPLETED ARCHITECTURE MILESTONE: ModuleContract is the canonical runtime owner/registry for module definitions and module-owned control surfaces; the obsolete Module Builder runtime spine is gone.
 
 CANONICAL CONTROL LOCK — ACTIVE
    - The shared control library, including READOUT, is pure canon and untouchable by default.
