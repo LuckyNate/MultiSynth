@@ -11,7 +11,7 @@
   const files=[
     "knob.js","encoder.js","turntable.js","fader.js","ribbon.js","expression.js",
     "pad.js","button.js","switch.js","xy.js","readout.js","screen.js","oscilloscope.js",
-    "meter.js","led.js","jack.js","decal.js","spec-core.js"
+    "meter.js","led.js","jack.js","decal.js","spec-core.js","prefabs.js"
   ];
   for(const file of files)doc.write('<script src="'+base+file+'"><\/script>');
 })(window);
