@@ -32,7 +32,7 @@ const document={createElement:tag=>new Element(tag)};
 const context={console,document,requestAnimationFrame:fn=>fn(),window:null,CustomEvent:MockCustomEvent,MouseEvent:MockMouseEvent,performance:{now:()=>Date.now()}};
 context.window=context;context.globalThis=context;
 vm.createContext(context);
-for(const file of ["control-surface-library.js","control-surface-spec.js","control-surface-renderer.js"]){vm.runInContext(fs.readFileSync(path.join(assets,file),"utf8"),context,{filename:file})}
+for(const file of ["control-surface-library.js",...fs.readdirSync(path.join(assets,"controls")).filter(x=>x.endsWith(".js")&&x!=="spec-core.js").sort().map(x=>"controls/"+x),"controls/spec-core.js","control-surface-renderer.js"]){vm.runInContext(fs.readFileSync(path.join(assets,file),"utf8"),context,{filename:file})}
 
 const renderer=context.MultiSynth.ControlSurfaceRenderer;
 function makeRotary(control,variant,value,markerClass){
