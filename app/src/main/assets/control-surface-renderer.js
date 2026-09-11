@@ -94,6 +94,15 @@
     root.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;at(e);e.preventDefault()});
     const end=e=>{if(e.pointerId!==pointer)return;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;root.commitExpressionValue(neutral)};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
+  function installPadPress(root,d){
+    if(d.control!==C.PAD)return root;
+    let pointer=null;
+    const emit=(phase,event)=>root.dispatchEvent(new CustomEvent(`multisynth-control-pad-${phase}`,{bubbles:true,detail:{active:phase!=="release",held:phase==="hold",controlId:d.id,stateKey:d.state,event}}));
+    root.__msResetPadPress=()=>{if(pointer!=null){try{root.releasePointerCapture?.(pointer)}catch(_){}}pointer=null;root.dataset.active="0";root.dataset.held="0"};
+    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;pointer=e.pointerId;root.dataset.active="1";root.dataset.held="1";root.setPointerCapture?.(pointer);emit("press",e);emit("hold",e);e.preventDefault()});
+    const end=e=>{if(pointer!=null&&e.pointerId!==pointer)return;const wasActive=root.dataset.active==="1";try{if(pointer!=null)root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;root.dataset.active="0";root.dataset.held="0";if(wasActive)emit("release",e)};
+    root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);root.addEventListener("lostpointercapture",end);return root;
+  }
   function installSwitchToggle(root,d){
     if(d.control!==C.SWITCH)return root;
     root.commitSwitchState=(on,{silent=false}={})=>{const next=!!on;root.dataset.on=next?"1":"0";root.dataset.active=next?"1":"0";if(!silent){if(root.__msSwitchBinding)root.__msSwitchBinding.on=next;root.dispatchEvent(new CustomEvent("multisynth-control-switch-change",{bubbles:true,detail:{on:next,controlId:d.id,stateKey:d.state}}))}return next};
@@ -146,7 +155,6 @@
   }
   function installSwitchFreewheel(root){root.addEventListener("click",()=>{const on=root.dataset.on!=="1";root.dataset.on=on?"1":"0";root.dataset.active=on?"1":"0"});return root}
   function installButtonFreewheel(root){root.addEventListener("click",()=>{const on=root.dataset.on!=="1";root.dataset.on=on?"1":"0";root.dataset.active=on?"1":"0"});return root}
-  function installPadFreewheel(root){let pointer=null;const down=e=>{if(e.button!=null&&e.button!==0)return;pointer=e.pointerId;root.dataset.active="1";root.setPointerCapture?.(pointer);e.preventDefault()},up=e=>{if(pointer!=null&&e.pointerId!==pointer)return;root.dataset.active="0";try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerdown",down);root.addEventListener("pointerup",up);root.addEventListener("pointercancel",up);return root}
   function installXYFreewheel(root){const face=root.querySelector(".ms-control-face"),dot=root.querySelector?.(".ms-xy-dot"),clamp=(v,a=-1,b=1)=>Math.min(b,Math.max(a,v));let active=false,pointer=null;const paint=(x,y)=>{x=clamp(x);y=clamp(y);root.dataset.x=String(x);root.dataset.y=String(y);if(dot){dot.style.left=`${(x+1)*50}%`;dot.style.top=`${(y+1)*50}%`}};const move=e=>{if(!face)return;const r=face.getBoundingClientRect(),nx=Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1))),ny=Math.max(0,Math.min(1,(e.clientY-r.top)/(r.height||1)));paint(nx*2-1,ny*2-1)};const reset=()=>paint(0,0);reset();root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;active=true;pointer=e.pointerId;root.setPointerCapture?.(pointer);move(e);e.preventDefault()});root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer)return;move(e);e.preventDefault()});const end=e=>{if(pointer!=null&&e?.pointerId!=null&&e.pointerId!==pointer)return;active=false;try{if(pointer!=null)root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;reset()};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);root.addEventListener("lostpointercapture",end);return root}
   function installTurntableMotion(root,d,{onScrub=null,secondsPerTurn=1.8,position=0}={}){
     const face=root.querySelector(".ms-control-face");if(!face)return root;
@@ -164,7 +172,6 @@
     [C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),
     [C.SWITCH]:root=>installSwitchFreewheel(root),
     [C.BUTTON]:root=>installButtonFreewheel(root),
-    [C.PAD]:root=>installPadFreewheel(root),
     [C.XY]:root=>installXYFreewheel(root),
     [C.TURNTABLE]:(root,d)=>installTurntableFreewheel(root,d)
   });
@@ -178,7 +185,7 @@
   function angleAt(face,e){const r=face.getBoundingClientRect(),cx=r.left+r.width*.5,cy=r.top+r.height*.5;return Math.atan2(e.clientY-cy,e.clientX-cx)}
   function wrapDelta(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
   function bindTurntable(root,{position=0,onScrub=null,secondsPerTurn=1.8}={}){if(root?.dataset?.control!==C.TURNTABLE)throw new Error("bindTurntable requires a turntable control");return installTurntableMotion(root,root.__msDescriptor,{position,onScrub,secondsPerTurn})}
-  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})}),parts=shell(d,visual);decorate(d,parts,visual);installCircularFit(parts.root,parts.face,d,visual);installValueVisual(parts.root,d,visual);installRotaryTap(parts.root,d);installEncoderCircularDrag(parts.root,d);installTouchLedFeedback(parts.root,d);installKnobStatusFeedback(parts.root,d);installFaderDrag(parts.root,d,visual);installRibbonDrag(parts.root,d,visual);installExpressionDrag(parts.root,d,visual);if(!options.freewheel){installKnobDrag(parts.root,d);installSwitchToggle(parts.root,d);installButtonToggle(parts.root,d)}if(options.freewheel)installFreewheel(parts.root,d,visual);return parts.root}
+  function render(spec,options={}){const d=spec?.control?CS.define(spec):spec;if(!d?.control)throw new Error("ControlSurfaceRenderer requires a descriptor");const visual=SPEC.resolve(d.control,{...(d.meta?.visual||{}),...(options.visual||{}),...(d.variant?{variant:d.variant}:{})}),parts=shell(d,visual);decorate(d,parts,visual);installCircularFit(parts.root,parts.face,d,visual);installValueVisual(parts.root,d,visual);installRotaryTap(parts.root,d);installEncoderCircularDrag(parts.root,d);installTouchLedFeedback(parts.root,d);installKnobStatusFeedback(parts.root,d);installFaderDrag(parts.root,d,visual);installRibbonDrag(parts.root,d,visual);installExpressionDrag(parts.root,d,visual);installPadPress(parts.root,d);if(!options.freewheel){installKnobDrag(parts.root,d);installSwitchToggle(parts.root,d);installButtonToggle(parts.root,d)}if(options.freewheel)installFreewheel(parts.root,d,visual);return parts.root}
   function mount(parent,spec,options={}){const node=render(spec,options);parent.appendChild(node);return node}
   function setValue(node,value,display=value){return paintValue(node,value,display)}
   function bindKnob(node,state){if(node?.dataset?.control!==C.KNOB)throw new Error("bindKnob requires a knob control");if(!state||typeof state!=="object")throw new Error("bindKnob requires a state object");node.__msResetKnobTap?.();node.__msResetKnobDrag?.();node.__msKnobBinding=state;if(state.value!==undefined)node.commitControlValue?.(state.value,{silent:true,display:state.value});node.setControlLocked?.(!!state.locked,{silent:true});node.__msResetKnobStatus?.();return node}
