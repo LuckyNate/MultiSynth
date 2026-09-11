@@ -113,11 +113,11 @@ These are not rows consumed from the Rearranger working surface.
 
 ### Readout
 
-The Rearranger readout is **8 rows x 20 columns**.
+The Rearranger readout is **8 rows x 24 characters** with extra-bold segments at the Rearranger module level.
 
 It is primarily a compact timeline viewport, not merely a status/menu display.
 
-Twenty horizontal cells provide a practical working span: at measure scale they can represent up to twenty measures; at sixteenth-note scale a complete measure still fits.
+Twenty-four horizontal cells provide a practical working span: at measure scale they can represent up to twenty-four measures; at sixteenth-note scale a complete measure still fits.
 
 The display can show multiple loop lanes plus ruler, playhead, selection and status information. The visible lanes are a viewport into a potentially larger arrangement; the arrangement itself is not limited to the number of lanes visible simultaneously.
 
@@ -198,11 +198,12 @@ Rearranger therefore supports both internally timed arrangement playback and syn
 
 A dedicated timing strip sits at the bottom of the Rearranger working surface, immediately above the pinned keyboard:
 
-**TAP PAD | TEMPO LED | 3-DIGIT BPM READOUT | BPM KNOB**
+**TAP PAD | TAP / TEMPO LED / BPM | 3-DIGIT BPM READOUT | BPM KNOB**
 
 - The TAP pad derives the internal BPM from repeated taps.
-- The tempo LED blinks once per beat at the effective current BPM.
+- The tempo LED blinks once per beat at the effective current BPM, with TAP labeled above it and BPM below it.
 - The three-digit BPM readout always shows the effective BPM.
+- The TAP pad, BPM readout, and BPM knob have matching visual scale/weight.
 - The BPM knob sets the internal BPM directly.
 - When Rearranger is synchronized from incoming CV timing, the BPM readout reflects the effective derived tempo.
 - This timing strip is dedicated and does not change meaning with Rearranger context.
