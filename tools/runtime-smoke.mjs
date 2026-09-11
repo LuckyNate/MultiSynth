@@ -22,7 +22,8 @@ const context={console,Math,JSON,Date,Number,String,Boolean,Array,Object,Map,Set
 context.window=context;context.globalThis=context;context.parent=context;
 vm.createContext(context);
 function load(rel){const p=path.join(assets,rel);if(!fs.existsSync(p))throw new Error(`missing ${rel}`);vm.runInContext(fs.readFileSync(p,"utf8"),context,{filename:rel})}
-const core=["module-ids.js","module-capabilities.js","module-boilerplate.js","state-keys.js","event-registry.js","control-descriptors.js","control-surface-library.js","control-surface-spec.js","control-surface-renderer.js","module-builder-definitions.js","state-schema.js","module-manifest.js","module-builder-catalog.js","module-contract.js","native-mic.js","native-live-wire.js","clean-mic.js","pcm-library.js","grain-library.js","dsp-source-family.js"];
+const controlDefs=fs.readdirSync(path.join(assets,"controls")).filter(x=>x.endsWith(".js")&&x!=="spec-core.js").sort().map(x=>"controls/"+x);
+const core=["module-ids.js","module-capabilities.js","module-boilerplate.js","state-keys.js","event-registry.js","control-descriptors.js","control-surface-library.js",...controlDefs,"controls/spec-core.js","control-surface-renderer.js","module-builder-definitions.js","state-schema.js","module-manifest.js","module-builder-catalog.js","module-contract.js","native-mic.js","native-live-wire.js","clean-mic.js","pcm-library.js","grain-library.js","dsp-source-family.js"];
 for(const f of core)try{load(f)}catch(e){fail(`load ${f}`,e)}
 const MS=context.MultiSynth||{};
 const catalog=Object.values(MS.ModuleIds?.CATALOG||{});
