@@ -1,0 +1,3 @@
+.ms-turntable{display:flex;width:100%;min-width:0}
+.ms-turntable .ms-control-face{width:100%;height:auto;aspect-ratio:1;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--ms-control-accent) 0 4px,#080808 5px 9px,transparent 10px),repeating-radial-gradient(circle at 50% 50%,#292929 0 5px,#161616 6px 10px);border:2px solid var(--ms-control-edge);box-shadow:inset 0 0 0 10px #090909,0 6px 18px var(--ms-control-shadow);transform-origin:50% 50%}
+.ms-turntable--platter .ms-control-face:after{content:"";position:absolute;left:50%;top:3%;width:5px;height:11%;transform:translateX(-50%);border-radius:999px;background:var(--ms-control-accent);box-shadow:0 0 5px var(--ms-control-accent)}
