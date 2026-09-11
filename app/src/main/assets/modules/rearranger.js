@@ -1,7 +1,7 @@
 "use strict";
 (function(global){
-  const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,B=MS.ModuleBuilderDefinitions;
-  if(!C||!I||!B)throw new Error("Rearranger requires ModuleContract, ModuleIds and ModuleBuilderDefinitions");
+  const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,P=MS.ControlPrefabs;
+  if(!C||!I||!P)throw new Error("Rearranger requires ModuleContract, ModuleIds and ControlPrefabs");
 
   const makeContext=(left=0,right=1,a=.5,b=.5,c=.5,d=.5)=>({left,right,knobs:[a,b,c,d]});
   const defaults=()=>({
@@ -14,9 +14,7 @@
     }
   });
 
-  const model=B.define({
-    id:I.REARRANGER,
-    model:"module-builder",
+  C.defineSurface(I.REARRANGER,{
     version:10,
     package:{
       id:I.REARRANGER,
@@ -24,7 +22,7 @@
       behavior:{
         role:"contextual-arrangement-controller",
         timing:"clock-only",
-        stateOwnership:"module-builder",
+        stateOwnership:"module",
         contextualControls:"stable-binding-identity"
       }
     },
@@ -46,7 +44,7 @@
       {id:"stanza-mode",control:"button",label:"STANZA",node:"controller.stanza"},
       {id:"song-mode",control:"button",label:"SONG",node:"controller.song"},
       {id:"live-mode",control:"button",label:"LIVE",node:"controller.live"},
-      B.Controls.performanceKeyboard({id:"keyboard"})
+      P.performanceKeyboard({id:"keyboard"})
     ],
     sources:[],
     actions:[
@@ -60,7 +58,6 @@
     type:I.REARRANGER,
     version:"module-builder-10",
     description:"CONTEXTUAL CLOCK-DRIVEN ARRANGEMENT CONTROLLER",
-    defaults:defaults(),
-    moduleBuilder:model
+    defaults:defaults()
   });
 })(window);
