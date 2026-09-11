@@ -1,0 +1,4 @@
+.ms-button .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);background:linear-gradient(#454545,#202020)}
+.ms-button--round .ms-control-face,.ms-button--arcade .ms-control-face{width:var(--ms-height);border-radius:50%}
+.ms-button--arcade .ms-control-face{box-shadow:inset 0 4px 5px rgba(255,255,255,.18),0 5px 0 #111,0 8px 10px var(--ms-control-shadow)}
+.ms-press-surface{position:absolute;inset:0;border-radius:inherit}
