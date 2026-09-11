@@ -1,25 +1,24 @@
 MULTISYNTH TODO
 
-1. FINAL CONTROL AUDIT — COMPLETENESS + MODULARITY
-   - NEXT PRIORITY: audit each migrated canonical control package for completeness and modularity.
-   - Execute as the final canonical-control audit queue.
-   - AUDIT QUEUE: knob
-   - AUDIT QUEUE: encoder
-   - AUDIT QUEUE: turntable
-   - AUDIT QUEUE: fader
-   - AUDIT QUEUE: ribbon
-   - AUDIT QUEUE: expression
-   - AUDIT QUEUE: pad
-   - AUDIT QUEUE: button
-   - AUDIT QUEUE: switch
-   - AUDIT QUEUE: XY
-   - AUDIT QUEUE: readout
-   - AUDIT QUEUE: screen
-   - AUDIT QUEUE: oscilloscope
-   - AUDIT QUEUE: meter
-   - AUDIT QUEUE: LED
-   - AUDIT QUEUE: jack
-   - AUDIT QUEUE: decal
+1. FINAL CONTROL AUDIT — COMPLETENESS + MODULARITY — COMPLETE
+   - Completed final completeness/modularity audit of every migrated canonical control and node feature.
+   - AUDITED: knob
+   - AUDITED: encoder
+   - AUDITED: turntable
+   - AUDITED: fader
+   - AUDITED: ribbon
+   - AUDITED: expression
+   - AUDITED: pad
+   - AUDITED: button
+   - AUDITED: switch
+   - AUDITED: XY
+   - AUDITED: readout
+   - AUDITED: screen
+   - AUDITED: oscilloscope
+   - AUDITED: meter
+   - AUDITED: LED
+   - AUDITED: jack
+   - AUDITED: decal
 
 2. CONTEXTUAL BINDING AUDIT — ALL MODULES
    - Audit every module for any physical control whose semantic target can change while the control remains mounted.
