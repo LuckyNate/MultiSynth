@@ -67,3 +67,11 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - This is not a declaration that leaf implementations are permanently frozen or final.
    - Individual leaf behavior may be revisited later as the instruments evolve.
    - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
+7. FUTURE MODULE — DJ MIXER
+   - Build a robust two-turntable media performance module.
+   - Two independent decks with media playback.
+   - Support looping and scratching on each deck.
+   - Include transport and deck-level performance controls.
+   - Include mixing between decks, including crossfading and level control.
+   - Treat this as a full performance instrument/module, not a generic mixer.
+
