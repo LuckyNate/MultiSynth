@@ -28,12 +28,11 @@ Semantic grid roles supplied by the shared control surface are:
 - `.ms-layout-pads`
 - `.ms-layout-steps`
 - `.ms-layout-list`
-- `.ms-layout-hardware-grid` for deliberate hardware-style fixed-column compositions
 - `.ms-layout-fill` when controls should fill their grid cell
 
 List rows use `.ms-list-row`.
 
-Hardware-style compositions use `.ms-layout-hardware-grid` and shared `.ms-hardware-slot` placement. A module declares `--ms-hardware-columns`, `--ms-hardware-col`, `--ms-hardware-span`, and `--ms-hardware-row` values; the shared control surface owns the actual CSS grid geometry. Modules must not assign `grid-template-columns`, `grid-column`, or `grid-row` directly.
+Additional shared semantic roles are `.ms-layout-pair` for left/right hardware pairs, `.ms-layout-context` for four-control context strips, and `.ms-layout-timing` for distributed timing controls. These roles describe the job of the row; they are not derived from a screen or readout character grid.
 
 These classes are the default module composition API. New modules should use them before writing any module-specific geometry.
 
@@ -152,6 +151,9 @@ Choose the shared role from the musical job of the bank:
 - performance/selection pads -> `.ms-layout-pads`
 - sequencer/step matrix -> `.ms-layout-steps`
 - text-heavy choices/library -> `.ms-layout-list`
+- left/right paired hardware -> `.ms-layout-pair`
+- four-control contextual strip -> `.ms-layout-context`
+- dedicated timing strip -> `.ms-layout-timing`
 
 This should be enough for a first usable layout without new CSS.
 
