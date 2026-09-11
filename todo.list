@@ -1,52 +1,32 @@
 MULTISYNTH TODO
 
-1. FINAL CONTROL AUDIT — COMPLETENESS + MODULARITY — COMPLETE
-   - Completed final completeness/modularity audit of every migrated canonical control and node feature.
-   - AUDITED: knob
-   - AUDITED: encoder
-   - AUDITED: turntable
-   - AUDITED: fader
-   - AUDITED: ribbon
-   - AUDITED: expression
-   - AUDITED: pad
-   - AUDITED: button
-   - AUDITED: switch
-   - AUDITED: XY
-   - AUDITED: readout
-   - AUDITED: screen
-   - AUDITED: oscilloscope
-   - AUDITED: meter
-   - AUDITED: LED
-   - AUDITED: jack
-   - AUDITED: decal
-
-2. CONTEXTUAL BINDING AUDIT — ALL MODULES
+1. CONTEXTUAL BINDING AUDIT — ALL MODULES
    - Audit every module for any physical control whose semantic target can change while the control remains mounted.
    - Give every contextual target a stable binding identity/key.
    - Binding selects which saved module state the physical control currently represents; the control must not infer context by inspecting the app.
    - Record each contextual use as: module | control | binding key | persistent fields | transient fields | rebind source | redraw complete? | leak risk.
    - Find and remove architectural dependence on hidden per-control persistent context state only after the audit and an explicitly agreed implementation plan.
 
-3. REBIND / STATE-REFLECTION CONTRACT
+2. REBIND / STATE-REFLECTION CONTRACT
    - On context change, the same physical control must bind to the newly selected saved-state target and completely reflect that target.
    - Rebinding must refresh every persistent property represented by the control, including value and per-binding lock/unlock state where applicable.
    - Example: Time Bandits probability must preserve independent probability + lock state for each drum; switching drums must show that drum's saved value and lock state immediately.
    - Interaction writes through the current binding into module state; changing context reads the new binding from module state back into the control.
    - No old binding's temporary interaction state may bleed into the new binding.
 
-4. PERSISTENCE / RELOAD AUDIT
+3. PERSISTENCE / RELOAD AUDIT
    - Verify contextual binding-associated persistent state survives save/reload for every affected module.
    - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
    - Verify switching among contexts after reload produces the same control state as before reload.
 
-5. CONTROLLER OWNERSHIP PASS
+4. CONTROLLER OWNERSHIP PASS
    - Each unique controller type owns its appearance.
    - Each unique controller type owns its interaction behavior.
    - Each unique controller type owns its I/O contract.
    - Identical variants remain grouped under the same controller type.
    - Module-specific code must not reimplement controller appearance or interaction.
 
-6. MODULE MAPPING PASS — COMPLETE
+5. MODULE MAPPING PASS — COMPLETE
    - All module runtime surfaces are migrated to ModuleContract and mapped onto canonical shared controls/prefabs.
    - Working leaf behavior was preserved during the migration.
    - Obsolete Module Builder runtime infrastructure has been fully excised after runtime consumers reached zero.
@@ -70,7 +50,7 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - This is not a declaration that leaf implementations are permanently frozen or final.
    - Individual leaf behavior may be revisited later as the instruments evolve.
    - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
-7. FUTURE MODULE — DJ MIXER
+6. FUTURE MODULE — DJ MIXER
    - Build a robust two-turntable media performance module.
    - Two independent decks with media playback.
    - Support looping and scratching on each deck.
