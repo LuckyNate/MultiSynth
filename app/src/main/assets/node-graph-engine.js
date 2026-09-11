@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth=global.MultiSynth||{},C=()=>MS.ModuleContract,I=()=>MS.ModuleIds,K=()=>MS.StateKeys,B=()=>MS.ModuleBuilderDefinitions;
+const MS=global.MultiSynth=global.MultiSynth||{},C=()=>MS.ModuleContract,I=()=>MS.ModuleIds,K=()=>MS.StateKeys;
 const modules=new Map(),connections=new Map(),listeners=new Map();let moduleSerial=0,edgeSerial=0;
 const clone=v=>v==null?v:JSON.parse(JSON.stringify(v)),id=(p,n)=>`${p}-${Date.now().toString(36)}-${n.toString(36)}`,canonical=t=>I()?.canonicalId?.(t)||String(t||""),ref=(mid,port)=>`module:${mid}:${port}`;
 const moduleIn=mid=>ref(mid,"carrier-in"),moduleOut=mid=>ref(mid,"carrier-out"),moduleCvIn=mid=>ref(mid,"cv-in"),moduleCvOut=mid=>ref(mid,"cv-out"),moduleInput=(mid,index)=>ref(mid,`input-${Math.max(0,index|0)}`);
@@ -12,7 +12,7 @@ function graph(){return{standard:"node-graph",modules:[...modules.values()].map(
 function addModule(type,state={}){type=canonical(type);const def=C().getDefinition(type),mid=id("node",++moduleSerial),normalized=K()?.normalizePatch?.(clone(state),def.defaults)||clone(state);modules.set(mid,{id:mid,type,displayName:def.displayName,enabled:true,state:Object.assign({},clone(def.defaults),normalized)});emit("graph-changed",graph());return mid}
 function compactDynamic(mid){const m=modules.get(String(mid));if(!isDynamicInput(m))return;const rows=[...connections.values()].map(e=>({e,p:parseNode(e.to)})).filter(x=>x.p?.id===m.id&&x.p.index!=null).sort((a,b)=>a.p.index-b.p.index),old=m.state?.channels||{},next={};rows.forEach((x,i)=>{next[i]=clone(old[x.p.index]||old[String(x.p.index)]||{level:1,mute:false,solo:false});x.e.to=moduleInput(m.id,i)});m.state.channels=next;try{C().update(m.id,{channels:clone(next)})}catch(_){}}
 function removeModule(mid){mid=String(mid);if(!modules.has(mid))return false;try{C().destroy(mid)}catch(_){}modules.delete(mid);const affected=new Set();for(const[eid,e]of [...connections]){const a=parseNode(e.from),b=parseNode(e.to);if(a?.id===mid||b?.id===mid){if(b?.id!==mid&&b?.index!=null)affected.add(b.id);connections.delete(eid)}}for(const target of affected)compactDynamic(target);emit("graph-changed",graph());return true}
-function hasBpmKnob(m){try{return!!B()?.get?.(m?.type)?.controls?.some(c=>c?.control==="knob"&&c?.state==="bpm")}catch(_){return false}}
+function hasBpmKnob(m){try{return!!C()?.getSurface?.(m?.type)?.controls?.some(c=>c?.control==="knob"&&c?.state==="bpm")}catch(_){return false}}
 function applyState(m,patch){const p=K()?.normalizePatch?.(patch||{},m.state)||patch||{};Object.assign(m.state,p);try{C().update(m.id,p)}catch(_){}emit("module-state",{moduleId:m.id,state:clone(m.state),patch:clone(p)});return p}
 function hasRunning(m){if(!m)return false;if(Object.prototype.hasOwnProperty.call(m.state||{},"running"))return true;try{return Object.prototype.hasOwnProperty.call(C().getDefinition(m.type)?.defaults||{},"running")}catch(_){return false}}
 function downstreamIds(mid){const seen=new Set(),queue=[String(mid)];while(queue.length){const cur=queue.shift();for(const e of connections.values()){if(e.type!=="audio")continue;const a=parseNode(e.from),b=parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier"||a.id!==cur||seen.has(b.id))continue;seen.add(b.id);queue.push(b.id)}}return[...seen]}
