@@ -1,0 +1,9 @@
+.ms-switch .ms-control-face{width:var(--ms-width);height:var(--ms-height);aspect-ratio:2/1;border:1px solid #777;background:#555;box-shadow:inset 0 2px 5px #222;overflow:hidden;border-radius:999px}
+.ms-switch-track{position:absolute;inset:0;border-radius:inherit;background:transparent;pointer-events:none}
+.ms-switch-thumb{position:absolute;top:0;left:0;width:50%;height:100%;border-radius:50%;background:linear-gradient(#ddd,#999);box-shadow:0 1px 3px #111;transition:left .06s linear}
+.ms-switch[data-on="1"] .ms-control-face{background:#b21f1f;box-shadow:inset 0 2px 5px #5b0808}
+.ms-switch[data-on="1"] .ms-switch-thumb{left:50%}
+.ms-switch--vertical .ms-control-face{width:42px;height:78px;aspect-ratio:auto;border-radius:21px}
+.ms-switch--vertical .ms-switch-track{border-radius:21px}
+.ms-switch--vertical .ms-switch-thumb{left:4px;top:auto;bottom:4px;width:32px;height:32px;border-radius:50%;transition:bottom .06s linear,left .06s linear}
+.ms-switch--vertical[data-on="1"] .ms-switch-thumb{left:4px;bottom:42px}
