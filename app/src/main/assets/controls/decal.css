@@ -1,0 +1,6 @@
+.ms-decal{pointer-events:none;touch-action:none;user-select:none;-webkit-user-select:none}
+.ms-decal .ms-control-face{width:var(--ms-width);height:var(--ms-height);border:0;background:transparent;box-shadow:none;overflow:visible;opacity:var(--ms-opacity);transform:rotate(calc(var(--ms-rotation)*1deg));transform-origin:center}
+.ms-decal-image{display:block;width:100%;height:100%;object-fit:var(--ms-fit);mix-blend-mode:var(--ms-blend);pointer-events:none}
+.ms-decal--screenprint .ms-decal-image{filter:contrast(1.08) saturate(.92)}
+.ms-decal--stencil .ms-decal-image{filter:contrast(1.3) grayscale(1)}
+.ms-decal--plate .ms-control-face{overflow:hidden;border:1px solid var(--ms-control-edge);background:var(--ms-control-bg);box-shadow:inset 0 1px 1px rgba(255,255,255,.08),0 3px 8px var(--ms-control-shadow)}
