@@ -22,7 +22,7 @@ row=bank("3 · PADS",3);mount(row,C.PAD,{variant:"square"});mount(row,C.PAD,{var
 row=bank("2 · HORIZONTAL SLIDERS",2);for(let i=0;i<2;i++)mount(row,C.FADER,{value:{default:.5,min:0,max:1,step:.01},meta:{visual:{variant:"horizontal"}}});
 row=bank("4 · KNOBS",4);for(let i=0;i<4;i++)mount(row,C.KNOB,{value:{default:(i+1)/5,min:0,max:1,step:.01}});
 row=bank("8 · VERTICAL FADERS",8);for(let i=0;i<8;i++)mount(row,C.FADER,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
-row=bank("8 · BUTTONS",8);for(let i=0;i<8;i++)mount(row,C.BUTTON);
+row=bank("3 · BUTTONS",3);mount(row,C.BUTTON,{variant:"rect"});mount(row,C.BUTTON,{variant:"round"});mount(row,C.BUTTON,{variant:"arcade"});
 row=bank("4 · SWITCHES",4);for(let i=0;i<4;i++){const n=mount(row,C.SWITCH);n.dataset.on=i%2?"1":"0"}
 row=bank("8 · VERTICAL SWITCHES",8);for(let i=0;i<8;i++){const n=mount(row,C.SWITCH,{meta:{visual:{variant:"vertical"}}});n.dataset.on=i%2?"1":"0"}
 row=bank("8 · METERS",8);for(let i=0;i<8;i++)mount(row,C.METER,{value:{default:(i+1)/9,min:0,max:1,step:.01}});
