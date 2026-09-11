@@ -1,0 +1,5 @@
+.ms-fader .ms-control-face{width:var(--ms-width);height:var(--ms-height);border:none;background:transparent;box-shadow:none}
+.ms-fader-track{position:absolute;left:50%;top:0;bottom:0;width:var(--ms-track-width);transform:translateX(-50%);border-radius:999px;background:#101010;box-shadow:inset 0 0 4px #000}
+.ms-fader-thumb{position:absolute;left:50%;top:50%;width:var(--ms-thumb-width);height:var(--ms-thumb-height);transform:translate(-50%,-50%);border-radius:4px;background:linear-gradient(#555,#222);border:1px solid #777;box-shadow:0 2px 5px var(--ms-control-shadow)}
+.ms-fader--horizontal .ms-control-face{width:var(--ms-height);height:var(--ms-width)}
+.ms-fader--horizontal .ms-fader-track{top:50%;bottom:auto;left:0;right:0;width:auto;height:var(--ms-track-width);transform:translateY(-50%)}
