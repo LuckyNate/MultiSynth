@@ -2,4 +2,4 @@
 .ms-encoder-dot{position:absolute;inset:3%;border-radius:50%;background:transparent;box-shadow:none;transform:rotate(var(--ms-angle,0deg));transform-origin:50% 50%;pointer-events:none}
 .ms-encoder-dot:before{content:"";position:absolute;left:50%;top:0;width:9px;height:9px;border-radius:50%;background:var(--ms-control-accent);box-shadow:0 0 5px var(--ms-control-accent);transform:translate(-50%,-15%)}
 .ms-encoder--selector .ms-encoder-dot:before{width:11px;height:11px}
-.ms-control-ticks{position:absolute;inset:-12%;border-radius:50%;pointer-events:none}
+.ms-encoder .ms-control-ticks{position:absolute;inset:-12%;border-radius:50%;pointer-events:none}
