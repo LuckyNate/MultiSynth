@@ -1,0 +1,6 @@
+.ms-screen .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);overflow:hidden;background:#101417}
+.ms-screen-glass{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.09),transparent 35%);pointer-events:none}
+.ms-screen--scroll .ms-control-face{overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+.ms-screen--scroll .ms-control-face::-webkit-scrollbar{display:none}
+.ms-scroll-rail{position:absolute;top:8px;right:8px;height:calc(var(--ms-height) - 16px);width:28px;border-radius:14px;background:#080808cc;border:1px solid var(--ms-control-edge);z-index:20;touch-action:none;box-sizing:border-box;padding:2px}
+.ms-scroll-thumb{width:100%;min-height:44px;border-radius:11px;background:linear-gradient(90deg,var(--ms-control-edge),var(--ms-control-accent),var(--ms-control-edge));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ms-control-fg) 40%,transparent),0 1px 4px #000;touch-action:none}
