@@ -1,0 +1,3 @@
+.ms-xy .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);overflow:hidden;background:#101417}
+.ms-xy-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:12.5% 12.5%}
+.ms-xy-dot{position:absolute;left:50%;top:50%;width:14px;height:14px;border-radius:50%;background:var(--ms-control-accent);transform:translate(-50%,-50%)}
