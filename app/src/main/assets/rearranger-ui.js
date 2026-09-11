@@ -52,7 +52,7 @@
     api.root.style.setProperty("--ms-readout-screen","#d88a18");
     api.root.style.setProperty("--ms-readout-border","#5a3513");
     api.root.style.setProperty("--ms-readout-on","#241507");
-    api.root.style.setProperty("--ms-readout-off","rgba(36,21,7,.16)");
+    api.root.style.setProperty("--ms-readout-off","rgba(58,35,10,.22)");
     api.root.style.setProperty("--ms-readout-glow","none");
     return api;
   };
