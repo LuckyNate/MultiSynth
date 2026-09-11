@@ -1,6 +1,6 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,B=MS.ModuleBuilderDefinitions;
+const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;
 if(!C||!I)return;
 const defaults=()=>({channel:1,octave:0,velocity:127,pitch:0,mod:0,ribbon:0.5,xyX:0.5,xyY:0.5,knobs:Array(8).fill(0.5),faders:Array(8).fill(0.75),pads:Array(16).fill(0),mappings:{},padMappings:{}});
 function create(api){const c=api.context,input=c.createGain(),output=c.createGain(),analyser=c.createAnalyser();analyser.fftSize=1024;analyser.smoothingTimeConstant=.7;input.connect(output);input.connect(analyser);api.setInput(input);api.setOutput(output);return{id:api.instanceId,input,output,analyser,state:api.state}}
@@ -16,7 +16,7 @@ const controls=[
   {id:"channel",control:"encoder",state:"channel",label:"MIDI CHANNEL",value:{default:1,min:1,max:16,step:1},node:"controller.channel"},
   {id:"mapping",control:"screen",state:"mappings",label:"ASSIGNMENTS",node:"controller.mapping"}
 ];
-B?.define?.({id:I.CONTROL_FREAK,model:"module-builder",version:3,package:{id:I.CONTROL_FREAK,version:3,behavior:{role:"performance-controller",outputs:["note","midi","cv"],performanceSurface:"control-keyboard.js",stateOwnership:"module-builder"}},faceplate:{livery:"controller-blue",primary:"#071527",secondary:"#75b7ff",tertiary:"#e1f1ff"},defaults:defaults(),controls,sources:[{id:"source.touch",type:"performanceInput"},{id:"source.midi",type:"midiInput"}],actions:[{id:"action.note",type:"noteOutput"},{id:"action.cv",type:"cvOutput"},{id:"action.map",type:"controlMapping"}],nodes:{connections:[["controller.mod","action.cv"],["controller.xy","action.cv"],...Array.from({length:8},(_,i)=>[`controller.knob${i}`,"action.map"]),...Array.from({length:8},(_,i)=>[`controller.fader${i}`,"action.map"])]}});
+C.defineSurface(I.CONTROL_FREAK,{version:3,package:{id:I.CONTROL_FREAK,version:3,behavior:{role:"performance-controller",outputs:["note","midi","cv"],performanceSurface:"control-keyboard.js",stateOwnership:"module"}},faceplate:{livery:"controller-blue",primary:"#071527",secondary:"#75b7ff",tertiary:"#e1f1ff"},defaults:defaults(),controls,sources:[{id:"source.touch",type:"performanceInput"},{id:"source.midi",type:"midiInput"}],actions:[{id:"action.note",type:"noteOutput"},{id:"action.cv",type:"cvOutput"},{id:"action.map",type:"controlMapping"}],nodes:{connections:[["controller.mod","action.cv"],["controller.xy","action.cv"],...Array.from({length:8},(_,i)=>[`controller.knob${i}`,"action.map"]),...Array.from({length:8},(_,i)=>[`controller.fader${i}`,"action.map"])]}});
 })(window);
 
 (function(global){
