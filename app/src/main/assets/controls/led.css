@@ -1,3 +1,7 @@
-.ms-led .ms-control-face{width:var(--ms-size);height:var(--ms-size);border-radius:50%}
+.ms-led .ms-control-face{width:var(--ms-size);height:var(--ms-size)}
+.ms-led--round .ms-control-face{border-radius:50%}
+.ms-led--rect .ms-control-face{border-radius:3px}
+.ms-led--square .ms-control-face{border-radius:0}
+.ms-led--pill .ms-control-face{border-radius:999px}
 .ms-led-lens{position:absolute;inset:3px;border-radius:inherit;background:var(--ms-control-accent);opacity:.35;box-shadow:inset 0 0 4px rgba(255,255,255,.3)}
 .ms-led[data-on="1"] .ms-led-lens{opacity:1;box-shadow:0 0 10px var(--ms-control-accent),inset 0 0 4px rgba(255,255,255,.5)}
