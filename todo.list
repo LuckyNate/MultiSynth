@@ -60,3 +60,7 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Include mixing between decks, including crossfading and level control.
    - Treat this as a full performance instrument/module, not a generic mixer.
 
+7. LOW PRIORITY — NEEDLE METER VISUAL POLISH
+   - Revisit the canonical needle-style meter appearance later.
+   - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
+   - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
