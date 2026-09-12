@@ -8,13 +8,14 @@
 
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const copy=v=>JSON.parse(JSON.stringify(v));
+  const makeContext=(left,right,knobs)=>({left,right,knobs:[...knobs],knobLocks:Array(4).fill(false)});
   const seed={
     context:"CLIP",
     contexts:{
-      CLIP:{left:0,right:1,knobs:[.8,0,1,1]},
-      STANZA:{left:0,right:1,knobs:[1,.25,1,0]},
-      SONG:{left:0,right:1,knobs:[1,0,1,1]},
-      LIVE:{left:0,right:1,knobs:[1,0,1,0]}
+      CLIP:makeContext(0,1,[.8,0,1,1]),
+      STANZA:makeContext(0,1,[1,.25,1,0]),
+      SONG:makeContext(0,1,[1,0,1,1]),
+      LIVE:makeContext(0,1,[1,0,1,0])
     }
   };
 
@@ -186,44 +187,55 @@
   };
 
   const current=()=>state.contexts[state.context];
+  const cancelEncoderDrag=node=>{const drag=node.__msEncoderCircular;if(!drag)return;drag.pointer=null;drag.active=false};
+  const paintContextReadout=()=>{const ctx=current(),labels=encoderLabels[state.context];readout.set(`REARRANGER ${state.context}  ${labels[0]} ${ctx.left.toFixed(3)}  ${labels[1]} ${ctx.right.toFixed(3)}`)};
+  let boundContext=null;
 
   function bindContext(){
-    const ctx=current();
-    const labels=encoderLabels[state.context];
+    const contextName=state.context,ctx=current(),labels=encoderLabels[contextName],contextChanged=boundContext!==contextName;
+    if(contextChanged){cancelEncoderDrag(encLeft);cancelEncoderDrag(encRight)}
+    if(!Array.isArray(ctx.knobLocks))ctx.knobLocks=Array(4).fill(false);
     labelNode(encLeft,labels[0]);
     labelNode(encRight,labels[1]);
+    encLeft.__rearrangerBinding={key:`rearranger.${contextName}.encoder.left`,context:contextName,stateKey:"left"};
+    encRight.__rearrangerBinding={key:`rearranger.${contextName}.encoder.right`,context:contextName,stateKey:"right"};
+    encLeft.dataset.bindingKey=encLeft.__rearrangerBinding.key;
+    encRight.dataset.bindingKey=encRight.__rearrangerBinding.key;
     R.setValue(encLeft,ctx.left,ctx.left.toFixed(3));
     R.setValue(encRight,ctx.right,ctx.right.toFixed(3));
 
     knobs.forEach((node,i)=>{
       const binding={
-        key:`rearranger.${state.context}.knob.${i}`,
-        get value(){return current().knobs[i]},
-        set value(v){current().knobs[i]=clamp(Number(v)||0);persist()},
-        locked:false
+        key:`rearranger.${contextName}.knob.${i}`,
+        get value(){return state.contexts[contextName].knobs[i]},
+        set value(v){state.contexts[contextName].knobs[i]=clamp(Number(v)||0);persist()},
+        get locked(){return !!state.contexts[contextName].knobLocks?.[i]},
+        set locked(v){const target=state.contexts[contextName];if(!Array.isArray(target.knobLocks))target.knobLocks=Array(4).fill(false);target.knobLocks[i]=!!v;persist()}
       };
       node.__rearrangerBinding=binding;
+      node.dataset.bindingKey=binding.key;
       R.bindKnob(node,binding);
-      labelNode(node,knobLabels[state.context][i]);
+      labelNode(node,knobLabels[contextName][i]);
     });
 
-    modeButtons.forEach((node,i)=>R.bindButton(node,{on:modes[i]===state.context}));
-    readout.set(`REARRANGER ${state.context}  ${labels[0]} ${ctx.left.toFixed(3)}  ${labels[1]} ${ctx.right.toFixed(3)}`);
+    modeButtons.forEach((node,i)=>R.bindButton(node,{on:modes[i]===contextName}));
+    boundContext=contextName;
+    paintContextReadout();
   }
 
-  function moveEncoder(node,key,delta){
-    const ctx=current();
-    const step=delta/(Math.PI*2);
+  function moveEncoder(node,delta){
+    const binding=node.__rearrangerBinding;if(!binding)return;
+    const ctx=state.contexts[binding.context],key=binding.stateKey,step=delta/(Math.PI*2);
     ctx[key]=clamp(ctx[key]+step);
     if(key==="left"&&ctx.left>ctx.right)ctx.left=ctx.right;
     if(key==="right"&&ctx.right<ctx.left)ctx.right=ctx.left;
     R.setValue(node,ctx[key],ctx[key].toFixed(3));
     persist();
-    bindContext();
+    if(binding.context===state.context)paintContextReadout();
   }
 
-  encLeft.addEventListener("multisynth-control-circular-drag",e=>{if(e.detail?.active)moveEncoder(encLeft,"left",e.detail.deltaRadians||0)});
-  encRight.addEventListener("multisynth-control-circular-drag",e=>{if(e.detail?.active)moveEncoder(encRight,"right",e.detail.deltaRadians||0)});
+  encLeft.addEventListener("multisynth-control-circular-drag",e=>{if(e.detail?.active)moveEncoder(encLeft,e.detail.deltaRadians||0)});
+  encRight.addEventListener("multisynth-control-circular-drag",e=>{if(e.detail?.active)moveEncoder(encRight,e.detail.deltaRadians||0)});
 
   knobs.forEach((node,i)=>{
     node.addEventListener("multisynth-control-knob-delta",e=>{
