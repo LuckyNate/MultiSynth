@@ -50,3 +50,10 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Revisit the canonical needle-style meter appearance later.
    - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
    - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
+
+6. LOW PRIORITY — REBUILD CONTROL FREAK
+   - Rebuild Control Freak from its current placeholder surface.
+   - Keep the shared performance keyboard and oscilloscope as the starting face.
+   - Redesign the assignable/rebindable control architecture from scratch.
+   - Rebindable controls need a selector populated from the target module's exposed patch/state contract, filtered to values the physical control can possess.
+   - Define stable binding identity, target-state reflection, persistence, and gesture reset behavior as part of that rebuild.
