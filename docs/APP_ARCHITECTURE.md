@@ -4,280 +4,693 @@
 
 MultiSynth is a phone-first Android-hosted HTML5 modular synthesizer and audio workstation.
 
-The architecture is built around one central rule:
+The current architecture is organized around a simple ownership chain:
 
-**Patch Graph -> Modules -> Shared Control Library**
+**Application -> Patch Graph -> ModuleContract -> Shared Controls -> Leaf Runtime/DSP**
 
-Each layer has a distinct responsibility. Shared infrastructure must remain shared, and module-specific behavior must stay at the leaf level.
+Each layer owns a specific job.
 
-## 1. Application Layers
+The central rule is:
 
-### Android Host
+**Everything owns itself.**
 
-The Android layer provides the native shell around the HTML5 application.
+A module owns its identity, state, behavior and composition.  
+A canonical control owns its own physical behavior and appearance.  
+The graph owns routing.  
+The runtime owns signal execution.  
+Persistence owns reconstruction of saved project state.
 
-Its job is to host the WebView, provide native capabilities where required, expose supported device services, and load the application assets.
+No layer should recreate behavior already owned by another layer.
 
-The browser-side application should not depend on Android-specific behavior unless that behavior is intentionally exposed through a native bridge.
+---
 
-### Patch Graph
+## 1. Application Layer
 
-The Patch Graph is the main performance and composition workspace.
+The application owns the overall project environment.
 
-It contains complete module instances only.
+Its responsibilities include:
 
-Responsibilities include:
+- project lifecycle;
+- navigation;
+- Patch Graph state;
+- module instances;
+- persistence;
+- application-level menus and selectors;
+- Android/native integration where required;
+- loading the shared runtime infrastructure.
 
-- module placement
-- module movement and selection
-- board pan and zoom
-- Carrier and CV cable routing
-- external module ports
-- persistence of module positions and patch state
+The application does not define individual module controls or module DSP behavior.
 
-Module position has no routing meaning. Signal flow exists only through explicit patch connections.
+---
 
-### Module Builder
+## 2. Android Host
 
-The Module Builder is a separate construction environment.
+The Android layer is the native shell around the HTML5 application.
 
-It contains primitives only, including DSP primitives and shared interface controls.
+Its responsibilities are limited to:
 
-Its output is a complete module definition containing identity, state, circuit, control bindings, face composition, ports, runtime behavior, and persistence information.
+- hosting the WebView;
+- loading application assets;
+- exposing explicitly supported native capabilities;
+- device integration that cannot be provided directly by the browser runtime.
 
-Finished modules belong on the Patch Graph. Primitives belong in the Module Builder. The two node types do not mix.
+Browser-side MultiSynth code should remain independent of Android-specific behavior unless that capability is deliberately exposed through the native bridge.
 
-## 2. Module Architecture
+---
 
-Each finished module is a complete instrument or processor.
+## 3. Patch Graph
 
-A module owns:
+The Patch Graph is the primary composition and performance workspace.
 
-- identity and metadata
-- four-color theme
-- persistent state
-- DSP/runtime implementation
-- control bindings
-- external Carrier/CV ports
-- module-specific face composition
-- module-specific artwork and presentation
+It contains complete module instances.
 
-A module does not own generic control behavior or generic control anatomy.
+Its responsibilities include:
 
-The intended end state is that module code mainly defines:
+- module placement;
+- module movement and selection;
+- board pan and zoom;
+- Carrier routing;
+- CV routing;
+- visible patch cables;
+- module external ports;
+- dynamic routing-port presentation;
+- persistence of graph position and connection state.
 
-**what a control connects to and what its value means**
+Module position has no routing meaning.
 
-rather than reimplementing how the control itself works.
+Signal flow exists only through explicit connections.
 
-## 3. Shared Control Architecture
+The Patch Graph does not own internal module behavior or physical control interaction.
 
-All recurring controls come from the canonical shared control system.
+---
 
-Examples include:
+## 4. ModuleContract
 
-- knob
-- encoder
-- turntable
-- fader
-- ribbon
-- expression
-- pad
-- button
-- switch
-- XY
-- readout
-- screen
-- oscilloscope
-- meter
-- LED
-- jack
-- decal
+`ModuleContract` is the canonical runtime owner and registry for modules.
 
-Each control is now modularized under:
+The previous Module Builder definition/catalog runtime has been removed from the active architecture.
+
+A module registered with `ModuleContract` has two related canonical pieces:
+
+### Runtime definition
+
+The runtime definition describes what the module does.
+
+It may own:
+
+- default persistent state;
+- DSP/runtime construction;
+- state application;
+- note handlers;
+- clock handlers;
+- CV behavior;
+- trigger behavior;
+- lifecycle behavior;
+- other module-specific runtime responsibilities.
+
+### Module surface
+
+The module surface describes how the module exposes itself to the shared UI/control system.
+
+It may own:
+
+- module identity;
+- semantic control descriptors;
+- control grouping;
+- control bindings;
+- face composition metadata;
+- package/behavior metadata;
+- module-specific presentation information;
+- declared external routing information.
+
+The generic module editor retrieves both pieces through `ModuleContract`.
+
+A finished module should therefore have one authoritative contract rather than parallel Module Builder, editor and runtime definitions.
+
+The standards audit also treats `ModuleContract` runtime definitions and surfaces as the authoritative module registration.
+
+---
+
+## 5. Module Ownership
+
+A module owns the things that make it a particular instrument or processor.
+
+That includes:
+
+- identity;
+- metadata;
+- four-color theme;
+- persistent state;
+- semantic parameter meaning;
+- runtime/DSP behavior;
+- control bindings;
+- external port policy;
+- intentional face composition;
+- module-specific artwork and presentation;
+- note, clock, CV and trigger semantics where applicable.
+
+A module does not own generic physical controller behavior.
+
+The intended leaf-level rule is:
+
+**The module decides what a control means.  
+The control decides how that physical control works.**
+
+Working leaf behavior should remain isolated from shared controller implementation.
+
+---
+
+## 6. Shared Control Architecture
+
+All recurring physical controls come from the canonical shared control system.
+
+Current canonical families include:
+
+- knob;
+- encoder;
+- turntable;
+- fader;
+- ribbon;
+- expression;
+- pad;
+- button;
+- switch;
+- XY;
+- readout;
+- screen;
+- oscilloscope;
+- meter;
+- LED.
+
+Jack and decal are shared node features rather than ordinary module controls.
+
+Canonical control packages live under:
 
 `app/src/main/assets/controls/`
 
-Each control package has its own definition and style file.
+Each control package owns its own control-specific implementation and styling.
 
-The aggregate public entry points remain:
+The aggregate public layers remain:
 
 - `control-surface-library.js`
 - `control-surface-spec.js`
+- `controls/spec-core.js`
 - `control-surface-renderer.js`
 - `control-surface.css`
 
-The large spec and CSS files now act as routing/aggregation layers instead of directly owning every individual control definition.
+These are public routing, assembly and shared-runtime layers around the individual canonical control packages.
 
-### Control Ownership
+---
 
-A canonical control type should own:
+## 7. Canonical Control Ownership
 
-- its appearance
-- its geometry
-- its interaction behavior
-- its generic I/O contract
-- its supported variants
+A canonical control owns:
 
-Module code may theme and place controls but should not recreate them.
+- appearance;
+- geometry;
+- physical proportions;
+- touch behavior;
+- pointer capture;
+- gesture interpretation;
+- generic value/state I/O;
+- pressed/active feedback;
+- lock feedback where supported;
+- approved variants;
+- control-specific accessibility semantics.
 
-## 4. Control Layers
+Module code may choose a supported control, bind it, theme it through supported hooks and place it in an intentional composition.
 
-### `control-surface-library.js`
+Module code must not recreate:
 
-Owns the shared control contract, control types, gestures, actions, generic semantics, and shared I/O behavior.
+- knob pointers;
+- fader thumbs;
+- ribbon tracks;
+- switch mechanisms;
+- pad behavior;
+- turntable scratch behavior;
+- XY interaction;
+- screen hardware;
+- meter hardware;
+- other canonical control anatomy or gestures.
 
-### `control-surface-spec.js`
+The complete canonical control-family audit has been completed.
 
-Acts as the public visual/spec loader and exposes the canonical `ControlSurfaceSpec` API.
+Control migration is no longer the current architectural phase.
 
-Individual control descriptors live in the per-control files under `assets/controls/`.
+---
 
-### `control-surface-renderer.js`
+## 8. Canon Protection
 
-Owns control rendering, interaction wiring, value painting, binding helpers, and shared runtime behavior.
+Existing canonical controls are locked.
 
-### `control-surface.css`
+Changes to an existing canonical control’s:
 
-Acts as the shared stylesheet entry point.
+- appearance;
+- geometry;
+- interaction;
+- generic I/O;
+- renderer behavior;
+- shared state behavior;
+- existing approved variants
 
-It imports:
+require two explicit confirmations for that exact proposed change.
 
-- shared base control CSS
-- per-control CSS files
-- shared layout CSS
+Authorization is single-use.
 
-Control-specific styling should live with that control.
+Approval to change one control or one canonical layer does not authorize:
 
-## 5. Shared Layout
+- cleanup;
+- adjacent controls;
+- refactors;
+- styling changes;
+- renderer changes;
+- unrelated behavior;
+- other follow-up work.
 
-Shared module layout belongs to the control-surface system, not to individual modules.
+New control types and explicitly approved new variants may be developed separately without silently altering existing canon.
+
+---
+
+## 9. Control Prefabs
+
+Reusable assemblies of existing canonical controls belong in:
+
+`controls/prefabs.js`
+
+A prefab is a composition, not a new physical control implementation.
+
+Prefabs exist for recurring higher-level hardware arrangements that can be built from canonical controls.
+
+A prefab may define:
+
+- a reusable arrangement;
+- coordinated descriptors;
+- composition rules;
+- common semantic grouping.
+
+A prefab must not duplicate the internal anatomy or gesture implementation of the controls it contains.
+
+The rule is:
+
+**Canonical controls are the parts.  
+Prefabs are reusable assemblies of those parts.  
+Modules are the complete machines built from them.**
+
+---
+
+## 10. Module Interface Composition
+
+Module faces use canonical controls plus intentional structural composition.
+
+Ordinary layout belongs to the shared control-surface layout system.
 
 Shared layout owns:
 
-- module shell containment
-- banks
-- control grids
-- responsive behavior
-- phone reflow
-- control containment
-- common touch sizing
-- common label behavior
+- module containment;
+- banks;
+- control grids;
+- responsive reflow;
+- common touch sizing;
+- phone-width containment;
+- label containment;
+- standard semantic layout roles.
 
-Modules may define intentional composition and visual identity, but ordinary layout repair should not be duplicated locally.
+Module-specific layout should describe musical structure rather than repair generic layout failures.
 
-## 6. Theme System
+Modules may deliberately use specialized compositions when the instrument itself requires them, including:
 
-Each module has a four-color semantic theme:
+- mixer channel strips;
+- performance keyboards;
+- turntables;
+- large XY surfaces;
+- specialized sequencers;
+- other purpose-built performance faces.
 
-- background
-- panel
-- accent
-- text
+A genuine instrument-specific composition is allowed.
 
-Controls remain canonical while rendering through the owning module's theme.
+Reimplementing canonical physical controls inside that composition is not.
 
-The control is shared.
+---
 
-The surrounding instrument identity belongs to the module.
+## 11. Module Editors
 
-## 7. Runtime and Signal Architecture
+The shared module editor consumes module definitions and surfaces from `ModuleContract`.
 
-Carrier and CV are distinct signal types.
+It does not depend on the removed Module Builder definition registry.
 
-Modules expose standard external boundaries unless explicitly specialized:
+For ordinary modules, the editor:
 
-- Carrier IN
-- CV IN
-- Carrier OUT
-- CV OUT
+1. identifies the current module instance;
+2. retrieves its runtime definition from `ModuleContract`;
+3. retrieves its module surface from `ModuleContract`;
+4. reconstructs current state from defaults plus saved instance state;
+5. mounts the declared canonical controls;
+6. binds interaction back to module state;
+7. applies state through the normal runtime path.
 
-Only the designated final output path reaches the device audio destination.
+Specialized modules may use purpose-built editors when their physical design genuinely requires one.
 
-Ordinary modules must not silently connect themselves directly to output.
+Those editors still consume canonical controls rather than creating a private control system.
 
-Controls modify module state or runtime behavior through explicit bindings.
+---
 
-## 8. Binding Model
+## 12. State and Control Binding
 
-A physical control may sometimes remain mounted while its semantic target changes.
+Module state is authoritative.
 
-Those controls require stable binding identities.
+A mounted control reflects the state target to which it is currently bound.
 
-The intended contract is:
+Interaction writes through the active binding into module state.
 
-- binding selects the current saved-state target
-- context change rebinds the same physical control
-- the control fully redraws from the new target state
-- interaction writes through to the currently bound state
-- temporary interaction state must not leak between bindings
-- persistent binding state must survive reload
+External state changes and restored persistent state must be reflected back into the mounted control.
 
-## 9. Persistence
+Live control movement must use the normal state/runtime application path.
 
-Normal work should persist automatically.
+It must not structurally rebuild the audio graph merely because a knob, fader, ribbon or other live controller moved.
 
-Persistence should reconstruct the actual playable project state, including:
+Graph rebuilds are structural operations.
 
-- module instances
-- module positions
-- module state
-- Patch Graph camera state
-- patch cables
-- saved module definitions
-- referenced assets
-- meaningful presentation state
-- contextual binding state where applicable
+Control interaction is state application.
 
-Reload should restore the same instrument, not merely the same visual arrangement.
+---
 
-## 10. Canon Protection
+## 13. Contextual Binding
 
-Canonical shared controls are protected.
+One physical control may remain mounted while its semantic target changes.
 
-Changes to an existing canonical control require explicit approval for the exact change and a second confirmation of that exact scope before implementation.
+This is a first-class supported architecture.
 
-Approval is single-use.
+Every contextual target must have a stable binding identity.
 
-Changing one control does not authorize changes to adjacent controls, shared cleanup, refactors, renderer behavior, styling, or unrelated architecture.
+When the context changes, the control must:
 
-The modularized control files are intended to reduce blast radius so work on one control remains isolated from others.
+- stop representing the old target;
+- bind to the new target;
+- read the new target from module state;
+- redraw its visible value;
+- redraw every persistent property represented by the control;
+- restore binding-specific lock state where applicable;
+- direct new interaction only to the new target;
+- cancel transient gesture state belonging to the old target.
 
-## 11. Current Architectural Priority
+An interaction started against one binding must never continue writing into another binding after a context change.
 
-The current priority is:
+Temporary pointer/drag state is not persistent module state.
 
-**Final Control Audit — Completeness + Modularity**
+Binding-associated values and persistent controller properties are.
 
-Each migrated control package must be checked for:
+---
 
-- complete ownership
-- correct file boundaries
-- no duplicated anatomy elsewhere
-- no missing control-specific styles
-- no missing control-specific definition data
-- correct interaction ownership
-- correct generic I/O ownership
-- correct variant ownership
-- clean dependency boundaries
-- no unnecessary coupling to unrelated controls
+## 14. Freewheel and Test Module
 
-After that, work continues into contextual binding, state reflection, persistence, controller ownership verification, and final module mapping.
+The Test Module is the canonical control test harness.
 
-## 12. Architectural Direction
+It exercises the real canonical controls in freewheel mode.
 
-The intended final structure is simple:
+Freewheel means a physical control may:
 
-**Application**
-owns navigation, project state, Patch Graph, persistence, and native integration.
+- move;
+- turn;
+- press;
+- hold;
+- release;
+- toggle;
+- return;
+- scrub;
+- otherwise perform its normal canonical interaction
 
-**Modules**
-own instrument identity, DSP, state, composition, and semantic bindings.
+without requiring a real module/DSP destination.
 
-**Shared Controls**
-own reusable hardware behavior, appearance, interaction, and generic I/O.
+Freewheel does not create a second control implementation.
 
-**Leaf Implementations**
-own only what each control means inside a specific module.
+It exists specifically so the canonical physical behavior can be tested independently of leaf semantics.
 
-That separation is the primary architecture rule for the project.
+Runtime smoke coverage should exercise the actual shared control/runtime path wherever practical.
+
+---
+
+## 15. Signal Architecture
+
+Carrier and CV are distinct routing domains.
+
+The graph/runtime is responsible for connecting declared ports.
+
+Modules declare what routing boundaries they expose.
+
+Ordinary static ports may include:
+
+- Carrier IN;
+- CV IN;
+- Carrier OUT;
+- CV OUT.
+
+Specialized modules may expose different or additional declared ports when their function requires them.
+
+A module does not silently connect itself to another module or to device output.
+
+Routing is explicit.
+
+---
+
+## 16. Dynamic Ports and the +1 Contract
+
+MultiSynth supports dynamic routing-port contracts.
+
+Some routing modules expose a **used + 1** boundary:
+
+- all currently used ports remain available;
+- one additional unused port is exposed;
+- when that port becomes used, another unused port becomes available.
+
+This allows routing capacity to grow naturally without presenting a large fixed bank of empty jacks.
+
+The dynamic port policy belongs to the module contract.
+
+The Patch Graph/runtime owns rendering and connecting the ports described by that contract.
+
+Dynamic-port metadata must survive the contract/graph path intact.
+
+Current examples include:
+
+- Alchemy +1 dynamic Carrier inputs;
+- Splitter +1 routing;
+- Merger +1 routing;
+- Father Time +1 CV outputs.
+
+Dynamic ports are therefore part of the normal routing architecture rather than special editor-only UI.
+
+---
+
+## 17. Routing Utility Modules
+
+Routing behavior may itself be represented by complete modules.
+
+Splitter and Merger are examples.
+
+They use the same module architecture as other finished modules:
+
+- registered identity;
+- `ModuleContract` runtime definition;
+- `ModuleContract` surface;
+- declared routing contract;
+- canonical/shared presentation infrastructure.
+
+They are not graph-internal exceptions masquerading as modules.
+
+---
+
+## 18. Audio Runtime
+
+The audio/runtime layer owns signal execution.
+
+Its responsibilities include:
+
+- module DSP/runtime instances;
+- applying module state;
+- Carrier signal construction;
+- CV behavior;
+- runtime clock/note behavior;
+- structural audio graph connections;
+- lifecycle of active audio nodes.
+
+Normal physical controller movement applies state to the existing runtime.
+
+Structural routing changes may rebuild or reconnect graph structure where necessary.
+
+The two operations must not be confused.
+
+---
+
+## 19. Output Ownership
+
+Only the designated output path reaches the device audio destination.
+
+Ordinary modules do not silently connect themselves directly to the device output.
+
+Output modules are explicit members of the module/routing architecture.
+
+The final destination remains controlled and identifiable.
+
+---
+
+## 20. Persistence
+
+Normal work must persist.
+
+Persistence should reconstruct the playable project, not merely its drawing.
+
+Persistent project state includes, where applicable:
+
+- module instances;
+- module positions;
+- module state;
+- Patch Graph camera state;
+- patch cables;
+- dynamic routing state;
+- referenced assets;
+- meaningful presentation state;
+- contextual binding targets;
+- binding-associated parameter values;
+- persistent lock/unlock state;
+- other module-owned persistent properties.
+
+After reload, switching among contexts must reproduce the same control values and persistent controller states that existed before reload.
+
+---
+
+## 21. CSS Ownership
+
+Shared CSS reinforces the same ownership boundaries as runtime code.
+
+`control-surface.css` and the individual canonical control styles own shared control and ordinary module layout infrastructure.
+
+Module CSS owns identity and intentional composition.
+
+Module CSS may own:
+
+- colors;
+- faceplate/chassis material;
+- typography;
+- decoration;
+- intentional specialized composition;
+- supported thematic treatment.
+
+Module CSS should not recreate canonical control anatomy or generic responsive infrastructure.
+
+Horizontal overflow on a normal phone module face is a layout failure.
+
+---
+
+## 22. Standards and Verification
+
+A valid active module should have the pieces required by the current runtime architecture.
+
+The standards path validates active modules against:
+
+- registered module identity;
+- manifest metadata;
+- `ModuleContract` runtime definition;
+- `ModuleContract` module surface;
+- declared capabilities;
+- routing/boilerplate expectations where applicable.
+
+Obsolete Module Builder definitions are no longer part of this validation path.
+
+Control verification should test both:
+
+- physical control behavior;
+- resulting generic state/event behavior.
+
+Display-only controls require correct mounting and state reflection.
+
+The architecture audit should reject private module implementations of canonical control anatomy or interaction.
+
+---
+
+## 23. Current Architectural Priority
+
+The canonical control-family completeness/modularity audit is complete.
+
+The current priority is the state/binding boundary.
+
+### First: rebind and state reflection
+
+Verify that contextual controls completely rebind when context changes.
+
+This includes:
+
+- correct target identity;
+- correct value;
+- correct persistent lock/state feedback;
+- no transient interaction leakage;
+- writes reaching only the active target.
+
+### Second: persistence and reload
+
+Verify that contextual binding state survives save/reload.
+
+Reload must reconstruct:
+
+- values;
+- binding identity;
+- lock/unlock state where applicable;
+- other persistent contextual properties.
+
+Switching context after reload should produce the same visible and behavioral state as before reload.
+
+These are now correctness requirements of the module/control boundary.
+
+---
+
+## 24. Legacy Architecture
+
+The old Module Builder runtime/catalog/definition path is retired.
+
+It must not be reintroduced as:
+
+- a compatibility registry;
+- a shadow module surface registry;
+- a second runtime-definition owner;
+- an adapter around `ModuleContract`;
+- a fallback editor source.
+
+Useful ideas or historical implementations may remain available in Git history as reference.
+
+Git history is not active architecture.
+
+When old implementation and the current `ModuleContract` architecture disagree, the current architecture wins unless deliberately changed.
+
+---
+
+## 25. Architectural Direction
+
+The intended structure is now:
+
+**Application**  
+owns project lifecycle, navigation, persistence and host integration.
+
+**Patch Graph**  
+owns complete module instances, spatial arrangement and explicit routing.
+
+**ModuleContract**  
+owns canonical runtime definitions and module-owned surfaces.
+
+**Modules**  
+own identity, state, semantics, DSP/runtime behavior and intentional composition.
+
+**Control Prefabs**  
+own reusable compositions built from existing canonical controls.
+
+**Canonical Controls**  
+own reusable physical hardware behavior, appearance, interaction and generic I/O.
+
+**Leaf Runtime/DSP**  
+owns the actual meaning and signal consequence of module state.
+
+The guiding rule remains:
+
+**Everything owns itself.**
+
+Do not solve architectural disagreement by adding another compatibility layer.
+
+Move responsibility to the layer that actually owns it.
