@@ -1,43 +1,43 @@
 import fs from "node:fs";
+import vm from "node:vm";
 import assert from "node:assert/strict";
 
 const read=path=>fs.readFileSync(path,"utf8");
 const worklet=read("app/src/main/assets/worklets/multisynth-clock-processor.js");
-const contract=read("app/src/main/assets/module-contract.js");
+const transportSource=read("app/src/main/assets/patch-transport.js");
+const clockStandard=read("app/src/main/assets/clock-standard.js");
 const graph=read("app/src/main/assets/node-audio-graph.js");
-const activity=read("app/src/main/java/audio/multisynth/app/MainActivity.java");
 
 assert.match(worklet,/class MultiSynthClockProcessor extends AudioWorkletProcessor/);
 assert.match(worklet,/currentFrame/);
 assert.match(worklet,/sampleRate/);
-assert.doesNotMatch(worklet,/setTimeout|setInterval/);
+assert.match(worklet,/type:\s*"timebase"/);
+assert.doesNotMatch(worklet,/bpm|running|horizon|setTimeout|setInterval/);
 
-const transport=contract.match(/function transport\([\s\S]*?\nfunction sampler/);
-assert.ok(transport,"shared transport function found");
-assert.match(transport[0],/subscribeClock/);
-assert.doesNotMatch(transport[0],/setTimeout|setInterval/);
+assert.match(transportSource,/ingestTimebase/);
+assert.match(transportSource,/subscribeTick/);
+assert.match(transportSource,/framesPerStep/);
+assert.doesNotMatch(transportSource,/setTimeout|setInterval|horizon/);
+
+assert.match(clockStandard,/PatchTransport/);
+assert.match(clockStandard,/subscribeTick/);
+assert.doesNotMatch(clockStandard,/subscribeClock|setClockBpm|startClock|stopClock|setTimeout|setInterval/);
 
 assert.match(graph,/new AudioWorkletNode\(ctx,"multisynth-clock-processor"/);
-assert.match(graph,/subscribeClock/);
-assert.match(graph,/setClockBpm/);
+assert.match(graph,/PatchTransport\?\.ingestTimebase/);
+assert.doesNotMatch(graph,/subscribeClock|setClockBpm|startClock|stopClock/);
 
-const pause=activity.match(/@Override protected void onPause\(\)\{[^\n]+/);
-assert.ok(pause,"Android onPause found");
-assert.doesNotMatch(pause[0],/panic\(\)/);
+const context={console,MultiSynth:{}};context.window=context;vm.createContext(context);vm.runInContext(transportSource,context,{filename:"patch-transport.js"});
+const T=context.MultiSynth.PatchTransport,ticks=[];T.subscribeTick(t=>ticks.push(t));T.setBpm(120);
+for(let frame=0;frame<=12288;frame+=128)T.ingestTimebase({frame,time:frame/48000,sampleRate:48000});
+assert.equal(ticks.length,2,"120 BPM should produce two sixteenth boundaries in 0.256 seconds");
+assert.ok(Math.abs(ticks[0].frame-6000)<1e-6,"first sixteenth boundary is sample-accurate");
+assert.ok(Math.abs(ticks[1].frame-12000)<1e-6,"second sixteenth boundary is sample-accurate");
+assert.equal(ticks[0].substep,0);
+assert.equal(ticks[1].substep,1);
 
-const sampleRate=48000;
-const sixteenthFrames=bpm=>sampleRate*(60/bpm)/4;
-assert.equal(sixteenthFrames(120),6000);
-assert.equal(sixteenthFrames(60),12000);
-assert.equal(sixteenthFrames(240),3000);
-assert.equal(sixteenthFrames(120)/sampleRate,0.125);
+const before=T.phase;T.setBpm(90);assert.equal(T.phase,before,"tempo changes preserve musical phase");
 
-let frame=0;
-for(let i=0;i<64;i++)frame+=sixteenthFrames(120);
-assert.equal(frame/sampleRate,8,"64 sixteenths at 120 BPM remain exactly eight seconds");
-
-const before=frame;
-frame+=sixteenthFrames(90);
-assert.ok(frame>before,"tempo change advances from existing phase instead of resetting the transport");
+const count=ticks.length;T.ingestTimebase({frame:48000,time:1,sampleRate:48000});assert.equal(ticks.length,count+1,"a delayed heartbeat emits one current boundary, never a catch-up burst");
 
 console.log("clock smoke: PASS");

@@ -76,6 +76,9 @@ jobs:
           fi
           echo "Architecture smoke passed"
 
+      - name: Clock architecture smoke
+        run: node scripts/clock-smoke.mjs
+
       - name: Shared rotary smoke
         run: node tools/shared-rotary-smoke.mjs
 
