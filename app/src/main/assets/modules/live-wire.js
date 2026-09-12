@@ -1,7 +1,7 @@
 "use strict";
 (function(global){
 const MS=global.MultiSynth=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,S=MS.ModuleStandard,N=MS.LiveWireNative,T=MS.TurntableControl;
-if(!C||!I||!S||!T)return;
+if(!C||!I||!S)return;
 const defaults={clip:true,loop:false};
 C.define({
  type:I.LIVE_WIRE,version:"module-builder-18",description:"FREESOUND AUDIO PLAYER · CV/MANUAL SAMPLE TRIGGER · 33⅓ RPM TURNTABLE · HOLD OR COPY TO SAMPLE",defaults,
@@ -10,7 +10,7 @@ C.define({
   const out=ctx.createGain();out.gain.value=1;api.setOutput(out);
   const player=S.sampler(ctx,out,{maxLag:.05}),sample={start:0,end:0,pitch:0,level:1,leftLevel:1,rightLevel:1,lagMs:0};
   let duration=0,transportOffset=0,transportPlaying=false,transportTicker=null,clip=api.state?.clip!==false,loop=!!api.state?.loop;
-  const engine=T.createPlatterEngine(ctx,out,{bufferSize:256,loop,onEnd:({position})=>{transportOffset=Math.max(0,Math.min(duration,Number(position)||duration));transportPlaying=false;clearTicker();emitTransport({ended:true})}});
+  const engine=T?.createPlatterEngine?.(ctx,out,{bufferSize:256,loop,onEnd:({position})=>{transportOffset=Math.max(0,Math.min(duration,Number(position)||duration));transportPlaying=false;clearTicker();emitTransport({ended:true})}})||null;
   const currentOffset=()=>engine?.active?Math.max(0,Math.min(duration,engine.position)):Math.max(0,Math.min(duration,transportOffset));
   const emitTransport=(extra={})=>global.dispatchEvent(new CustomEvent("multisynth-live-wire-transport-state",{detail:{instanceId:api.instanceId,offset:currentOffset(),playing:transportPlaying,duration,clip,loop,rate:engine?.rate??0,...extra}}));
   const clearTicker=()=>{if(transportTicker)clearInterval(transportTicker);transportTicker=null};
