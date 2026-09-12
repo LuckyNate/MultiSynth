@@ -21,21 +21,6 @@ MULTISYNTH TODO
    - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
    - Verify switching among contexts after reload produces the same control state as before reload.
 
-4. CONTROLLER OWNERSHIP PASS
-   - Each unique controller type owns its appearance.
-   - Each unique controller type owns its interaction behavior.
-   - Each unique controller type owns its I/O contract.
-   - Identical variants remain grouped under the same controller type.
-   - Module-specific code must not reimplement controller appearance or interaction.
-
-5. MODULE MAPPING PASS — COMPLETE
-   - All module runtime surfaces are migrated to ModuleContract and mapped onto canonical shared controls/prefabs.
-   - Working leaf behavior was preserved during the migration.
-   - Obsolete Module Builder runtime infrastructure has been fully excised after runtime consumers reached zero.
-   - module-builder-definitions.js and module-builder-catalog.js are removed from runtime.
-   - tools/module-builder/ remains intentionally deferred tooling and was not modified.
-   - COMPLETED ARCHITECTURE MILESTONE: ModuleContract is the canonical runtime owner/registry for module definitions and module-owned control surfaces; the obsolete Module Builder runtime spine is gone.
-
 CANONICAL CONTROL LOCK — ACTIVE
    - The shared control library, including READOUT, is pure canon and untouchable by default.
    - Canon covers shared control appearance, geometry, interaction, generic I/O behavior, renderer behavior, and readout behavior/styling.
@@ -52,7 +37,8 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - This is not a declaration that leaf implementations are permanently frozen or final.
    - Individual leaf behavior may be revisited later as the instruments evolve.
    - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
-6. FUTURE MODULE — DJ MIXER
+
+4. FUTURE MODULE — DJ MIXER
    - Build a robust two-turntable media performance module.
    - Two independent decks with media playback.
    - Support looping and scratching on each deck.
@@ -60,7 +46,7 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Include mixing between decks, including crossfading and level control.
    - Treat this as a full performance instrument/module, not a generic mixer.
 
-7. LOW PRIORITY — NEEDLE METER VISUAL POLISH
+5. LOW PRIORITY — NEEDLE METER VISUAL POLISH
    - Revisit the canonical needle-style meter appearance later.
    - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
    - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
