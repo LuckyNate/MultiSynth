@@ -14,6 +14,13 @@
     }
   });
 
+  C.define({
+    type:I.REARRANGER,
+    version:"module-builder-10",
+    description:"CONTEXTUAL CLOCK-DRIVEN ARRANGEMENT CONTROLLER",
+    defaults:defaults()
+  });
+
   C.defineSurface(I.REARRANGER,{
     version:10,
     package:{
@@ -52,12 +59,5 @@
       {id:"action.rebind",type:"rebindContextControls"}
     ],
     nodes:{connections:[]}
-  });
-
-  C.define({
-    type:I.REARRANGER,
-    version:"module-builder-10",
-    description:"CONTEXTUAL CLOCK-DRIVEN ARRANGEMENT CONTROLLER",
-    defaults:defaults()
   });
 })(window);
