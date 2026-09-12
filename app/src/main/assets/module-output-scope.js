@@ -1,2 +1,25 @@
 "use strict";
-(function(){const q=new URLSearchParams(location.search),instance=q.get("instance"),canvas=document.getElementById("moduleScope"),shell=document.getElementById("scopeShell")||canvas?.closest?.(".scopeShell");if(!canvas||!instance)return;const P=parent.MultiSynth||{},I=P.ModuleIds,C=P.ModuleContract,A=P.NodeAudioGraph,S=P.ModuleStandard;if(!I)return;const silentTypes=new Set([I.FATHER_TIME,I.BEEN_SERVED,I.GARAGE_BAND,I.MASTER_OF_LEVELS]);let type="";try{type=C.getRuntime(instance).type}catch(_){try{type=P.NodeGraphEngine?.getModule?.(instance)?.type||""}catch(__){}}if(silentTypes.has(type)){shell?.remove();return}document.body?.classList.add("hasPinnedScope");let raf=0,last=0,dead=false,staticPcm=null;function accent(){return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()||"#8ff"}function paintStatic(){const pcm=staticPcm;if(!pcm?.length)return;const dpr=Math.max(1,devicePixelRatio||1),w=Math.max(1,Math.floor(canvas.clientWidth*dpr)),h=Math.max(1,Math.floor(canvas.clientHeight*dpr));if(canvas.width!==w)canvas.width=w;if(canvas.height!==h)canvas.height=h;const x=canvas.getContext("2d");x.clearRect(0,0,w,h);x.strokeStyle=accent();x.lineWidth=Math.max(1,dpr);x.beginPath();const mid=h/2,per=Math.max(1,pcm.length/w);for(let px=0;px<w;px++){const a=Math.floor(px*per),b=Math.min(pcm.length,Math.max(a+1,Math.floor((px+1)*per)));let lo=1,hi=-1;for(let i=a;i<b;i++){const v=Number(pcm[i])||0;if(v<lo)lo=v;if(v>hi)hi=v}const y1=mid-hi*mid*.92,y2=mid-lo*mid*.92;x.moveTo(px,y1);x.lineTo(px,y2)}x.stroke()}function draw(ts){if(dead)return;if(document.hidden||ts-last<32){raf=requestAnimationFrame(draw);return}last=ts;if(staticPcm)paintStatic();else{let analyser=null;try{analyser=C.getAnalyser(instance)}catch(_){}S?.paintScope?.(canvas,analyser,{accent:accent()})}raf=requestAnimationFrame(draw)}addEventListener("multisynth-scope-static",e=>{const pcm=e.detail?.pcm;staticPcm=pcm?.length?pcm:null;if(staticPcm)paintStatic()});addEventListener("multisynth-scope-live",()=>{staticPcm=null});try{A?.resume?.()}catch(_){}raf=requestAnimationFrame(draw);addEventListener("pagehide",()=>{dead=true;cancelAnimationFrame(raf)})})();
+(function(){
+const q=new URLSearchParams(location.search),instance=q.get("instance"),anchor=document.getElementById("moduleScope"),shell=document.getElementById("scopeShell")||anchor?.closest?.(".scopeShell");
+if(!anchor||!instance)return;
+const P=parent.MultiSynth||{},I=P.ModuleIds,C=P.ModuleContract,A=P.NodeAudioGraph,MS=window.MultiSynth||{},R=MS.ControlSurfaceRenderer,CS=MS.ControlSurface?.CONTROL;
+if(!I||!R||!CS)return;
+const silentTypes=new Set([I.FATHER_TIME,I.BEEN_SERVED,I.GARAGE_BAND,I.MASTER_OF_LEVELS]);
+let type="";try{type=C.getRuntime(instance).type}catch(_){try{type=P.NodeGraphEngine?.getModule?.(instance)?.type||""}catch(__){}}
+if(silentTypes.has(type)){shell?.remove();return}
+document.body?.classList.add("hasPinnedScope");
+const parentNode=anchor.parentElement;if(!parentNode)return;
+const host=document.createElement("div"),scope=R.mount(host,{id:"moduleScope",control:CS.OSCILLOSCOPE,meta:{trace:[]}});
+host.style.cssText="position:absolute;inset:0";scope.style.cssText+=";position:absolute;inset:0;width:100%;height:100%;max-width:none;transform:none";const face=scope.querySelector(".ms-control-face");if(face){face.style.width="100%";face.style.height="100%"}
+anchor.replaceWith(host);
+const binding={trace:[]};R.bindOscilloscope(scope,binding);
+let raf=0,last=0,dead=false,staticPcm=null,data=null;
+function commit(samples){binding.trace=samples||[];scope.commitOscilloscopeTrace?.(binding.trace)}
+function liveTrace(){let analyser=null;try{analyser=C.getAnalyser(instance)}catch(_){}if(!analyser)return commit([]);if(!data||data.length!==analyser.fftSize)data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);commit(data)}
+function draw(ts){if(dead)return;if(document.hidden||ts-last<32){raf=requestAnimationFrame(draw);return}last=ts;if(staticPcm)commit(staticPcm);else liveTrace();raf=requestAnimationFrame(draw)}
+addEventListener("multisynth-scope-static",e=>{const pcm=e.detail?.pcm;staticPcm=pcm?.length?pcm:null;if(staticPcm)commit(staticPcm)});
+addEventListener("multisynth-scope-live",()=>{staticPcm=null});
+try{A?.resume?.()}catch(_){}
+raf=requestAnimationFrame(draw);
+addEventListener("pagehide",()=>{dead=true;cancelAnimationFrame(raf)});
+})();
