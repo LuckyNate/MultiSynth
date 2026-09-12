@@ -3,13 +3,13 @@
   const MS=global.MultiSynth=global.MultiSynth||{},CS=MS.ControlSurface,P=MS.ControlSurfaceSpecParts||{};
   if(!CS)return;
   const C=CS.CONTROL,freeze=o=>Object.freeze(o),px=n=>`${Number(n)}px`;
-  const required=["knob","encoder","turntable","fader","ribbon","expression","pad","button","switch","xy","readout","screen","oscilloscope","meter","led","jack","decal"];
+  const required=["knob","encoder","turntable","fader","ribbon","expression","pad","button","switch","xy","readout","screen","oscilloscope","meter","gauge","led","jack","decal"];
   for(const name of required)if(!P[name])throw new Error("Missing canonical control definition: "+name);
   const TYPES=freeze({
     [C.KNOB]:P.knob.type,[C.ENCODER]:P.encoder.type,[C.TURNTABLE]:P.turntable.type,[C.FADER]:P.fader.type,
     [C.RIBBON]:P.ribbon.type,[C.EXPRESSION]:P.expression.type,[C.PAD]:P.pad.type,[C.BUTTON]:P.button.type,
     [C.SWITCH]:P.switch.type,[C.XY]:P.xy.type,[C.READOUT]:P.readout.type,[C.SCREEN]:P.screen.type,
-    [C.OSCILLOSCOPE]:P.oscilloscope.type,[C.METER]:P.meter.type,[C.LED]:P.led.type,[C.JACK]:P.jack.type,[C.DECAL]:P.decal.type
+    [C.OSCILLOSCOPE]:P.oscilloscope.type,[C.METER]:P.meter.type,[C.GAUGE]:P.gauge.type,[C.LED]:P.led.type,[C.JACK]:P.jack.type,[C.DECAL]:P.decal.type
   });
   const VARIANTS=freeze(Object.fromEntries(required.map(name=>[name,P[name].variants])));
   function defaults(control){const d=TYPES[control];if(!d)throw new Error("No control visual spec for "+control);return d}
