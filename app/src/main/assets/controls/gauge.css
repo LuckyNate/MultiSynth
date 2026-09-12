@@ -1,0 +1,6 @@
+.ms-gauge .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);overflow:hidden;background:#e7dfc4;border:1px solid #342f28;box-sizing:border-box}
+.ms-gauge-face{position:absolute;inset:4px;border-radius:3px;background:linear-gradient(#eee7cf,#d8cfb1);overflow:hidden}
+.ms-gauge-arc{position:absolute;left:12%;right:12%;top:12%;height:56%;border:1px solid #4b4439;border-bottom:0;border-radius:50% 50% 0 0/100% 100% 0 0;opacity:.7}
+.ms-gauge-ticks{position:absolute;inset:0;background:repeating-conic-gradient(from 300deg at 50% 82%,#4b4439 0deg 1deg,transparent 1deg 10deg);clip-path:polygon(0 0,100% 0,100% 78%,0 78%);opacity:.7}
+.ms-gauge-needle{position:absolute;left:50%;bottom:18%;width:2px;height:60%;background:#b32222;transform-origin:50% 100%;transform:translateX(-50%) rotate(-60deg);box-shadow:0 0 2px rgba(0,0,0,.35)}
+.ms-gauge-needle-pivot{position:absolute;left:50%;bottom:15%;width:8px;height:8px;border-radius:50%;background:#2b2924;transform:translateX(-50%);box-shadow:0 1px 2px rgba(0,0,0,.45)}
