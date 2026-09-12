@@ -9,6 +9,10 @@
   const lerp=(a,b,t)=>a+(b-a)*clamp(t,0,1);
   const angleAt=(face,e)=>{const r=face.getBoundingClientRect();return Math.atan2(e.clientY-(r.top+r.height*.5),e.clientX-(r.left+r.width*.5))};
   const wrapDelta=a=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a};
+  const workletBase=global.document?.currentScript?.src||global.location?.href||"";
+  const WORKLET_URL=(()=>{try{return new URL("control-turntable-worklet.js",workletBase).href}catch(_){return"control-turntable-worklet.js"}})();
+  const WORKLET_LOADS=new WeakMap();
+  const ensureWorklet=ctx=>{let p=WORKLET_LOADS.get(ctx);if(!p){p=ctx.audioWorklet.addModule(WORKLET_URL);WORKLET_LOADS.set(ctx,p)}return p};
 
   function createState(opts={}){
     const position=Math.max(0,Number(opts.position)||0);
@@ -49,15 +53,33 @@
   }
 
   function createPlatterEngine(ctx,output,opts={}){
-    if(!ctx||!output||typeof ctx.createScriptProcessor!=="function")return null;
-    const size=[256,512,1024,2048].includes(Number(opts.bufferSize))?Number(opts.bufferSize):256,processor=ctx.createScriptProcessor(size,0,2);
-    let buffer=null,active=false,playhead=0,rate=1,loop=!!opts.loop,ended=false;
+    const WorkletNode=global.AudioWorkletNode;
+    if(!ctx||!output||!ctx.audioWorklet||typeof WorkletNode!=="function")return null;
+    let node=null,buffer=null,active=false,playhead=0,rate=1,loop=!!opts.loop,ended=false,destroyed=false,pendingStart=null;
     const onEnd=typeof opts.onEnd==="function"?opts.onEnd:null;
-    const sampleAt=(channel,index)=>{const data=buffer.getChannelData(Math.min(channel,buffer.numberOfChannels-1)),i0=Math.max(0,Math.min(data.length-1,Math.floor(index))),i1=Math.max(0,Math.min(data.length-1,i0+1)),f=index-i0;return data[i0]+(data[i1]-data[i0])*f};
-    const finish=atEnd=>{active=false;rate=0;ended=true;playhead=atEnd&&buffer?buffer.length-1:0;onEnd?.({position:buffer?playhead/buffer.sampleRate:0})};
-    processor.onaudioprocess=e=>{const outs=[];for(let c=0;c<e.outputBuffer.numberOfChannels;c++)outs.push(e.outputBuffer.getChannelData(c));if(!active||!buffer){for(const out of outs)out.fill(0);return}const step=rate*buffer.sampleRate/ctx.sampleRate;for(let i=0;i<e.outputBuffer.length;i++){if(playhead<0||playhead>=buffer.length-1){if(loop){while(playhead<0)playhead+=buffer.length;while(playhead>=buffer.length)playhead-=buffer.length}else{for(const out of outs)out[i]=0;finish(rate>=0);for(let j=i+1;j<e.outputBuffer.length;j++)for(const out of outs)out[j]=0;break}}if(!active)break;for(let c=0;c<outs.length;c++)outs[c][i]=sampleAt(c,playhead);playhead+=step}};
-    processor.connect(output);
-    return{setBuffer(next){buffer=next||null;if(buffer)playhead=Math.max(0,Math.min(buffer.length-1,playhead));return this},setLoop(next){loop=!!next;return loop},start(position=0,nextRate=1){if(!buffer)return false;active=true;ended=false;rate=Number(nextRate)||0;playhead=Math.max(0,Math.min(buffer.length-1,(Number(position)||0)*buffer.sampleRate));return true},setRate(nextRate=0){if(!buffer||!active)return false;rate=Number(nextRate)||0;return true},setMotion(position=0,nextRate=0){return this.setRate(nextRate)},seek(position=0){if(buffer)playhead=Math.max(0,Math.min(buffer.length-1,(Number(position)||0)*buffer.sampleRate));return true},stop(position=null){if(position!=null)this.seek(position);active=false;rate=0;return true},disconnect(){active=false;processor.onaudioprocess=null;try{processor.disconnect()}catch(_){}},get position(){return buffer?playhead/buffer.sampleRate:0},get rate(){return rate},get active(){return active},get loop(){return loop},get ended(){return ended}};
+    const setParam=value=>{rate=Number(value)||0;if(!node)return;const p=node.parameters.get("rate");if(!p)return;try{p.cancelScheduledValues(ctx.currentTime);p.setValueAtTime(rate,ctx.currentTime)}catch(_){p.value=rate}};
+    const send=(type,extra={})=>{if(node)node.port.postMessage({type,...extra})};
+    const sendBuffer=()=>{if(!node||!buffer)return;const channels=[],transfer=[];for(let c=0;c<buffer.numberOfChannels;c++){const data=buffer.getChannelData(c).slice();channels.push(data);transfer.push(data.buffer)}node.port.postMessage({type:"buffer",channels,sampleRate:buffer.sampleRate},transfer)};
+    const startNow=(position,nextRate)=>{playhead=Math.max(0,Math.min(buffer.duration,Number(position)||0));active=true;ended=false;send("start",{position:playhead});setParam(nextRate)};
+    const ready=ensureWorklet(ctx).then(()=>{
+      if(destroyed)return null;
+      node=new WorkletNode(ctx,"multisynth-platter",{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2],parameterData:{rate}});
+      node.port.onmessage=e=>{const d=e.data||{};if(d.type==="state"){playhead=Math.max(0,Number(d.position)||0);active=!!d.active;ended=!!d.ended}else if(d.type==="ended"){playhead=Math.max(0,Number(d.position)||0);active=false;ended=true;rate=0;onEnd?.({position:playhead})}};
+      node.connect(output);send("loop",{value:loop});sendBuffer();
+      if(pendingStart){const p=pendingStart;pendingStart=null;startNow(p.position,p.rate)}else setParam(rate);
+      return node;
+    }).catch(e=>{console.error("MultiSynth platter AudioWorklet failed",e);active=false;ended=true;return null});
+    return{
+      setBuffer(next){buffer=next||null;if(buffer)playhead=Math.max(0,Math.min(buffer.duration,playhead));sendBuffer();return this},
+      setLoop(next){loop=!!next;send("loop",{value:loop});return loop},
+      start(position=0,nextRate=1){if(!buffer)return false;const p=Math.max(0,Math.min(buffer.duration,Number(position)||0));if(node)startNow(p,nextRate);else{playhead=p;active=true;ended=false;rate=Number(nextRate)||0;pendingStart={position:p,rate}}return true},
+      setRate(nextRate=0){if(!buffer||!active)return false;setParam(nextRate);return true},
+      setMotion(position=0,nextRate=0){return this.setRate(nextRate)},
+      seek(position=0){if(buffer)playhead=Math.max(0,Math.min(buffer.duration,Number(position)||0));send("seek",{position:playhead});return true},
+      stop(position=null){if(position!=null&&buffer)playhead=Math.max(0,Math.min(buffer.duration,Number(position)||0));active=false;ended=false;pendingStart=null;setParam(0);send("stop",{position:position!=null?playhead:null});return true},
+      disconnect(){destroyed=true;active=false;pendingStart=null;try{node?.port?.close?.()}catch(_){}try{node?.disconnect?.()}catch(_){}node=null},
+      get position(){return playhead},get rate(){return rate},get active(){return active},get loop(){return loop},get ended(){return ended},get ready(){return ready}
+    };
   }
 
   MS.TurntableControl=Object.freeze({REFERENCE_RPM,SECONDS_PER_TURN,REFERENCE_ANGULAR_VELOCITY,createState,beatSeconds,beatPhase,signedBeatDeltaSeconds,setRate,setBpm,setRole,setRunning,correctionWeight,requestSync,consumeSync,recover,tick,bindTurntable,createPlatterEngine,createScratchEngine:createPlatterEngine});
