@@ -13,6 +13,7 @@
 @import url("controls/screen.css");
 @import url("controls/oscilloscope.css");
 @import url("controls/meter.css");
+@import url("controls/gauge.css");
 @import url("controls/led.css");
 @import url("controls/jack.css");
 @import url("controls/decal.css");
