@@ -1,9 +1,10 @@
 .ms-meter .ms-control-face{width:var(--ms-width);height:var(--ms-height);border-radius:var(--ms-corner);overflow:hidden}
-.ms-meter-track{position:absolute;inset:4px;display:flex;flex-direction:column-reverse;gap:2px;padding:2px;box-sizing:border-box;background:#090909;border-radius:3px}
-.ms-meter-segment{display:block;flex:1 1 0;min-height:2px;border-radius:1px;opacity:.14;box-shadow:0 0 4px currentColor}
-.ms-meter-segment-green{color:#35c54a;background:#35c54a}
-.ms-meter-segment-yellow{color:#e8cf31;background:#e8cf31}
-.ms-meter-segment-red{color:#e23b35;background:#e23b35}
+.ms-meter-track{position:absolute;inset:4px;display:flex;gap:2px;padding:2px;box-sizing:border-box;background:#090909;border-radius:3px}
+.ms-meter--bar .ms-meter-track,.ms-meter--vertical .ms-meter-track{flex-direction:column-reverse}
+.ms-meter--horizontal .ms-meter-track{flex-direction:row}
+.ms-meter-track>.ms-led{flex:1 1 0;min-width:0;min-height:0;width:auto!important;height:auto!important;max-width:none!important}
+.ms-meter-track>.ms-led .ms-control-face{width:100%;height:100%;min-width:0;min-height:0}
+.ms-meter-track>.ms-led .ms-led-lens{inset:1px}
 .ms-meter--needle .ms-control-face{background:#e7dfc4;border:1px solid #342f28;box-sizing:border-box}
 .ms-meter-gauge{position:absolute;inset:4px;border-radius:3px;background:linear-gradient(#eee7cf,#d8cfb1);overflow:hidden}
 .ms-meter-gauge-arc{position:absolute;left:12%;right:12%;top:12%;height:56%;border:1px solid #4b4439;border-bottom:0;border-radius:50% 50% 0 0/100% 100% 0 0;opacity:.7}
