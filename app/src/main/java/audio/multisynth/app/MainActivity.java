@@ -231,7 +231,7 @@ public final class MainActivity extends Activity {
     private void status(String text,boolean connected){runJs("window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.status("+JSONObject.quote(text)+","+connected+");");}
     private void runJs(String script){main.post(()->{if(webView!=null)webView.evaluateJavascript(script,null);});}
 
-    @Override protected void onPause(){stopNativeMic();runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();window.MultiSynthNativeMidi&&window.MultiSynthNativeMidi.panic();");super.onPause();}
+    @Override protected void onPause(){stopNativeMic();runJs("window.MultiSynthSaveNow&&window.MultiSynthSaveNow();");super.onPause();}
     @Override protected void onResume(){super.onResume();runJs("window.warmAudioEngine&&window.warmAudioEngine();");}
     @Override public void onBackPressed(){
         if(webView==null){super.onBackPressed();return;}
