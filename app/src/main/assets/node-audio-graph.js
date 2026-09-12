@@ -15,7 +15,7 @@ function syncNow(){queued=false;ensureContext();const g=E().graph(),by=new Map(g
 function rebuild(){if(queued)return;queued=true;queueMicrotask(syncNow)}
 function start(){ensureContext();ensureClock().catch(()=>{});if(!started){E().on("graph-changed",rebuild);started=true}rebuild();return api}
 function resume(){ensureContext();return ctx.state==="suspended"?ctx.resume():Promise.resolve()}
-function eachNote(fn){for(const m of E().graph().modules)if(m.enabled!==false&&has(m,"noteInput")){runtime(m);try{fn(m)}catch(e){console.error(e)}}
+function eachNote(fn){for(const m of E().graph().modules)if(m.enabled!==false&&has(m,"noteInput")){runtime(m);try{fn(m)}catch(e){console.error(e)}}}
 function isPureHold(m){return m?.type===I()?.PURE_SYNTH&&!!m?.state?.hold}
 function refreshPureHold(){resume();let count=0;eachNote(m=>{if(!isPureHold(m))return;const rt=runtime(m),note=Number(rt?.user?.lastNote??60);C().panic(m.id);if(C().noteOn(m.id,note,127))count++});return count}
 function setPureHold(enabled){let count=0;eachNote(m=>{if(m?.type!==I()?.PURE_SYNTH)return;const rt=runtime(m),note=Number(rt?.user?.lastNote??60);C().panic(m.id);if(enabled&&C().noteOn(m.id,note,127))count++});return count}
