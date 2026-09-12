@@ -1,22 +1,13 @@
 MULTISYNTH TODO
 
-1. CONTEXTUAL BINDING AUDIT — ALL MODULES
-   - Execute this audit by canonical control type across all modules, not module-by-module.
-   - For each control family, gather every module that uses it, classify fixed vs contextual bindings, and audit all contextual uses together before moving to the next control type.
-   - Audit every module for any physical control whose semantic target can change while the control remains mounted.
-   - Give every contextual target a stable binding identity/key.
-   - Binding selects which saved module state the physical control currently represents; the control must not infer context by inspecting the app.
-   - Record each contextual use as: module | control | binding key | persistent fields | transient fields | rebind source | redraw complete? | leak risk.
-   - Find and remove architectural dependence on hidden per-control persistent context state only after the audit and an explicitly agreed implementation plan.
-
-2. REBIND / STATE-REFLECTION CONTRACT
+1. REBIND / STATE-REFLECTION CONTRACT
    - On context change, the same physical control must bind to the newly selected saved-state target and completely reflect that target.
    - Rebinding must refresh every persistent property represented by the control, including value and per-binding lock/unlock state where applicable.
    - Example: Time Bandits probability must preserve independent probability + lock state for each drum; switching drums must show that drum's saved value and lock state immediately.
    - Interaction writes through the current binding into module state; changing context reads the new binding from module state back into the control.
    - No old binding's temporary interaction state may bleed into the new binding.
 
-3. PERSISTENCE / RELOAD AUDIT
+2. PERSISTENCE / RELOAD AUDIT
    - Verify contextual binding-associated persistent state survives save/reload for every affected module.
    - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
    - Verify switching among contexts after reload produces the same control state as before reload.
@@ -38,7 +29,7 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Individual leaf behavior may be revisited later as the instruments evolve.
    - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
 
-4. FUTURE MODULE — DJ MIXER
+3. FUTURE MODULE — DJ MIXER
    - Build a robust two-turntable media performance module.
    - Two independent decks with media playback.
    - Support looping and scratching on each deck.
@@ -46,12 +37,12 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Include mixing between decks, including crossfading and level control.
    - Treat this as a full performance instrument/module, not a generic mixer.
 
-5. LOW PRIORITY — NEEDLE METER VISUAL POLISH
+4. LOW PRIORITY — NEEDLE METER VISUAL POLISH
    - Revisit the canonical needle-style meter appearance later.
    - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
    - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
 
-6. LOW PRIORITY — REBUILD CONTROL FREAK
+5. LOW PRIORITY — REBUILD CONTROL FREAK
    - Rebuild Control Freak from its current placeholder surface.
    - Keep the shared performance keyboard and oscilloscope as the starting face.
    - Redesign the assignable/rebindable control architecture from scratch.
