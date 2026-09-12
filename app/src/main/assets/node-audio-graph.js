@@ -11,8 +11,8 @@ function ensureClock(){ensureContext();if(clockReady)return clockReady;if(!ctx.a
 function subscribeClock(fn){if(typeof fn!=="function")return()=>{};clockListeners.add(fn);ensureClock().catch(()=>{});return()=>clockListeners.delete(fn)}
 function unsubscribeClock(fn){clockListeners.delete(fn)}
 function setClockBpm(value){return Math.max(20,Math.min(300,Number(value)||120))}
-function startClock({reset=false}={}){ensureClock().then(node=>node.port.postMessage({type:"running",running:true,reset:!!reset})).catch(()=>{});return resume()}
-function stopClock(){if(clockNode)clockNode.port.postMessage({type:"running",running:false})}
+function startClock(){ensureClock().catch(()=>{});return resume()}
+function stopClock(){return false}
 function connectRecord(map,key,a,b,signature=""){if(!a||!b||map.has(key))return;try{a.connect(b);map.set(key,{a,b,signature})}catch(e){console.error("Node audio link",e)}}
 function disconnectRecord(map,key){const rec=map.get(key);if(!rec)return;try{rec.a.disconnect(rec.b)}catch(_){}map.delete(key)}
 function syncNow(){queued=false;ensureContext();const g=E().graph(),by=new Map(g.modules.map(m=>[m.id,m])),incoming=new Set(),outgoing=new Set(),desired=new Map();for(const e of g.connections||[]){if(e.type!=="audio")continue;const a=E().parseNode(e.from),b=E().parseNode(e.to);if(a?.signal!=="carrier"||b?.signal!=="carrier")continue;const ma=by.get(a.id),mb=by.get(b.id);if(!ma||!mb)continue;incoming.add(b.id);outgoing.add(a.id);desired.set(e.id,{edge:e,a,b,ma,mb,signature:`${e.from}>${e.to}`})}
