@@ -139,7 +139,7 @@
     const at=e=>{if(!face)return root.commitXY(0,0);const r=face.getBoundingClientRect(),nx=Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1))),ny=Math.max(0,Math.min(1,(e.clientY-r.top)/(r.height||1)));return root.commitXY(nx*2-1,ny*2-1)};
     root.commitXY(0,0,{silent:true});
     root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;active=true;pointer=e.pointerId;root.setPointerCapture?.(pointer);const point=at(e);root.dispatchEvent(new CustomEvent("multisynth-control-xy-press",{bubbles:true,detail:{...point,controlId:d.id,stateKey:d.state,event:e}}));e.preventDefault()});
-    root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer)return;at(e);e.preventDefault()});
+    root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer)return;const point=at(e);root.dispatchEvent(new CustomEvent("multisynth-control-xy-drag",{bubbles:true,detail:{...point,controlId:d.id,stateKey:d.state,event:e}}));e.preventDefault()});
     const end=e=>{if(pointer!=null&&e?.pointerId!=null&&e.pointerId!==pointer)return;const wasActive=active;active=false;try{if(pointer!=null)root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;if(!root.__msXYBinding)root.commitXY(0,0);if(wasActive)root.dispatchEvent(new CustomEvent("multisynth-control-xy-release",{bubbles:true,detail:{x:Number(root.dataset.x)||0,y:Number(root.dataset.y)||0,controlId:d.id,stateKey:d.state,event:e}}))};
     root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);root.addEventListener("lostpointercapture",end);return root;
   }
