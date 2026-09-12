@@ -48,3 +48,10 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Redesign the assignable/rebindable control architecture from scratch.
    - Rebindable controls need a selector populated from the target module's exposed patch/state contract, filtered to values the physical control can possess.
    - Define stable binding identity, target-state reflection, persistence, and gesture reset behavior as part of that rebuild.
+
+6. LOW PRIORITY — CANON MODULE / NODE VISUAL POLISH
+   - Beautify the current canonical modules and their tabletop nodes after node/faceplate behavior is stable.
+   - Preserve the existing shared visual-identity system: each node and opened module should use the same module-owned decals, branding, palette, materials, typography, markings, and flavor assets.
+   - Nodes remain branding + connection topology only; do not turn them into miniature control surfaces.
+   - Treat the node as the top of the same standalone module sitting on the graph tabletop; opening the module reveals the actual controls.
+   - Refine enclosure shape, silhouette, decals, materials, wear, labeling, and related visual details without changing module behavior or control architecture unless separately authorized.
