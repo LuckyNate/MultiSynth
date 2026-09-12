@@ -12,7 +12,7 @@
   const MODULE_CONTROL=Object.freeze({
     KNOB:"knob", ENCODER:"encoder", TURNTABLE:"turntable", FADER:"fader", RIBBON:"ribbon", EXPRESSION:"expression",
     PAD:"pad", BUTTON:"button", SWITCH:"switch", XY:"xy", READOUT:"readout",
-    SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", LED:"led"
+    SCREEN:"screen", OSCILLOSCOPE:"oscilloscope", METER:"meter", GAUGE:"gauge", LED:"led"
   });
 
   // Node features live on nodes, not modules. They are not module controls.
@@ -59,6 +59,7 @@
     [CONTROL.SCREEN]:Object.freeze([GESTURE.TAP,GESTURE.HOLD,GESTURE.DRAG,GESTURE.SWIPE]),
     [CONTROL.OSCILLOSCOPE]:Object.freeze([GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.METER]:Object.freeze([GESTURE.TAP]),
+    [CONTROL.GAUGE]:Object.freeze([]),
     [CONTROL.LED]:Object.freeze([]),
     [CONTROL.JACK]:Object.freeze([GESTURE.TAP,GESTURE.PRESS,GESTURE.DRAG,GESTURE.RELEASE]),
     [CONTROL.DECAL]:Object.freeze([])
