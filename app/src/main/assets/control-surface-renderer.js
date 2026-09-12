@@ -178,7 +178,26 @@
     const v=freewheelValueState(root,d);
     let value=v.get();
     v.set(value);
-    root.addEventListener("multisynth-control-circular-drag",e=>{const detail=e.detail||{};if(!detail.active)return;const span=v.max-v.min||1,delta=Number(detail.deltaRadians)||0;value=v.set(value+delta/(Math.PI*2)*span);if(Number.isFinite(Number(detail.rotationDegrees)))root.style.setProperty("--ms-angle",String(Number(detail.rotationDegrees))+"deg")});
+
+    root.addEventListener("multisynth-control-circular-drag",e=>{
+      const detail=e.detail||{};
+      if(!detail.active)return;
+
+      const span=v.max-v.min||1;
+      const delta=Number(detail.deltaRadians)||0;
+
+      value=v.set(
+        value + delta/(Math.PI*2)*span
+      );
+
+      if(Number.isFinite(Number(detail.rotationDegrees))){
+        root.style.setProperty(
+          "--ms-angle",
+          String(Number(detail.rotationDegrees))+"deg"
+        );
+      }
+    });
+
     return root;
   }
   function installTurntableMotion(root,d,{onScrub=null,secondsPerTurn=1.8,position=0}={}){
@@ -192,7 +211,11 @@
     if(!state.frame)state.frame=requestAnimationFrame(tick);root.setTurntablePosition=value=>{state.position=Math.max(0,Number(value)||0);return root};return root;
   }
   function installTurntableFreewheel(root,d){return installTurntableMotion(root,d)}
-  const FREEWHEEL_INSTALLERS=Object.freeze({[C.KNOB]:(root,d,visual)=>installKnobFreewheel(root,d,visual),[C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),[C.TURNTABLE]:(root,d)=>installTurntableFreewheel(root,d)});
+  const FREEWHEEL_INSTALLERS=Object.freeze({
+    [C.KNOB]:(root,d,visual)=>installKnobFreewheel(root,d,visual),
+    [C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),
+    [C.TURNTABLE]:(root,d)=>installTurntableFreewheel(root,d)
+  });
   function installFreewheel(root,d,visual){if(root.__msFreewheelInstalled||d.control===C.DECAL)return root;root.__msFreewheelInstalled=true;FREEWHEEL_INSTALLERS[d.control]?.(root,d,visual);return root}
   // Character masks adapted from dmadison/LED-Segment-ASCII (MIT), 14-segment ASCII table.
   // Copyright (c) 2017 David Madison. https://github.com/dmadison/LED-Segment-ASCII
