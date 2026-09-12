@@ -75,14 +75,16 @@
   }
   function installRibbonDrag(root,d,visual){
     if(d.control!==C.RIBBON)return root;
-    const face=root.querySelector(".ms-control-face"),min=Number.isFinite(Number(d.value?.min))?Number(d.value.min):0,max=Number.isFinite(Number(d.value?.max))?Number(d.value.max):1,step=Number(d.value?.step)||0,vertical=visual.variant==="vertical";let pointer=null;
+    const face=root.querySelector(".ms-control-face"),min=Number.isFinite(Number(d.value?.min))?Number(d.value.min):0,max=Number.isFinite(Number(d.value?.max))?Number(d.value.max):1,step=Number(d.value?.step)||0,vertical=visual.variant==="vertical",TAP_MOVE=6,TAP_MS=220;let pointer=null,startX=0,startY=0,startTime=0,moved=false;
     const clamp=v=>Math.min(max,Math.max(min,Number(v))),quant=v=>{v=clamp(v);return step>0?clamp(min+Math.round((v-min)/step)*step):v};
     root.commitRibbonValue=(value,{silent=false,display=value}={})=>{const next=quant(value);paintValue(root,next,display);if(!silent){if(root.__msRibbonBinding)root.__msRibbonBinding.value=next;root.dispatchEvent(new CustomEvent("multisynth-control-value-change",{bubbles:true,detail:{value:next,controlId:d.id,stateKey:d.state}}))}return next};
-    root.__msResetRibbonDrag=()=>{if(pointer!=null){try{root.releasePointerCapture?.(pointer)}catch(_){}}pointer=null};
-    const at=e=>{if(!face)return;const r=face.getBoundingClientRect(),t=vertical?1-Math.max(0,Math.min(1,(e.clientY-r.top)/(r.height||1))):Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1)));root.commitRibbonValue(min+t*(max-min))};
-    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;pointer=e.pointerId;root.setPointerCapture?.(pointer);at(e);e.preventDefault()});
-    root.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;at(e);e.preventDefault()});
-    const end=e=>{if(e.pointerId!==pointer)return;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
+    const emit=(phase,e,extra={})=>root.dispatchEvent(new CustomEvent(`multisynth-control-ribbon-${phase}`,{bubbles:true,detail:{value:Number(root.dataset.value),...extra,controlId:d.id,stateKey:d.state,event:e}}));
+    root.__msResetRibbonDrag=()=>{if(pointer!=null){try{root.releasePointerCapture?.(pointer)}catch(_){}}pointer=null;startX=0;startY=0;startTime=0;moved=false};
+    const at=e=>{if(!face)return Number(root.dataset.value);const r=face.getBoundingClientRect(),t=vertical?1-Math.max(0,Math.min(1,(e.clientY-r.top)/(r.height||1))):Math.max(0,Math.min(1,(e.clientX-r.left)/(r.width||1)));return root.commitRibbonValue(min+t*(max-min))};
+    root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0)return;pointer=e.pointerId;startX=e.clientX;startY=e.clientY;startTime=performance.now();moved=false;root.setPointerCapture?.(pointer);const value=at(e);emit("press",e,{value});e.preventDefault()});
+    root.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;if(Math.hypot(e.clientX-startX,e.clientY-startY)>TAP_MOVE)moved=true;const value=at(e);emit("drag",e,{value});e.preventDefault()});
+    const end=(e,cancelled=false)=>{if(e.pointerId!==pointer)return;const duration=Math.max(0,performance.now()-startTime),wasMoved=moved,value=Number(root.dataset.value);try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null;startX=0;startY=0;startTime=0;moved=false;if(!cancelled&&!wasMoved&&duration<=TAP_MS)emit("tap",e,{value,duration});emit("release",e,{value,duration,cancelled})};
+    root.addEventListener("pointerup",e=>end(e));root.addEventListener("pointercancel",e=>end(e,true));root.addEventListener("lostpointercapture",e=>{if(e.pointerId===pointer)end(e,true)});return root;
   }
   function installExpressionDrag(root,d,visual){
     if(d.control!==C.EXPRESSION)return root;
@@ -176,26 +178,7 @@
     const v=freewheelValueState(root,d);
     let value=v.get();
     v.set(value);
-
-    root.addEventListener("multisynth-control-circular-drag",e=>{
-      const detail=e.detail||{};
-      if(!detail.active)return;
-
-      const span=v.max-v.min||1;
-      const delta=Number(detail.deltaRadians)||0;
-
-      value=v.set(
-        value + delta/(Math.PI*2)*span
-      );
-
-      if(Number.isFinite(Number(detail.rotationDegrees))){
-        root.style.setProperty(
-          "--ms-angle",
-          String(Number(detail.rotationDegrees))+"deg"
-        );
-      }
-    });
-
+    root.addEventListener("multisynth-control-circular-drag",e=>{const detail=e.detail||{};if(!detail.active)return;const span=v.max-v.min||1,delta=Number(detail.deltaRadians)||0;value=v.set(value+delta/(Math.PI*2)*span);if(Number.isFinite(Number(detail.rotationDegrees)))root.style.setProperty("--ms-angle",String(Number(detail.rotationDegrees))+"deg")});
     return root;
   }
   function installTurntableMotion(root,d,{onScrub=null,secondsPerTurn=1.8,position=0}={}){
@@ -209,11 +192,7 @@
     if(!state.frame)state.frame=requestAnimationFrame(tick);root.setTurntablePosition=value=>{state.position=Math.max(0,Number(value)||0);return root};return root;
   }
   function installTurntableFreewheel(root,d){return installTurntableMotion(root,d)}
-  const FREEWHEEL_INSTALLERS=Object.freeze({
-    [C.KNOB]:(root,d,visual)=>installKnobFreewheel(root,d,visual),
-    [C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),
-    [C.TURNTABLE]:(root,d)=>installTurntableFreewheel(root,d)
-  });
+  const FREEWHEEL_INSTALLERS=Object.freeze({[C.KNOB]:(root,d,visual)=>installKnobFreewheel(root,d,visual),[C.ENCODER]:(root,d)=>installEncoderFreewheel(root,d),[C.TURNTABLE]:(root,d)=>installTurntableFreewheel(root,d)});
   function installFreewheel(root,d,visual){if(root.__msFreewheelInstalled||d.control===C.DECAL)return root;root.__msFreewheelInstalled=true;FREEWHEEL_INSTALLERS[d.control]?.(root,d,visual);return root}
   // Character masks adapted from dmadison/LED-Segment-ASCII (MIT), 14-segment ASCII table.
   // Copyright (c) 2017 David Madison. https://github.com/dmadison/LED-Segment-ASCII
