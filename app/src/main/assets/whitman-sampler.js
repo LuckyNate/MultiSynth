@@ -53,7 +53,7 @@
   const stepNodes=[];
   for(let index=0;index<STEP_COUNT;index++){
     const node=mount(steps,{id:`step-${index}`,control:"button",label:String(index+1)},{variant:"rect"});
-    node.addEventListener("multisynth-control-button-tap",()=>{const sample=selected(),data=copy(state.stepsData||[]);while(data.length<STEP_COUNT)data.push([]);const row=(data[index]||[]).map(Number),at=row.indexOf(sample);if(at>=0)row.splice(at,1);else row.push(sample);data[index]=row;send({stepsData:data});});stepNodes.push(node);
+    node.addEventListener("multisynth-control-button-tap",()=>{const sample=selected(),sequence=Array.from({length:STEP_COUNT},(_,step)=>slotAt(sample).sequence?.[step]?1:0);sequence[index]=sequence[index]?0:1;updateSample(sample,{sequence});});stepNodes.push(node);
   }
 
   const screen=mount(libraryBank,{id:"library",control:"screen",label:"SAVED SAMPLES"},{variant:"scroll",height:260}),screenFace=screen.querySelector(".ms-control-face");let libraryList=document.createElement("div"),libraryToken=0;libraryList.className="whitman-library-list";screenFace?.appendChild(libraryList);
@@ -75,7 +75,7 @@
   }
 
   function paintSlots(){const current=selected();slotNodes.forEach((node,index)=>{node.dataset.selected=index===current?"1":"0";node.dataset.loaded=slotAt(index).pcmKey?"1":"0";});}
-  function paintSteps(){const sample=selected();stepNodes.forEach((node,index)=>node.commitButtonState?.((state.stepsData?.[index]||[]).map(Number).includes(sample),{silent:true}));}
+  function paintSteps(){const sample=selected(),sequence=slotAt(sample).sequence||[];stepNodes.forEach((node,index)=>node.commitButtonState?.(!!sequence[index],{silent:true}));}
   function paintGlobal(){runSwitch.commitSwitchState?.(!!state.running,{silent:true});previewSwitch.commitSwitchState?.(!!state.previewPlaying,{silent:true});cvSwitch.commitSwitchState?.(!!state.cvTrigger,{silent:true});record.commitButtonState?.(!!state.recording,{silent:true});for(const [key,node] of globalKnobs){node.setModuleValue?.(state[key]);node.setControlLocked?.(!!state.locks?.[key],{silent:true});}}
 
   function refreshSelection({redrawLibrary=false,rebind=false}={}){paintSlots();paintSteps();if(rebind)bindSelectedParams();else paintSelectedParams();if(redrawLibrary)drawLibrary().catch(console.error);}
@@ -91,8 +91,7 @@
     const selectedSlotChanged=previous.samples?.[currentSelection]!==next.samples?.[currentSelection];
     if(selectionChanged)refreshSelection({redrawLibrary:true,rebind:true});
     else{
-      if(selectedSlotChanged)paintSelectedParams();
-      if(previous.stepsData!==next.stepsData)paintSteps();
+      if(selectedSlotChanged){paintSelectedParams();paintSteps();}
       if(previous.samples!==next.samples)paintSlots();
       if(keyChanged)drawLibrary().catch(console.error);
     }
