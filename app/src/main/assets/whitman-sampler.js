@@ -14,7 +14,7 @@
   const selected=()=>clamp(state.selectedSample,0,SLOT_COUNT-1);
   function replaceSlot(index,mutate){const samples=copy(state.samples||[]);while(samples.length<SLOT_COUNT)samples.push({});const next={...(samples[index]||{}),locks:{...(samples[index]?.locks||{})}};mutate(next);samples[index]=next;send({samples});}
 
-  const transport=bank("TRANSPORT","ms-layout-transport"),timing=bank("TIMING","ms-layout-knobs"),slots=bank("16 SAMPLE PADS","ms-layout-steps"),params=bank("SELECTED SAMPLE","ms-layout-params"),steps=bank("32 STEPS","ms-layout-steps"),libraryBank=bank("PCM LIBRARY","ms-layout-list");
+  const transport=bank("TRANSPORT","ms-layout-transport"),timing=bank("TIMING","ms-layout-knobs"),slots=bank("16 SAMPLE PADS","ms-layout-steps"),libraryBank=bank("PCM LIBRARY","ms-layout-list"),params=bank("SELECTED SAMPLE","ms-layout-params"),steps=bank("32 STEPS","ms-layout-steps");
 
   const record=mount(transport,{id:"record",control:"button",label:"RECORD INPUT"},{variant:"rect"});
   record.addEventListener("multisynth-control-button-press",()=>send({recording:true,recordSlot:selected()}));
