@@ -11,7 +11,7 @@
   const M=Object.freeze({
     [I.LIVE_WIRE]:row(I.LIVE_WIRE,"input","#72d7ff",["audioOutput","generator"],["nativeAudio"]),
     [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["clockSource","clockFollower","cvInput","cvOutput","midi"],["midi","storage"]),
-    [I.WS]:row(I.WS,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockSource","clockFollower","cvInput","cvOutput","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
+    [I.WHITMAN_SAMPLER]:row(I.WHITMAN_SAMPLER,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","clockSource","clockFollower","cvInput","cvOutput","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
     [I.TIME_BANDITS]:row(I.TIME_BANDITS,"rhythm","#c89b52",["audioInput","audioOutput","clockSource","clockFollower","cvInput","cvOutput"],[],{carrierBehavior:"add"}),
     [I.REARRANGER]:row(I.REARRANGER,"sequencer","#b75cff",[]),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
