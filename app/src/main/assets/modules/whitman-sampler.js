@@ -21,37 +21,75 @@
     next.steps=clamp(Math.round(next.steps||32),1,STEP_COUNT);
     next.bpm=clamp(next.bpm||120,30,300);
     next.swing=clamp(next.swing||0,0,100);
+    next.recording=false;
+    next.previewPlaying=false;
     return next;
   }
 
-  function install(runtime,index,data,sampleRate,name,pcmKey=null){
+  function installBuffer(runtime,index,data,sampleRate){
     index=clamp(index,0,SLOT_COUNT-1);
-    const buffer=runtime.player.install(index,data,sampleRate);
-    if(!buffer)return false;
-    const slot=runtime.state.samples[index];
-    if(slot){slot.name=name||slot.name;slot.start=0;slot.end=buffer.duration;slot.pcmKey=pcmKey;}
-    runtime.emit?.("pcm-captured",{index,sampleRate,name:slot?.name||name||"CAPTURE",pcmKey});
-    return true;
+    return runtime.player.install(index,data,sampleRate);
   }
 
-  async function loadLibraryKey(runtime,index,key){
-    if(!key)return false;
+  function clearSlotBuffer(runtime,index){
+    index=clamp(index,0,SLOT_COUNT-1);
+    runtime.loadSerial[index]++;
+    runtime.loadingKeys[index]=null;
+    runtime.loadedKeys[index]=null;
+    runtime.player.remove(index);
+  }
+
+  async function loadSlot(runtime,index,key){
+    index=clamp(index,0,SLOT_COUNT-1);
+    key=key==null?null:String(key);
+    if(!key){clearSlotBuffer(runtime,index);return false;}
+    if(runtime.loadedKeys[index]===key&&runtime.player.buffers.has(index))return true;
+    if(runtime.loadingKeys[index]===key)return true;
     const library=MS.UnifiedLibrary||MS.PCMLibrary;
-    if(!library)return false;
+    if(!library?.get)return false;
+    const serial=++runtime.loadSerial[index];
+    runtime.loadingKeys[index]=key;
     try{
       const row=await library.get(key);
-      return !!(row?.data?.length&&install(runtime,index,row.data,row.sampleRate,row.name,row.id));
-    }catch(error){console.error("Whitman Sampler sample library",error);return false;}
+      if(serial!==runtime.loadSerial[index]||String(runtime.state.samples?.[index]?.pcmKey||"")!==key)return false;
+      if(!row?.data?.length||!row.sampleRate)return false;
+      const buffer=installBuffer(runtime,index,row.data,row.sampleRate);
+      if(!buffer)return false;
+      runtime.loadedKeys[index]=key;
+      return true;
+    }catch(error){
+      console.error("Whitman Sampler sample load",error);
+      return false;
+    }finally{
+      if(serial===runtime.loadSerial[index])runtime.loadingKeys[index]=null;
+    }
   }
 
-  function hydrate(runtime){for(const [index,slot] of (runtime.state.samples||[]).entries())if(slot?.pcmKey)loadLibraryKey(runtime,index,slot.pcmKey);}
-  function play(runtime,index,time=runtime.ctx.currentTime){index=clamp(index,0,SLOT_COUNT-1);return runtime.player.play(index,runtime.state.samples[index]||{},time);}
+  function syncSampleBuffers(runtime,previousSamples=[]){
+    const samples=runtime.state.samples||[];
+    for(let index=0;index<SLOT_COUNT;index++){
+      const key=samples[index]?.pcmKey==null?null:String(samples[index].pcmKey),previous=previousSamples[index]?.pcmKey==null?null:String(previousSamples[index].pcmKey);
+      if(key===previous&&((key&&runtime.loadedKeys[index]===key)||(!key&&!runtime.player.buffers.has(index))))continue;
+      if(!key)clearSlotBuffer(runtime,index);else loadSlot(runtime,index,key);
+    }
+  }
+
+  function hydrate(runtime){
+    for(let index=0;index<SLOT_COUNT;index++){
+      const key=runtime.state.samples?.[index]?.pcmKey;
+      if(key)loadSlot(runtime,index,key);
+    }
+  }
+
+  function play(runtime,index,time=runtime.ctx.currentTime){
+    index=clamp(index,0,SLOT_COUNT-1);
+    return runtime.player.play(index,runtime.state.samples[index]||{},time);
+  }
   function fireStep(runtime,step,time){for(const index of runtime.state.stepsData?.[step]||[])play(runtime,index,time);}
 
   function stopPreview(runtime){
     if(runtime.previewTimer)clearTimeout(runtime.previewTimer);
     runtime.previewTimer=null;
-    runtime.player.stopAll();
   }
 
   function startPreview(runtime){
@@ -59,7 +97,7 @@
     const loop=()=>{
       if(!runtime.state.previewPlaying)return;
       const index=clamp(runtime.state.selectedSample,0,SLOT_COUNT-1),slot=runtime.state.samples[index],buffer=runtime.player.buffers.get(index);
-      if(!slot||!buffer)return;
+      if(!slot||!buffer){runtime.previewTimer=setTimeout(loop,100);return;}
       play(runtime,index);
       const rate=Math.max(.01,Math.pow(2,(Number(slot.pitch)||0)/12)),start=Math.max(0,Number(slot.start)||0),end=Math.max(start+.001,Math.min(buffer.duration,Number(slot.end)||buffer.duration));
       runtime.previewTimer=setTimeout(loop,Math.max(10,(end-start)/rate*1000));
@@ -70,16 +108,18 @@
   function create(api){
     const ctx=api.context,input=ctx.createGain(),through=ctx.createGain(),samplerOut=ctx.createGain(),mix=ctx.createGain(),output=ctx.createGain();
     input.connect(through).connect(mix);samplerOut.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
-    const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,cvStep:0};
+    const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,cvStep:0,loadedKeys:Array(SLOT_COUNT).fill(null),loadingKeys:Array(SLOT_COUNT).fill(null),loadSerial:Array(SLOT_COUNT).fill(0)};
     runtime.player=S.sampler(ctx,samplerOut,{maxLag:.05});
     runtime.transport=S.transport(ctx,{getState:()=>runtime.state,maxSteps:STEP_COUNT,onStep:(step,time,meta)=>{
       fireStep(runtime,step,time);
       if(!meta?.external&&step%4===0)MS.CvBus?.send(runtime.id,{kind:"trigger",clock:true,value:1,gate:true,bpm:Number(runtime.state.bpm)||120,substep:step,beat:Math.floor(step/4),time});
     }});
     runtime.capture=S.capture(ctx,input,{onCapture:result=>{
-      const slot=clamp(runtime.state.recordSlot??runtime.state.selectedSample,0,SLOT_COUNT-1),name=`INPUT ${String(slot+1).padStart(2,"0")}`;
-      install(runtime,slot,result.pcm,result.sampleRate,name,null);
-      runtime.emit?.("capture-ready",{index:slot,name,sampleRate:result.sampleRate,frames:result.pcm.length,duration:result.duration,source:I.WHITMAN_SAMPLER,pcmKey:null,transient:true});
+      const slot=clamp(runtime.state.recordSlot??runtime.state.selectedSample,0,SLOT_COUNT-1);
+      installBuffer(runtime,slot,result.pcm,result.sampleRate);
+      runtime.loadedKeys[slot]=null;
+      runtime.loadingKeys[slot]=null;
+      runtime.emit?.("capture-ready",{index:slot,name:`INPUT ${String(slot+1).padStart(2,"0")}`,sampleRate:result.sampleRate,frames:result.pcm.length,duration:result.duration,source:I.WHITMAN_SAMPLER,pcmKey:null,transient:true});
     },onError:error=>console.error("Whitman Sampler input capture",error)});
     hydrate(runtime);
     if(api.state.running)runtime.transport.start();
@@ -89,9 +129,10 @@
   }
 
   function setState({runtime,state,patch}){
-    const u=runtime.user;if(!u)return;u.state=state;
-    if(patch.pcmInstall){const p=patch.pcmInstall;install(u,p.index,p.data,p.sampleRate,p.name,p.pcmKey??null);}
-    if(Array.isArray(patch.samples))patch.samples.forEach((slot,index)=>{if(slot?.pcmKey)loadLibraryKey(u,index,slot.pcmKey);else if(slot&&Object.prototype.hasOwnProperty.call(slot,"pcmKey"))u.player.remove(index);});
+    const u=runtime.user;if(!u)return;
+    const previousSamples=u.state?.samples||[];
+    u.state=state;
+    if(Array.isArray(patch.samples))syncSampleBuffers(u,previousSamples);
     if(Object.prototype.hasOwnProperty.call(patch,"running"))(state.running?u.transport.start():u.transport.stop());
     if(Object.prototype.hasOwnProperty.call(patch,"recording"))(state.recording?u.capture.start():u.capture.stop());
     if(Object.prototype.hasOwnProperty.call(patch,"selectedSample")&&state.previewPlaying)startPreview(u);
@@ -109,18 +150,18 @@
   function clockStart({runtime}){const u=runtime.user;if(u)u.cvStep=0;u?.transport.clockStart();}
   function clockStop({runtime}){runtime.user?.transport.clockStop();}
   function clockTick({runtime},tick){return runtime.user?.transport.clockTick(tick)??false;}
-  function destroy({runtime}){const u=runtime.user;if(!u)return;stopPreview(u);u.transport.destroy();u.capture?.destroy();u.player.stopAll();try{u.player.buffers?.clear?.();}catch(_){}for(const node of [u.input,u.through,u.samplerOut,u.mix,u.output])try{node.disconnect();}catch(_){}}
+  function destroy({runtime}){const u=runtime.user;if(!u)return;stopPreview(u);for(let i=0;i<SLOT_COUNT;i++)u.loadSerial[i]++;u.transport.destroy();u.capture?.destroy();u.player.stopAll();try{u.player.buffers?.clear?.();}catch(_){}for(const node of [u.input,u.through,u.samplerOut,u.mix,u.output])try{node.disconnect();}catch(_){}}
 
   C.define({
-    type:I.WHITMAN_SAMPLER,version:3,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 32 STEP MULTI-SAMPLE SEQUENCER",defaults:defaults(),resources:["pcm","storage"],
+    type:I.WHITMAN_SAMPLER,version:4,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 32 STEP MULTI-SAMPLE SEQUENCER",defaults:defaults(),resources:["pcm","storage"],
     create,setState,trigger,clockStart,clockStop,clockTick,destroy,
-    serialize:({state})=>({...normalizedState(state),recording:false,previewPlaying:false}),
-    restore:({saved})=>({...normalizedState(saved),recording:false,previewPlaying:false})
+    serialize:({state})=>normalizedState(state),
+    restore:({saved})=>normalizedState(saved)
   });
 
   C.defineSurface(I.WHITMAN_SAMPLER,{
-    version:3,
-    package:{id:I.WHITMAN_SAMPLER,version:3,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"internal-or-follower",cvMode:"quarter-note-trigger",stateOwnership:"module"}},
+    version:4,
+    package:{id:I.WHITMAN_SAMPLER,version:4,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"internal-or-follower",cvMode:"quarter-note-trigger",stateOwnership:"module"}},
     faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},
     defaults:defaults(),
     controls:[
