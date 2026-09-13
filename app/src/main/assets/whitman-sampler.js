@@ -14,7 +14,7 @@
   const selected=()=>clamp(state.selectedSample,0,SLOT_COUNT-1);
   function replaceSlot(index,mutate){const samples=copy(state.samples||[]);while(samples.length<SLOT_COUNT)samples.push({});const next={...(samples[index]||{}),locks:{...(samples[index]?.locks||{})}};mutate(next);samples[index]=next;send({samples});}
 
-  const transport=bank("TRANSPORT","ms-layout-transport"),timing=bank("TIMING","ms-layout-knobs"),slots=bank("16 SAMPLE PADS","ms-layout-pads"),params=bank("SELECTED SAMPLE","ms-layout-params"),steps=bank("32 STEPS","ms-layout-steps"),libraryBank=bank("PCM LIBRARY","ms-layout-list");
+  const transport=bank("TRANSPORT","ms-layout-transport"),timing=bank("TIMING","ms-layout-knobs"),slots=bank("16 SAMPLE PADS","ms-layout-steps"),params=bank("SELECTED SAMPLE","ms-layout-params"),steps=bank("32 STEPS","ms-layout-steps"),libraryBank=bank("PCM LIBRARY","ms-layout-list");
 
   const record=mount(transport,{id:"record",control:"button",label:"RECORD INPUT"},{variant:"rect"});
   record.addEventListener("multisynth-control-button-press",()=>send({recording:true,recordSlot:selected()}));
@@ -54,9 +54,9 @@
     if(!Library?.get)return;const full=await Library.get(id);if(!full)return;const samples=copy(state.samples||[]);while(samples.length<SLOT_COUNT)samples.push({});samples[index]={...(samples[index]||{}),name:full.name,pcmKey:full.id,start:0,end:full.duration,pitch:samples[index]?.pitch??0,level:samples[index]?.level??1,leftLevel:samples[index]?.leftLevel??1,rightLevel:samples[index]?.rightLevel??1,lagMs:samples[index]?.lagMs??0,locks:{...(samples[index]?.locks||{})}};send({samples,pcmInstall:{index,data:full.data,sampleRate:full.sampleRate,name:full.name,pcmKey:full.id}});
   }
   async function drawLibrary(){
-    const token=++libraryToken,chosen=selected(),chosenKey=slotAt(chosen).pcmKey||null,next=document.createElement("div");next.className="whitman-library-list";const items=Library?.list?await Library.list():[];if(token!==libraryToken)return;
-    if(!items.length){const empty=document.createElement("div");empty.className="whitman-library-empty";empty.textContent="NO SAVED SAMPLES";next.appendChild(empty);}else for(const item of items){if(token!==libraryToken)return;const row=document.createElement("div");row.className="ms-list-row whitman-library-row";if(chosenKey!=null&&String(item.id)===String(chosenKey))row.dataset.selected="1";next.appendChild(row);const choice=Renderer.mountLibraryChoice(row,{id:`use-${item.id}`,label:`${item.name} · ${(item.duration||0).toFixed(2)}s`,sampleRate:item.sampleRate,onSelect:()=>installPCM(item.id,chosen).catch(console.error)});choice.dataset.bindingKey=`whitman.sample.${chosen}.pcm`;}
-    if(token!==libraryToken)return;libraryList.replaceWith(next);libraryList=next;
+    const token=++libraryToken,chosen=selected(),chosenKey=slotAt(chosen).pcmKey||null,scroll=screenFace?.scrollTop||0,next=document.createElement("div");next.className="whitman-library-list";const items=Library?.list?await Library.list():[];if(token!==libraryToken)return;let activeRow=null;
+    if(!items.length){const empty=document.createElement("div");empty.className="whitman-library-empty";empty.textContent="NO SAVED SAMPLES";next.appendChild(empty);}else for(const item of items){const full=Library?.get?await Library.get(item.id):null;if(token!==libraryToken)return;const row=document.createElement("div");row.className="ms-list-row whitman-library-row";if(chosenKey!=null&&String(item.id)===String(chosenKey)){row.dataset.selected="1";activeRow=row;}next.appendChild(row);const choice=Renderer.mountLibraryChoice(row,{id:`use-${item.id}`,label:`${item.name} · ${(item.duration||0).toFixed(2)}s`,data:full?.data,sampleRate:full?.sampleRate||item.sampleRate,active:chosenKey!=null&&String(item.id)===String(chosenKey),onSelect:()=>installPCM(item.id,chosen).catch(console.error)});choice.dataset.bindingKey=`whitman.sample.${chosen}.pcm`;}
+    if(token!==libraryToken)return;libraryList.replaceWith(next);libraryList=next;if(screenFace){screenFace.scrollTop=Math.min(scroll,Math.max(0,screenFace.scrollHeight-screenFace.clientHeight));if(activeRow)requestAnimationFrame(()=>{if(token!==libraryToken||!activeRow.isConnected)return;const top=activeRow.offsetTop,bottom=top+activeRow.offsetHeight,viewTop=screenFace.scrollTop,viewBottom=viewTop+screenFace.clientHeight;if(top<viewTop)screenFace.scrollTop=top;else if(bottom>viewBottom)screenFace.scrollTop=Math.max(0,bottom-screenFace.clientHeight);});}
   }
 
   function paintSlots(){const current=selected();slotNodes.forEach((node,index)=>{node.dataset.selected=index===current?"1":"0";node.dataset.loaded=slotAt(index).pcmKey?"1":"0";const label=node.querySelector(".ms-control-label");if(label)label.textContent=String(index+1).padStart(2,"0");});}
@@ -65,5 +65,7 @@
   function paintGlobal(){runSwitch.commitSwitchState?.(!!state.running,{silent:true});previewSwitch.commitSwitchState?.(!!state.previewPlaying,{silent:true});cvSwitch.commitSwitchState?.(!!state.cvTrigger,{silent:true});record.commitButtonState?.(!!state.recording,{silent:true});for(const [key,node] of globalKnobs){node.setModuleValue?.(state[key]);node.setControlLocked?.(!!state.locks?.[key],{silent:true});}}
 
   paintGlobal();rebindSelected();
+  parent.addEventListener("multisynth-pcm-library",()=>drawLibrary().catch(console.error));
+  parent.addEventListener("multisynth-grain-library",()=>drawLibrary().catch(console.error));
   window.addEventListener("multisynth-state-sync",event=>{const before=state;state={...(def.defaults||{}),...(event.detail||{})};paintGlobal();const selectionChanged=Number(before.selectedSample)!==Number(state.selectedSample),samplesChanged=before.samples!==state.samples,stepsChanged=before.stepsData!==state.stepsData;if(selectionChanged||samplesChanged)rebindSelected();else if(stepsChanged)paintSteps();if(samplesChanged&&!selectionChanged)drawLibrary().catch(console.error);});
 })();
