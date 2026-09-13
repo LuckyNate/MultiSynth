@@ -5,16 +5,21 @@
 
   const SLOT_COUNT=16,STEP_COUNT=32;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
-  const emptySlot=i=>({name:`SAMPLE ${String(i+1).padStart(2,"0")}`,pcmKey:null,start:0,end:0,pitch:0,level:1,leftLevel:1,rightLevel:1,lagMs:0,locks:{}});
+  const emptySequence=()=>Array(STEP_COUNT).fill(0);
+  const emptySlot=i=>({name:`SAMPLE ${String(i+1).padStart(2,"0")}`,pcmKey:null,start:0,end:0,pitch:0,level:1,leftLevel:1,rightLevel:1,lagMs:0,locks:{},sequence:emptySequence()});
   const defaults=()=>({
     bpm:120,swing:0,steps:32,running:false,recording:false,recordSlot:0,selectedSample:0,previewPlaying:false,cvTrigger:true,
-    locks:{},samples:Array.from({length:SLOT_COUNT},(_,i)=>emptySlot(i)),stepsData:Array.from({length:STEP_COUNT},()=>[])
+    locks:{},samples:Array.from({length:SLOT_COUNT},(_,i)=>emptySlot(i))
   });
 
   function normalizedState(saved={}){
-    const base=defaults(),next={...base,...saved};
-    next.samples=Array.from({length:SLOT_COUNT},(_,i)=>({...emptySlot(i),...(saved.samples?.[i]||{}),locks:{...(saved.samples?.[i]?.locks||{})}}));
-    next.stepsData=Array.from({length:STEP_COUNT},(_,i)=>Array.isArray(saved.stepsData?.[i])?saved.stepsData[i].map(Number).filter(n=>n>=0&&n<SLOT_COUNT):[]);
+    const base=defaults(),next={...base,...saved},legacySteps=Array.isArray(saved.stepsData)?saved.stepsData:null;
+    delete next.stepsData;
+    next.samples=Array.from({length:SLOT_COUNT},(_,i)=>{
+      const source=saved.samples?.[i]||{},legacySequence=legacySteps?Array.from({length:STEP_COUNT},(_,step)=>Array.isArray(legacySteps[step])&&legacySteps[step].map(Number).includes(i)?1:0):emptySequence();
+      const sequence=Array.from({length:STEP_COUNT},(_,step)=>Array.isArray(source.sequence)?(source.sequence[step]?1:0):legacySequence[step]);
+      return {...emptySlot(i),...source,locks:{...(source.locks||{})},sequence};
+    });
     next.locks={...(saved.locks||{})};
     next.selectedSample=clamp(next.selectedSample,0,SLOT_COUNT-1);
     next.recordSlot=clamp(next.recordSlot,0,SLOT_COUNT-1);
@@ -24,6 +29,13 @@
     next.recording=false;
     next.previewPlaying=false;
     return next;
+  }
+
+  function normalizeRuntimeState(state){
+    const normalized=normalizedState(state);
+    for(const key of Object.keys(state))delete state[key];
+    Object.assign(state,normalized);
+    return state;
   }
 
   function installBuffer(runtime,index,data,sampleRate){index=clamp(index,0,SLOT_COUNT-1);return runtime.player.install(index,data,sampleRate);}
@@ -59,7 +71,9 @@
   function hydrate(runtime){syncSampleBuffers(runtime);}
 
   function play(runtime,index,time=runtime.ctx.currentTime){index=clamp(index,0,SLOT_COUNT-1);return runtime.player.play(index,runtime.state.samples[index]||{},time);}
-  function fireStep(runtime,step,time){for(const index of runtime.state.stepsData?.[step]||[])play(runtime,index,time);}
+  function fireStep(runtime,step,time){
+    for(let index=0;index<SLOT_COUNT;index++)if(runtime.state.samples?.[index]?.sequence?.[step])play(runtime,index,time);
+  }
 
   function stopPreview(runtime){if(runtime.previewTimer)clearTimeout(runtime.previewTimer);runtime.previewTimer=null;}
   function startPreview(runtime){
@@ -76,6 +90,7 @@
   }
 
   function create(api){
+    normalizeRuntimeState(api.state);
     const ctx=api.context,input=ctx.createGain(),through=ctx.createGain(),samplerOut=ctx.createGain(),mix=ctx.createGain(),output=ctx.createGain();
     input.connect(through).connect(mix);samplerOut.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
     const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,cvStep:0,loadedKeys:Array(SLOT_COUNT).fill(null),loadingKeys:Array(SLOT_COUNT).fill(null),loadSerial:Array(SLOT_COUNT).fill(0)};
@@ -116,8 +131,8 @@
   function clockTick({runtime},tick){return runtime.user?.transport.clockTick(tick)??false;}
   function destroy({runtime}){const u=runtime.user;if(!u)return;stopPreview(u);for(let i=0;i<SLOT_COUNT;i++)u.loadSerial[i]++;u.transport.destroy();u.capture?.destroy();u.player.stopAll();try{u.player.buffers?.clear?.();}catch(_){}for(const node of [u.input,u.through,u.samplerOut,u.mix,u.output])try{node.disconnect();}catch(_){}}
 
-  C.define({type:I.WHITMAN_SAMPLER,version:4,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 32 STEP MULTI-SAMPLE SEQUENCER",defaults:defaults(),resources:["pcm","storage"],create,setState,trigger,clockStart,clockStop,clockTick,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
-  C.defineSurface(I.WHITMAN_SAMPLER,{version:4,package:{id:I.WHITMAN_SAMPLER,version:4,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"internal-or-follower",cvMode:"quarter-note-trigger",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
+  C.define({type:I.WHITMAN_SAMPLER,version:5,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 16×32 STEP SAMPLE-OWNED SEQUENCERS",defaults:defaults(),resources:["pcm","storage"],create,setState,trigger,clockStart,clockStop,clockTick,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
+  C.defineSurface(I.WHITMAN_SAMPLER,{version:5,package:{id:I.WHITMAN_SAMPLER,version:5,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"internal-or-follower",cvMode:"quarter-note-trigger",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
     {id:"record",control:"button",state:"recording",label:"RECORD INPUT",meta:{momentary:true}},{id:"running",control:"switch",state:"running",label:"RUN"},{id:"previewPlaying",control:"switch",state:"previewPlaying",label:"PLAY SELECTED"},{id:"cvTrigger",control:"switch",state:"cvTrigger",label:"CV TRIGGER"},
     {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1}},{id:"swing",control:"knob",state:"swing",label:"SWING",value:{default:0,min:0,max:100,step:1},meta:{unit:"%"}},{id:"steps",control:"knob",state:"steps",label:"LENGTH",value:{default:32,min:1,max:32,step:1}},
     {id:"sample-slots",kind:"prefab",label:"16 SAMPLE PADS",controls:Array.from({length:SLOT_COUNT},(_,i)=>({id:`sample-${i}`,control:"pad",label:String(i+1).padStart(2,"0"),meta:{slotIndex:i}}))},{id:"step-grid",kind:"prefab",label:"32 STEPS",controls:Array.from({length:STEP_COUNT},(_,i)=>({id:`step-${i}`,control:"button",label:String(i+1),meta:{stepIndex:i,stateful:true}}))},
