@@ -8,7 +8,7 @@
     if(!root||root.dataset.control!=="encoder"||root.__msEncoderRuntime)return root;
     const face=root.querySelector(".ms-control-face");if(!face)return root;
     root.__msEncoderRuntime=true;face.style.touchAction="none";
-    const add=root.addEventListener.bind(root),remove=root.removeEventListener.bind(root),later={pointerdown:[],pointermove:[],pointerup:[],pointercancel:[]};
+    const add=root.addEventListener.bind(root),remove=typeof root.removeEventListener==="function"?root.removeEventListener.bind(root):()=>{},later={pointerdown:[],pointermove:[],pointerup:[],pointercancel:[]};
     const s={pointer:null,x:0,y:0,last:0,rotation:0,turns:0,active:false};
     const emit=(active,delta,e)=>root.dispatchEvent(new CustomEvent("multisynth-control-circular-drag",{bubbles:true,detail:{active,deltaRadians:delta,deltaDegrees:delta*180/Math.PI,rotationRadians:s.rotation,rotationDegrees:s.rotation*180/Math.PI,turns:s.rotation/(Math.PI*2),direction:Math.sign(delta),clockwise:delta>0,controlId:root.dataset.controlId||null,stateKey:root.dataset.stateKey||null,event:e}}));
     const routedY=()=>{const d=root.__msDescriptor,min=Number(d?.value?.min),max=Number(d?.value?.max),step=Number(d?.value?.step),span=Number.isFinite(min)&&Number.isFinite(max)?Math.abs(max-min):1,indexed=root.dataset.variant==="indexed"||root.dataset.variant==="selector",pixels=indexed&&step>0?Math.max(28,28*span/step):180;return s.y-s.turns*pixels};
