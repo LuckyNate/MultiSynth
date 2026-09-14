@@ -5,6 +5,7 @@
 
   const makeContext=(left=0,right=1,a=.5,b=.5,c=.5,d=.5)=>({left,right,knobs:[a,b,c,d],knobLocks:Array(4).fill(false)});
   const defaults=()=>({
+    bpm:120,
     context:"CLIP",
     contexts:{
       CLIP:makeContext(0,1,.8,0,1,1),
@@ -47,6 +48,7 @@
       {id:"context-2",control:"knob",label:"PARAM 2",value:{default:.5,min:0,max:1,step:.001},node:"controller.context2"},
       {id:"context-3",control:"knob",label:"PARAM 3",value:{default:.5,min:0,max:1,step:.001},node:"controller.context3"},
       {id:"context-4",control:"knob",label:"PARAM 4",value:{default:.5,min:0,max:1,step:.001},node:"controller.context4"},
+      {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1},node:"controller.bpm"},
       {id:"clip-mode",control:"button",label:"CLIP",node:"controller.clip"},
       {id:"stanza-mode",control:"button",label:"STANZA",node:"controller.stanza"},
       {id:"song-mode",control:"button",label:"SONG",node:"controller.song"},
