@@ -23,12 +23,15 @@
     {name:"RIMSHOT",pitch:455,decay:85,bend:0,tone:78,character:72,level:74,kind:"rimshot"}
   ];
   const PARAMS=["pitch","decay","bend","tone","character","level"];
+  const LOCK_KEYS=[...PARAMS,"probability"];
   const LANE_KEYS=["subSteps","kickSteps","snareSteps","tom1Steps","tom2Steps","tom3Steps","cymbal1Steps","cymbal2Steps","cymbal3Steps","hatClosedSteps","hatOpenSteps","tambourineSteps"];
   const pat=()=>BASE.map(()=>Array(32).fill(0));
   const prob=()=>BASE.map(()=>Array(32).fill(100));
+  const lockState=(saved={},legacy=false)=>{const out={};for(const k of LOCK_KEYS)out[k]=k==="probability"&&saved.probability==null?!!legacy:!!saved[k];return out};
   const voiceState=(saved,i)=>{const b=BASE[i]||BASE[0],s=saved||{},v={};for(const k of PARAMS)v[k]=Number.isFinite(Number(s[k]))?Number(s[k]):b[k];return v};
   const normalizeVoices=state=>{state.voices=BASE.map((_,i)=>voiceState(state.voices?.[i],i));return state.voices};
-  const defaults=()=>({bpm:120,swing:0,steps:32,running:false,pattern:pat(),probabilities:prob(),voices:BASE.map((_,i)=>voiceState(null,i)),selected:0});
+  const normalizeKnobLocks=state=>{state.knobLocks=BASE.map((_,i)=>lockState(state.knobLocks?.[i],state.probabilityLocks?.[i]));return state.knobLocks};
+  const defaults=()=>({bpm:120,swing:0,steps:32,running:false,pattern:pat(),probabilities:prob(),voices:BASE.map((_,i)=>voiceState(null,i)),knobLocks:BASE.map(()=>lockState()),selected:0});
 
   function normalizePattern(state){
     if(Array.isArray(state.pattern)){
@@ -109,7 +112,7 @@
 
   function create(api){
     const c=api.context,input=c.createGain(),drums=c.createGain(),mix=c.createGain(),output=c.createGain();
-    normalizePattern(api.state);normalizeProbabilities(api.state);normalizeVoices(api.state);
+    normalizePattern(api.state);normalizeProbabilities(api.state);normalizeVoices(api.state);normalizeKnobLocks(api.state);
     input.connect(mix);drums.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
     const u={id:api.instanceId,ctx:c,input,drums,mix,output,state:api.state,transport:null,cvStep:0,auditionTimer:0,buffers:Array(BASE.length).fill(null),sampleIds:Array.from({length:BASE.length},(_,i)=>api.state.sampleIds?.[i]||null),renderTokens:Array(BASE.length).fill(0),probabilityQueue:[],probabilityEvents:[],probabilityCursor:0};
     primeProbabilityQueue(u,0);
@@ -121,7 +124,7 @@
 
   function setState({runtime,state,patch}){
     const u=runtime.user;if(!u)return;
-    normalizePattern(state);normalizeProbabilities(state);normalizeVoices(state);u.state=state;
+    normalizePattern(state);normalizeProbabilities(state);normalizeVoices(state);normalizeKnobLocks(state);u.state=state;
     if("pattern" in patch||"probabilities" in patch||"steps" in patch)u.probabilityQueue=[];
     if("voices" in patch){const targets=[Math.max(0,Math.min(BASE.length-1,Math.round(Number(state.selected)||0)))];for(const i of targets)renderAndCache(u,i,true).then(()=>{state.sampleIds=[...u.sampleIds]}).catch(e=>console.error("Time Bandits PCM render",e))}
     if("running" in patch){state.running?u.transport.start():u.transport.stop();if(!state.running)audition(u)}
