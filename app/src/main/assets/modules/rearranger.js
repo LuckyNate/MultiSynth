@@ -3,7 +3,7 @@
   const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,P=MS.ControlPrefabs;
   if(!C||!I||!P)throw new Error("Rearranger requires ModuleContract, ModuleIds and ControlPrefabs");
 
-  const makeContext=(left=0,right=1,a=.5,b=.5,c=.5,d=.5)=>({left,right,knobs:[a,b,c,d]});
+  const makeContext=(left=0,right=1,a=.5,b=.5,c=.5,d=.5)=>({left,right,knobs:[a,b,c,d],knobLocks:Array(4).fill(false)});
   const defaults=()=>({
     context:"CLIP",
     contexts:{
