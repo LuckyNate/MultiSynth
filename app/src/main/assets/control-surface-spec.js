@@ -9,7 +9,7 @@
   const src=current?.src||"control-surface-spec.js";
   const base=src.replace(/[^/]*$/,"controls/");
   const files=[
-    "knob.js","encoder.js","turntable.js","fader.js","ribbon.js","expression.js",
+    "knob.js","encoder.js","encoder-runtime.js","turntable.js","fader.js","ribbon.js","expression.js",
     "pad.js","button.js","switch.js","xy.js","readout.js","screen.js","oscilloscope.js",
     "meter.js","gauge.js","led.js","jack.js","decal.js","spec-core.js","prefabs.js"
   ];
