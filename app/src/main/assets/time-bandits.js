@@ -13,10 +13,19 @@
   const mount=(parent,d,visual={})=>R.mount(parent,{...d,meta:{...(d.meta||{}),visual:{...(d.meta?.visual||{}),...visual}}});
 
   function normalize(){
-    const p=state.pattern,pr=state.probabilities,v=state.voices;
+    const p=state.pattern,pr=state.probabilities,v=state.voices,locks=state.knobLocks;
     state.pattern=BASE.map((_,lane)=>Array.from({length:32},(_,step)=>p?.[lane]?.[step]?1:0));
     state.probabilities=BASE.map((_,lane)=>Array.from({length:32},(_,step)=>clamp(pr?.[lane]?.[step]??100,0,100)));
     state.voices=BASE.map((base,i)=>({...base,...(v?.[i]||{})}));
+    state.knobLocks=BASE.map((_,i)=>({
+      pitch:!!locks?.[i]?.pitch,
+      decay:!!locks?.[i]?.decay,
+      bend:!!locks?.[i]?.bend,
+      tone:!!locks?.[i]?.tone,
+      character:!!locks?.[i]?.character,
+      level:!!locks?.[i]?.level,
+      probability:locks?.[i]?.probability!=null?!!locks[i].probability:!!state.probabilityLocks?.[i]
+    }));
   }
   normalize();
   root.innerHTML="";root.classList.add("ms-module-surface");
@@ -47,17 +56,18 @@
 
   const ranges={pitch:{label:"PITCH",min:20,max:3000,step:1},decay:{label:"DECAY",min:20,max:2500,step:1},bend:{label:"BEND",min:-2500,max:2500,step:10},tone:{label:"TONE",min:0,max:100,step:1},character:{label:"CHARACTER",min:0,max:100,step:1},level:{label:"LEVEL",min:0,max:100,step:1}};
   const paramNodes=new Map();
+  function writeKnobLock(i,key,value){const knobLocks=copy(state.knobLocks);knobLocks[i]={...(knobLocks[i]||{}),[key]:!!value};send({knobLocks})}
   function bindVoiceParam(key){
     const spec=ranges[key],i=selected(),node=paramNodes.get(key)||mount(paramBank,{id:key,control:"knob",label:spec.label,value:{default:Number(state.voices?.[i]?.[key]??BASE[i][key]),min:spec.min,max:spec.max,step:spec.step}},{variant:"cap",valueReadout:true});
     if(!paramNodes.has(key))paramNodes.set(key,node);
-    const binding={key:`time-bandits.voice.${i}.${key}`,get value(){return Number(state.voices?.[i]?.[key]??BASE[i][key])},set value(v){const voices=copy(state.voices);voices[i]={...voices[i],[key]:v};send({voices})},get locked(){return false},set locked(){}};
+    const binding={key:`time-bandits.voice.${i}.${key}`,get value(){return Number(state.voices?.[i]?.[key]??BASE[i][key])},set value(v){const voices=copy(state.voices);voices[i]={...voices[i],[key]:v};send({voices})},get locked(){return !!state.knobLocks?.[i]?.[key]},set locked(v){writeKnobLock(i,key,v)}};
     node.dataset.bindingKey=binding.key;R.bindKnob(node,binding);node.setModuleValue?.(binding.value);
   }
   Object.keys(ranges).forEach(bindVoiceParam);
 
   const probability=mount(probBank,{id:"probability",control:"knob",label:"PROBABILITY",value:{default:100,min:0,max:100,step:1},meta:{unit:"%"}},{variant:"cap",valueReadout:true});
   function bindProbability(){
-    const i=selected(),binding={key:`time-bandits.voice.${i}.probability`,get value(){return Number(state.probabilities?.[i]?.[0]??100)},set value(v){const probabilities=copy(state.probabilities);probabilities[i]=Array(32).fill(clamp(v,0,100));send({probabilities})},get locked(){return !!state.probabilityLocks?.[i]},set locked(v){send({probabilityLocks:{...(state.probabilityLocks||{}),[i]:!!v}})}};
+    const i=selected(),binding={key:`time-bandits.voice.${i}.probability`,get value(){return Number(state.probabilities?.[i]?.[0]??100)},set value(v){const probabilities=copy(state.probabilities);probabilities[i]=Array(32).fill(clamp(v,0,100));send({probabilities})},get locked(){return !!state.knobLocks?.[i]?.probability},set locked(v){writeKnobLock(i,"probability",v)}};
     probability.dataset.bindingKey=binding.key;R.bindKnob(probability,binding);probability.setModuleValue?.(binding.value);probability.setControlLocked?.(binding.locked,{silent:true});
   }
   bindProbability();
@@ -79,12 +89,12 @@
   const onState=e=>{
     const before=state;state={...(def.defaults||{}),...(e.detail||{})};normalize();
     paintRun();paintGlobals();
-    const selectionChanged=Number(before.selected)!==Number(state.selected),voicesChanged=before.voices!==state.voices,patternChanged=before.pattern!==state.pattern,probChanged=before.probabilities!==state.probabilities,locksChanged=before.probabilityLocks!==state.probabilityLocks;
+    const selectionChanged=Number(before.selected)!==Number(state.selected),voicesChanged=before.voices!==state.voices,patternChanged=before.pattern!==state.pattern,probChanged=before.probabilities!==state.probabilities,locksChanged=before.knobLocks!==state.knobLocks||before.probabilityLocks!==state.probabilityLocks;
     if(selectionChanged)rebindSelected();else{
       if(voicesChanged)Object.keys(ranges).forEach(key=>paramNodes.get(key)?.setModuleValue?.(state.voices?.[selected()]?.[key]));
       if(patternChanged)paintSteps();
       if(probChanged)probability.setModuleValue?.(state.probabilities?.[selected()]?.[0]??100);
-      if(locksChanged)probability.setControlLocked?.(!!state.probabilityLocks?.[selected()],{silent:true});
+      if(locksChanged){Object.keys(ranges).forEach(key=>paramNodes.get(key)?.setControlLocked?.(!!state.knobLocks?.[selected()]?.[key],{silent:true}));probability.setControlLocked?.(!!state.knobLocks?.[selected()]?.probability,{silent:true});}
     }
   };
   window.addEventListener("multisynth-state-sync",onState);
