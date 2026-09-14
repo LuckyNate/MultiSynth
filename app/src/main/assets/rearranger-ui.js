@@ -10,6 +10,7 @@
   const copy=v=>JSON.parse(JSON.stringify(v));
   const makeContext=(left,right,knobs)=>({left,right,knobs:[...knobs],knobLocks:Array(4).fill(false)});
   const seed={
+    bpm:120,
     context:"CLIP",
     contexts:{
       CLIP:makeContext(0,1,[.8,0,1,1]),
@@ -21,6 +22,7 @@
 
   const mergeState=saved=>{
     const next=copy(seed),src=saved||{};
+    next.bpm=Math.max(30,Math.min(300,Math.round(Number(src.bpm)||120)));
     next.context=src.context&&next.contexts[src.context]?src.context:next.context;
     for(const name of Object.keys(next.contexts)){
       const incoming=src.contexts?.[name]||{},base=next.contexts[name];
@@ -145,27 +147,30 @@
   const bpmReadout=styleRearrangerReadout(CS.mountReadout(bpmReadoutHost,{id:"rearranger-bpm-readout",rows:1,columns:3,text:"120",lit:false}));
   bpmReadout.root.style.height=timingSize+"px";
 
-  const bpmKnob=R.mount(timingGrid,{id:"rearranger-bpm",control:"knob",label:"BPM",value:{default:120,min:30,max:300,step:1}},{
+  const bpmKnob=R.mount(timingGrid,{id:"rearranger-bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1}},{
     visual:{size:timingSize,touchSize:92}
   });
-  let internalBpm=120,tapTimes=[];
-  let beatTimer=0;
+  let tapTimes=[];
+  const paintBpm=value=>{
+    state.bpm=Math.max(30,Math.min(300,Math.round(Number(value)||120)));
+    R.setValue(bpmKnob,state.bpm,String(state.bpm));
+    bpmReadout.set(String(state.bpm).padStart(3,"0").slice(-3));
+  };
+  const writeBpm=value=>{
+    const bpm=Math.max(30,Math.min(300,Math.round(Number(value)||120)));
+    paintBpm(bpm);
+    if(instance)try{E?.setModuleState?.(instance,{bpm})}catch(e){console.error("Rearranger BPM",e)}
+  };
   const flashBeat=()=>{
     tempoLed.dataset.on="1";
     setTimeout(()=>{tempoLed.dataset.on="0"},90);
   };
-  const restartBeatTimer=()=>{
-    clearInterval(beatTimer);
+  const onClock=e=>{
+    const bpm=Number(e.detail?.bpm);
+    if(Number.isFinite(bpm))paintBpm(bpm);
     flashBeat();
-    beatTimer=setInterval(flashBeat,60000/internalBpm);
   };
-
-  const setBpm=value=>{
-    internalBpm=Math.max(30,Math.min(300,Math.round(Number(value)||120)));
-    R.setValue(bpmKnob,internalBpm,String(internalBpm));
-    bpmReadout.set(String(internalBpm).padStart(3,"0").slice(-3));
-    restartBeatTimer();
-  };
+  parent.addEventListener("multisynth-father-time-tick",onClock);
   timingPad.addEventListener("click",()=>{
     const now=performance.now();
     if(tapTimes.length&&now-tapTimes[tapTimes.length-1]>2000)tapTimes=[];
@@ -174,11 +179,11 @@
     if(tapTimes.length>1){
       const intervals=[];
       for(let i=1;i<tapTimes.length;i++)intervals.push(tapTimes[i]-tapTimes[i-1]);
-      setBpm(60000/(intervals.reduce((a,b)=>a+b,0)/intervals.length));
+      writeBpm(60000/(intervals.reduce((a,b)=>a+b,0)/intervals.length));
     }
   });
-  bpmKnob.addEventListener("multisynth-control-knob-delta",e=>setBpm(internalBpm+(e.detail?.delta||0)*270));
-  setBpm(internalBpm);
+  bpmKnob.addEventListener("multisynth-control-knob-delta",e=>writeBpm(state.bpm+(e.detail?.delta||0)*270));
+  paintBpm(state.bpm);
 
   const knobLabels={
     CLIP:["LEVEL","PAN","RATE","LOOP"],
@@ -285,23 +290,23 @@
   transportButtons[2].addEventListener("click",()=>readout.set("STOP"));
   transportButtons[3].addEventListener("click",()=>readout.set("FWD"));
 
-  const onState=e=>{state=mergeState(e.detail);bindContext()};
+  const onState=e=>{state=mergeState(e.detail);paintBpm(state.bpm);bindContext()};
   window.addEventListener("multisynth-state-sync",onState);
 
+  const cleanup=()=>{
+    readoutObserver.disconnect();
+    window.removeEventListener("multisynth-state-sync",onState);
+    parent.removeEventListener("multisynth-father-time-tick",onClock);
+    document.body.classList.remove("hasPinnedKeyboard");
+  };
   const keyboardHost=document.getElementById("performanceKeyboard");
   if(keyboardHost&&MS.PerformanceKeyboard?.mount){
     document.body.classList.add("hasPinnedKeyboard");
     const keyboard=MS.PerformanceKeyboard.mount(keyboardHost,{audio:A});
-    const cleanup=()=>{
-      clearInterval(beatTimer);
-      readoutObserver.disconnect();
-      window.removeEventListener("multisynth-state-sync",onState);
-      document.body.classList.remove("hasPinnedKeyboard");
-      try{keyboard?.destroy?.()}catch(_){}
-    };
-    addEventListener("pagehide",cleanup,{once:true});
-    addEventListener("beforeunload",cleanup,{once:true});
-  }else addEventListener("pagehide",()=>window.removeEventListener("multisynth-state-sync",onState),{once:true});
+    const destroy=()=>{cleanup();try{keyboard?.destroy?.()}catch(_){}};
+    addEventListener("pagehide",destroy,{once:true});
+    addEventListener("beforeunload",destroy,{once:true});
+  }else addEventListener("pagehide",cleanup,{once:true});
 
   bindContext();
 })();
