@@ -1,13 +1,6 @@
 MULTISYNTH TODO
 
-1. REBIND / STATE-REFLECTION CONTRACT
-   - On context change, the same physical control must bind to the newly selected saved-state target and completely reflect that target.
-   - Rebinding must refresh every persistent property represented by the control, including value and per-binding lock/unlock state where applicable.
-   - Example: Time Bandits probability must preserve independent probability + lock state for each drum; switching drums must show that drum's saved value and lock state immediately.
-   - Interaction writes through the current binding into module state; changing context reads the new binding from module state back into the control.
-   - No old binding's temporary interaction state may bleed into the new binding.
-
-2. PERSISTENCE / RELOAD AUDIT
+1. PERSISTENCE / RELOAD AUDIT
    - Verify contextual binding-associated persistent state survives save/reload for every affected module.
    - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
    - Verify switching among contexts after reload produces the same control state as before reload.
@@ -29,7 +22,7 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Individual leaf behavior may be revisited later as the instruments evolve.
    - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
 
-3. FUTURE MODULE — DJ MIXER
+2. FUTURE MODULE — DJ MIXER
    - Build a robust two-turntable media performance module.
    - Two independent decks with media playback.
    - Support looping and scratching on each deck.
@@ -37,19 +30,19 @@ LEAF CODE STATUS — SETTLED FOR NOW
    - Include mixing between decks, including crossfading and level control.
    - Treat this as a full performance instrument/module, not a generic mixer.
 
-4. LOW PRIORITY — GAUGE VISUAL POLISH
+3. LOW PRIORITY — GAUGE VISUAL POLISH
    - Revisit the canonical needle-style meter appearance later.
    - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
    - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
 
-5. LOW PRIORITY — REBUILD CONTROL FREAK
+4. LOW PRIORITY — REBUILD CONTROL FREAK
    - Rebuild Control Freak from its current placeholder surface.
    - Keep the shared performance keyboard and oscilloscope as the starting face.
    - Redesign the assignable/rebindable control architecture from scratch.
    - Rebindable controls need a selector populated from the target module's exposed patch/state contract, filtered to values the physical control can possess.
    - Define stable binding identity, target-state reflection, persistence, and gesture reset behavior as part of that rebuild.
 
-6. LOW PRIORITY — CANON MODULE / NODE VISUAL POLISH
+5. LOW PRIORITY — CANON MODULE / NODE VISUAL POLISH
    - Beautify the current canonical modules and their tabletop nodes after node/faceplate behavior is stable.
    - Preserve the existing shared visual-identity system: each node and opened module should use the same module-owned decals, branding, palette, materials, typography, markings, and flavor assets.
    - Nodes remain branding + connection topology only; do not turn them into miniature control surfaces.
