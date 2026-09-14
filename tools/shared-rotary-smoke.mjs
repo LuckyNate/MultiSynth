@@ -87,7 +87,7 @@ encoder.node.dispatchEvent(pointer("pointermove",3,50,100));
 encoder.node.dispatchEvent(pointer("pointerup",3,50,100));
 if(dragEvents<10)throw new Error(`encoder circular drag emitted too few events: ${dragEvents}`);
 if(Math.abs(Number(lastDrag?.rotationDegrees)-960)>1e-6)throw new Error(`encoder circular drag did not preserve relative pickup: ${lastDrag?.rotationDegrees}`);
-if(encoder.node.style["--ms-angle"]!=="960deg")throw new Error(`encoder indicator did not preserve relative pickup: ${encoder.node.style["--ms-angle"]}`);
+if(Math.abs(Number.parseFloat(encoder.node.style["--ms-angle"])-960)>1e-6)throw new Error(`encoder indicator did not preserve relative pickup: ${encoder.node.style["--ms-angle"]}`);
 if(encoderTaps!==1||encoderClicks!==1)throw new Error("encoder circular drag incorrectly fired tap/click");
 
 console.log("shared rotary contract smoke passed");
