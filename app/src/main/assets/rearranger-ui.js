@@ -19,12 +19,24 @@
     }
   };
 
+  const mergeState=saved=>{
+    const next=copy(seed),src=saved||{};
+    next.context=src.context&&next.contexts[src.context]?src.context:next.context;
+    for(const name of Object.keys(next.contexts)){
+      const incoming=src.contexts?.[name]||{},base=next.contexts[name];
+      next.contexts[name]={
+        ...base,
+        ...incoming,
+        knobs:Array.from({length:4},(_,i)=>Number.isFinite(Number(incoming.knobs?.[i]))?clamp(Number(incoming.knobs[i])):base.knobs[i]),
+        knobLocks:Array.from({length:4},(_,i)=>!!incoming.knobLocks?.[i])
+      };
+    }
+    return next;
+  };
+
   let state=copy(seed);
   if(instance){
-    try{
-      const saved=E?.getModule?.(instance)?.state;
-      if(saved?.contexts)state={...state,...saved,contexts:{...state.contexts,...saved.contexts}};
-    }catch(_){}
+    try{state=mergeState(E?.getModule?.(instance)?.state)}catch(_){}
   }
 
   const persist=()=>{
@@ -194,7 +206,6 @@
   function bindContext(){
     const contextName=state.context,ctx=current(),labels=encoderLabels[contextName],contextChanged=boundContext!==contextName;
     if(contextChanged){cancelEncoderDrag(encLeft);cancelEncoderDrag(encRight)}
-    if(!Array.isArray(ctx.knobLocks))ctx.knobLocks=Array(4).fill(false);
     labelNode(encLeft,labels[0]);
     labelNode(encRight,labels[1]);
     encLeft.__rearrangerBinding={key:`rearranger.${contextName}.encoder.left`,context:contextName,stateKey:"left"};
@@ -209,8 +220,8 @@
         key:`rearranger.${contextName}.knob.${i}`,
         get value(){return state.contexts[contextName].knobs[i]},
         set value(v){state.contexts[contextName].knobs[i]=clamp(Number(v)||0);persist()},
-        get locked(){return !!state.contexts[contextName].knobLocks?.[i]},
-        set locked(v){const target=state.contexts[contextName];if(!Array.isArray(target.knobLocks))target.knobLocks=Array(4).fill(false);target.knobLocks[i]=!!v;persist()}
+        get locked(){return !!state.contexts[contextName].knobLocks[i]},
+        set locked(v){state.contexts[contextName].knobLocks[i]=!!v;persist()}
       };
       node.__rearrangerBinding=binding;
       node.dataset.bindingKey=binding.key;
@@ -274,6 +285,9 @@
   transportButtons[2].addEventListener("click",()=>readout.set("STOP"));
   transportButtons[3].addEventListener("click",()=>readout.set("FWD"));
 
+  const onState=e=>{state=mergeState(e.detail);bindContext()};
+  window.addEventListener("multisynth-state-sync",onState);
+
   const keyboardHost=document.getElementById("performanceKeyboard");
   if(keyboardHost&&MS.PerformanceKeyboard?.mount){
     document.body.classList.add("hasPinnedKeyboard");
@@ -281,12 +295,13 @@
     const cleanup=()=>{
       clearInterval(beatTimer);
       readoutObserver.disconnect();
+      window.removeEventListener("multisynth-state-sync",onState);
       document.body.classList.remove("hasPinnedKeyboard");
       try{keyboard?.destroy?.()}catch(_){}
     };
     addEventListener("pagehide",cleanup,{once:true});
     addEventListener("beforeunload",cleanup,{once:true});
-  }
+  }else addEventListener("pagehide",()=>window.removeEventListener("multisynth-state-sync",onState),{once:true});
 
   bindContext();
 })();
