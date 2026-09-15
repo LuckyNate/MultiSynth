@@ -9,7 +9,11 @@ const clockStandard=read("app/src/main/assets/clock-standard.js");
 const graph=read("app/src/main/assets/node-audio-graph.js");
 const midi=read("app/src/main/assets/native-midi.js");
 const cvBus=read("app/src/main/assets/cv-bus.js");
+const manifest=read("app/src/main/assets/module-manifest.js");
 const father=read("app/src/main/assets/modules/father-time.js");
+const whitman=read("app/src/main/assets/modules/whitman-sampler.js");
+const timeBandits=read("app/src/main/assets/modules/time-bandits.js");
+const randrone=read("app/src/main/assets/modules/randrone.js");
 
 assert.match(worklet,/class MultiSynthClockProcessor extends AudioWorkletProcessor/);
 assert.match(worklet,/currentFrame/);
@@ -27,7 +31,8 @@ assert.doesNotMatch(transportSource,/horizon/);
 
 assert.match(clockStandard,/PatchTransport/);
 assert.match(clockStandard,/subscribeTick/);
-assert.doesNotMatch(clockStandard,/external=true|setClockBpm|startClock|subscribeClock/);
+assert.match(clockStandard,/subscribeMidi/);
+assert.doesNotMatch(clockStandard,/external=true|setClockBpm|startClock|subscribeClock|clockStart|clockTick|clockStop/);
 
 assert.match(graph,/new AudioWorkletNode\(ctx,"multisynth-clock-processor"/);
 assert.match(graph,/PatchTransport\?\.ingestTimebase/);
@@ -45,6 +50,13 @@ assert.doesNotMatch(cvBus,/clockTargets|walkClock|clockSourceFor|\.clockTick\(/)
 assert.match(father,/midiStatus:0xf8/);
 assert.match(father,/subscribeMidi/);
 assert.doesNotMatch(father,/clockTick|clockStart|clockStop|hasClockUpstream/);
+assert.doesNotMatch(whitman,/cvTrigger|clockTick|clockStart|clockStop|CvBus\?\.send/);
+assert.doesNotMatch(timeBandits,/clockTick|clockStart|clockStop|CvBus\?\.send/);
+assert.match(randrone,/PatchTransport\?\.subscribeTick/);
+assert.doesNotMatch(randrone,/clockTick|setTimeout\(\(\)=>schedule/);
+assert.match(manifest,/\[I\.FATHER_TIME\].*\["clockSource","clockFollower"/s);
+assert.doesNotMatch(manifest,/\[I\.WHITMAN_SAMPLER\].*"clockSource"/);
+assert.doesNotMatch(manifest,/\[I\.TIME_BANDITS\].*"clockSource"/);
 
 const context={console,MultiSynth:{},setTimeout,clearTimeout,performance:{now:()=>0}};
 context.window=context;
