@@ -21,7 +21,7 @@
   record.addEventListener("multisynth-control-button-release",()=>send({recording:false}));
 
   function switchControl(id,label,key){const node=mount(transport,{id,control:"switch",state:key,label},{variant:"rocker"});node.addEventListener("multisynth-control-switch-change",event=>send({[key]:!!event.detail?.on}));return node;}
-  const runSwitch=switchControl("running","RUN","running"),previewSwitch=switchControl("previewPlaying","PLAY SELECTED","previewPlaying"),cvSwitch=switchControl("cvTrigger","CV TRIGGER","cvTrigger");
+  const runSwitch=switchControl("running","RUN","running"),previewSwitch=switchControl("previewPlaying","PLAY SELECTED","previewPlaying");
 
   const globalKnobs=new Map();
   function bindGlobalKnob(id,label,key,min,max,step,unit=""){
@@ -76,7 +76,7 @@
 
   function paintSlots(){const current=selected();slotNodes.forEach((node,index)=>{node.dataset.selected=index===current?"1":"0";node.dataset.loaded=slotAt(index).pcmKey?"1":"0";});}
   function paintSteps(){const sample=selected(),sequence=slotAt(sample).sequence||[];stepNodes.forEach((node,index)=>node.commitButtonState?.(!!sequence[index],{silent:true}));}
-  function paintGlobal(){runSwitch.commitSwitchState?.(!!state.running,{silent:true});previewSwitch.commitSwitchState?.(!!state.previewPlaying,{silent:true});cvSwitch.commitSwitchState?.(!!state.cvTrigger,{silent:true});record.commitButtonState?.(!!state.recording,{silent:true});for(const [key,node] of globalKnobs){node.setModuleValue?.(state[key]);node.setControlLocked?.(!!state.locks?.[key],{silent:true});}}
+  function paintGlobal(){runSwitch.commitSwitchState?.(!!state.running,{silent:true});previewSwitch.commitSwitchState?.(!!state.previewPlaying,{silent:true});record.commitButtonState?.(!!state.recording,{silent:true});for(const [key,node] of globalKnobs){node.setModuleValue?.(state[key]);node.setControlLocked?.(!!state.locks?.[key],{silent:true});}}
 
   function refreshSelection({redrawLibrary=false,rebind=false}={}){paintSlots();paintSteps();if(rebind)bindSelectedParams();else paintSelectedParams();if(redrawLibrary)drawLibrary().catch(console.error);}
 
