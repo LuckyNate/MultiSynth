@@ -62,16 +62,18 @@
     updateSample(index,{name:full.name,pcmKey:full.id,start:0,end:Number(full.duration)||0});
   }
   async function drawLibrary(){
-    const token=++libraryToken,chosen=selected(),chosenKey=slotAt(chosen).pcmKey||null,scroll=screenFace?.scrollTop||0,next=document.createElement("div");next.className="whitman-library-list";
-    const items=Library?.list?await Library.list():[];if(token!==libraryToken)return;let activeRow=null;
-    if(!items.length){const empty=document.createElement("div");empty.className="whitman-library-empty";empty.textContent="NO SAVED SAMPLES";next.appendChild(empty);}else for(const item of items){
-      const full=Library?.get?await Library.get(item.id):null;if(token!==libraryToken)return;const row=document.createElement("div");row.className="ms-list-row whitman-library-row";
-      if(chosenKey!=null&&String(item.id)===String(chosenKey)){row.dataset.selected="1";activeRow=row;}next.appendChild(row);
-      let choice=null;
-      choice=Renderer.mountLibraryChoice(row,{id:`use-${item.id}`,label:`${item.name} · ${(item.duration||0).toFixed(2)}s`,data:full?.data,sampleRate:full?.sampleRate||item.sampleRate,active:chosenKey!=null&&String(item.id)===String(chosenKey),onSelect:()=>{const target=selected();if(choice)choice.dataset.bindingKey=`whitman.sample.${target}.pcm`;return choosePCM(item.id,target).catch(console.error);}});choice.dataset.bindingKey=`whitman.sample.${chosen}.pcm`;
-    }
-    if(token!==libraryToken)return;libraryList.replaceWith(next);libraryList=next;
-    if(screenFace){screenFace.scrollTop=Math.min(scroll,Math.max(0,screenFace.scrollHeight-screenFace.clientHeight));if(activeRow)requestAnimationFrame(()=>{if(token!==libraryToken||!activeRow.isConnected)return;const top=activeRow.offsetTop,bottom=top+activeRow.offsetHeight,viewTop=screenFace.scrollTop,viewBottom=viewTop+screenFace.clientHeight;if(top<viewTop)screenFace.scrollTop=top;else if(bottom>viewBottom)screenFace.scrollTop=Math.max(0,bottom-screenFace.clientHeight);});}
+    return screen.runUpdating(async()=>{
+      const token=++libraryToken,chosen=selected(),chosenKey=slotAt(chosen).pcmKey||null,scroll=screenFace?.scrollTop||0,next=document.createElement("div");next.className="whitman-library-list";
+      const items=Library?.list?await Library.list():[];if(token!==libraryToken)return;let activeRow=null;
+      if(!items.length){const empty=document.createElement("div");empty.className="whitman-library-empty";empty.textContent="NO SAVED SAMPLES";next.appendChild(empty);}else for(const item of items){
+        const full=Library?.get?await Library.get(item.id):null;if(token!==libraryToken)return;const row=document.createElement("div");row.className="ms-list-row whitman-library-row";
+        if(chosenKey!=null&&String(item.id)===String(chosenKey)){row.dataset.selected="1";activeRow=row;}next.appendChild(row);
+        let choice=null;
+        choice=Renderer.mountLibraryChoice(row,{id:`use-${item.id}`,label:`${item.name} · ${(item.duration||0).toFixed(2)}s`,data:full?.data,sampleRate:full?.sampleRate||item.sampleRate,active:chosenKey!=null&&String(item.id)===String(chosenKey),onSelect:()=>{const target=selected();if(choice)choice.dataset.bindingKey=`whitman.sample.${target}.pcm`;return choosePCM(item.id,target).catch(console.error);}});choice.dataset.bindingKey=`whitman.sample.${chosen}.pcm`;
+      }
+      if(token!==libraryToken)return;libraryList.replaceWith(next);libraryList=next;
+      if(screenFace){screenFace.scrollTop=Math.min(scroll,Math.max(0,screenFace.scrollHeight-screenFace.clientHeight));if(activeRow)requestAnimationFrame(()=>{if(token!==libraryToken||!activeRow.isConnected)return;const top=activeRow.offsetTop,bottom=top+activeRow.offsetHeight,viewTop=screenFace.scrollTop,viewBottom=viewTop+screenFace.clientHeight;if(top<viewTop)screenFace.scrollTop=top;else if(bottom>viewBottom)screenFace.scrollTop=Math.max(0,bottom-screenFace.clientHeight);});}
+    });
   }
 
   function paintSlots(){const current=selected();slotNodes.forEach((node,index)=>{node.dataset.selected=index===current?"1":"0";node.dataset.loaded=slotAt(index).pcmKey?"1":"0";});}
