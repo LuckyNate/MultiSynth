@@ -99,4 +99,13 @@ T.releaseExternalClock();
 assert.equal(T.external,false,"loss/release of external clock must fall back to internal master");
 offTick();offPulse();
 
+const wireClocks=[],wireNotes=[];
+const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(){return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}},NodeGraphEngine:{setPatchState(){}}}};
+midiContext.window=midiContext;
+vm.createContext(midiContext);
+vm.runInContext(midi,midiContext,{filename:"native-midi.js"});
+midiContext.MultiSynthNativeMidi.receive([0x90,60,0xf8,100,61,0xf8,110]);
+assert.deepEqual(wireNotes,[[60,100],[61,110]],"interleaved realtime bytes must not corrupt Note On data or running status");
+assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach the transport individually");
+
 console.log("clock smoke: PASS — one real 24 PPQN MIDI clock bus");
