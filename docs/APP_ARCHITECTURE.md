@@ -67,13 +67,14 @@ The runtime definition may own:
 - default persistent state;
 - DSP/runtime construction;
 - state application;
-- note handlers;
+- MIDI Note On/Off handlers;
 - clock handlers;
-- genuine trigger behavior;
 - lifecycle behavior;
 - other module-specific runtime responsibilities.
 
-`ModuleContract.clock()` is the explicit jack-clock path. Clock packets are never automatically converted into generic triggers.
+Playable musical events use MIDI Note On/Off semantics. `ModuleContract` does not expose a parallel generic trigger bus.
+
+`ModuleContract.clock()` is the explicit jack-clock path. Clock packets stay timing data and never become note events.
 
 ### Module surface
 
@@ -95,7 +96,7 @@ The old Module Builder definition/catalog runtime is retired and must not be rei
 
 ## 5. Module Ownership
 
-A module owns the things that make it a particular instrument or processor, including identity, metadata, theme, persistent state, parameter meaning, DSP/runtime behavior, control bindings, jack policy, intentional composition, artwork, and note/clock/trigger semantics where applicable.
+A module owns the things that make it a particular instrument or processor, including identity, metadata, theme, persistent state, parameter meaning, DSP/runtime behavior, control bindings, jack policy, intentional composition, artwork, and MIDI note/clock semantics where applicable.
 
 A module does not own generic physical controller behavior.
 
@@ -203,7 +204,7 @@ Freewheel does not create a second implementation; it exercises the real canonic
 
 ---
 
-## 15. Signal and Jack Architecture
+## 15. Signal, MIDI and Jack Architecture
 
 MultiSynth currently has two graph routing domains:
 
@@ -212,11 +213,20 @@ MultiSynth currently has two graph routing domains:
 
 A **jack** is the visible patch point on a module. Direction is encoded by the graph connection contract, but the physical UI remains a jack rather than being described as a device input/output.
 
-There is currently no general control-voltage routing domain. Continuous modulation can be introduced deliberately later if the application actually needs it.
+There is currently no general control-voltage routing domain.
 
-Clock packets use clock semantics. A clock packet must never enter a module through the generic trigger path.
+Performance/control semantics are MIDI-native:
 
-Genuine trigger behavior remains separate: a trigger performs a discrete module action and is not transport timing.
+- Note On/Off — playable notes, drum hits and sample-slot events;
+- Control Change — controller values;
+- Pitch Bend — pitch expression;
+- Channel/Poly Pressure — pressure expression;
+- Program Change — program selection;
+- F8/FA/FB/FC — timing and transport.
+
+The native MIDI parser keeps these as MIDI messages rather than translating them into a CV-shaped packet vocabulary.
+
+Clock packets use clock semantics only. A clock packet must never enter a module as a playable note event.
 
 ---
 
@@ -258,13 +268,17 @@ Multiple Father Time module instances share one physical MIDI-out clock stream s
 
 ---
 
-## 18. Timing Followers
+## 18. Timing Followers and Playable MIDI Modules
 
 Timing-aware modules are identified by `clockFollower` capability metadata.
 
-Their sequencers consume the shared transport/subdivision stream directly. Patch Clock jacks are explicit timing connections and are not generic triggers.
+Their sequencers consume the shared transport/subdivision stream directly. Patch Clock jacks are explicit timing connections and are not note/event buses.
 
-A clock-aware module must not infer BPM by running its own timer, start a private scheduler, or reinterpret a Clock packet as a performance trigger.
+A clock-aware module must not infer BPM by running its own timer, start a private scheduler, or reinterpret a Clock packet as a performance event.
+
+Playable modules use `noteInput` capability metadata and `ModuleContract.noteOn()` / `noteOff()` handlers.
+
+Whitman Sampler maps MIDI notes 36–51 to its 16 sample slots. Time Bandits maps MIDI notes 36–51 to its 16 drum voices. RanDrone uses MIDI Note On as its explicit manual/random-event performance input.
 
 The current timing participants include Father Time, Whitman Sampler, Time Bandits and RanDrone.
 
@@ -286,7 +300,7 @@ Current examples include Alchemy dynamic Carrier jacks, Splitter/Merger dynamic 
 
 ## 20. Audio Runtime
 
-The audio/runtime layer owns module DSP/runtime instances, applying module state, Carrier signal construction, runtime clock/note behavior, structural audio graph connections, and active AudioNode lifecycle.
+The audio/runtime layer owns module DSP/runtime instances, applying module state, Carrier signal construction, runtime MIDI note/clock behavior, structural audio graph connections, and active AudioNode lifecycle.
 
 Normal control movement applies state to the existing runtime. Structural routing changes may reconnect graph structure where necessary.
 
@@ -322,16 +336,18 @@ Module CSS must not recreate canonical control anatomy or generic responsive inf
 
 The standards path validates active modules against registered identity, manifest metadata, `ModuleContract` runtime definition and surface, declared capabilities, and routing/boilerplate expectations.
 
-Timing smoke tests must prove:
+Timing/MIDI smoke tests must prove:
 
 - one real 24-PPQN MIDI clock authority;
 - sample-accurate internal F8 boundaries;
 - identical subdivision semantics for internal and external MIDI clock;
 - no module-local timing scheduler replacing the transport;
-- clock-jack packets stay on the clock path and cannot invoke generic trigger behavior;
-- Father Time cannot multiply physical MIDI clock output.
+- clock-jack packets stay on the clock path and cannot become note events;
+- Father Time cannot multiply physical MIDI clock output;
+- MIDI Note On/Off reaches modules through the note contract rather than a generic trigger/CV bus;
+- MIDI channel messages remain MIDI channel messages.
 
-Control verification remains separate and must not be changed as part of timing work.
+Control verification remains separate and must not be changed as part of timing/MIDI work.
 
 ---
 
@@ -339,7 +355,7 @@ Control verification remains separate and must not be changed as part of timing 
 
 The old Module Builder runtime/catalog/definition path is retired. It must not return as a compatibility registry, shadow surface registry, second runtime owner, adapter around `ModuleContract`, or fallback editor source.
 
-Retired timing-routing concepts likewise stay in Git history rather than remaining as active compatibility paths.
+Retired CV/trigger timing-routing concepts likewise stay in Git history rather than remaining as active compatibility paths.
 
 Git history is reference material, not active architecture.
 
