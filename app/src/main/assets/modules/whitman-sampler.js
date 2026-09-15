@@ -3,7 +3,7 @@
   const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,S=MS.ModuleStandard;
   if(!C||!I||!S)return;
 
-  const SLOT_COUNT=16,STEP_COUNT=32;
+  const SLOT_COUNT=16,STEP_COUNT=32,MIDI_BASE_NOTE=36;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
   const emptySequence=()=>Array(STEP_COUNT).fill(0);
   const emptySlot=i=>({name:`SAMPLE ${String(i+1).padStart(2,"0")}`,pcmKey:null,start:0,end:0,pitch:0,level:1,leftLevel:1,rightLevel:1,lagMs:0,locks:{},sequence:emptySequence()});
@@ -70,7 +70,11 @@
   }
   function hydrate(runtime){syncSampleBuffers(runtime);}
 
-  function play(runtime,index,time=runtime.ctx.currentTime){index=clamp(index,0,SLOT_COUNT-1);return runtime.player.play(index,runtime.state.samples[index]||{},time);}
+  function play(runtime,index,time=runtime.ctx.currentTime,velocity=127){
+    index=clamp(index,0,SLOT_COUNT-1);
+    const source=runtime.state.samples[index]||{},gain=clamp(Number(velocity)||127,1,127)/127,slot={...source,level:Math.max(0,Number(source.level??1))*gain};
+    return runtime.player.play(index,slot,time);
+  }
   function fireStep(runtime,step,time){for(let index=0;index<SLOT_COUNT;index++)if(runtime.state.samples?.[index]?.sequence?.[step])play(runtime,index,time);}
 
   function stopPreview(runtime){if(runtime.previewTimer)clearTimeout(runtime.previewTimer);runtime.previewTimer=null;}
@@ -91,7 +95,7 @@
     normalizeRuntimeState(api.state);
     const ctx=api.context,input=ctx.createGain(),through=ctx.createGain(),samplerOut=ctx.createGain(),mix=ctx.createGain(),output=ctx.createGain();
     input.connect(through).connect(mix);samplerOut.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
-    const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,triggerStep:0,loadedKeys:Array(SLOT_COUNT).fill(null),loadingKeys:Array(SLOT_COUNT).fill(null),loadSerial:Array(SLOT_COUNT).fill(0)};
+    const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,loadedKeys:Array(SLOT_COUNT).fill(null),loadingKeys:Array(SLOT_COUNT).fill(null),loadSerial:Array(SLOT_COUNT).fill(0)};
     runtime.player=S.sampler(ctx,samplerOut,{maxLag:.05});
     runtime.transport=S.transport(ctx,{getState:()=>runtime.state,maxSteps:STEP_COUNT,onStep:(step,time)=>fireStep(runtime,step,time)});
     runtime.capture=S.capture(ctx,input,{onCapture:result=>{
@@ -113,17 +117,16 @@
     if(Object.prototype.hasOwnProperty.call(patch,"previewPlaying"))(state.previewPlaying?startPreview(u):stopPreview(u));
   }
 
-  function trigger({runtime,state},packet={}){
-    const u=runtime.user;if(!u?.ctx)return false;
-    if(packet.sampleIndex!==undefined&&packet.sampleIndex!==null)return play(u,packet.sampleIndex,Number(packet.time)||u.ctx.currentTime);
-    const length=clamp(Math.round(state.steps||32),1,STEP_COUNT),start=u.triggerStep%length,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/clamp(MS.PatchTransport?.bpm||state.bpm||120,30,300)/4;
-    for(let n=0;n<4;n++)fireStep(u,(start+n)%length,base+n*sixteenth);
-    u.triggerStep=(start+4)%length;return true;
+  function noteOn({runtime},note,velocity=127){
+    const u=runtime.user,n=Math.round(Number(note));if(!u?.ctx||!Number.isFinite(n))return false;
+    const index=n-MIDI_BASE_NOTE;if(index<0||index>=SLOT_COUNT)return false;
+    return play(u,index,u.ctx.currentTime,velocity);
   }
+  function noteOff(){return true;}
   function destroy({runtime}){const u=runtime.user;if(!u)return;stopPreview(u);for(let i=0;i<SLOT_COUNT;i++)u.loadSerial[i]++;u.transport.destroy();u.capture?.destroy();u.player.stopAll();try{u.player.buffers?.clear?.();}catch(_){}for(const node of [u.input,u.through,u.samplerOut,u.mix,u.output])try{node.disconnect();}catch(_){}}
 
-  C.define({type:I.WHITMAN_SAMPLER,version:7,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 16×32 STEP SAMPLE-OWNED SEQUENCERS · PATCH MIDI CLOCK",defaults:defaults(),resources:["pcm","storage"],create,setState,trigger,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
-  C.defineSurface(I.WHITMAN_SAMPLER,{version:7,package:{id:I.WHITMAN_SAMPLER,version:7,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"patch-midi-follower",triggerMode:"quarter-note-trigger",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
+  C.define({type:I.WHITMAN_SAMPLER,version:8,description:"WHITMAN SAMPLER · 16 PCM SLOTS · MIDI NOTES 36–51 · 16×32 STEP SAMPLE-OWNED SEQUENCERS · PATCH MIDI CLOCK",defaults:defaults(),resources:["pcm","storage","midi"],create,setState,noteOn,noteOff,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
+  C.defineSurface(I.WHITMAN_SAMPLER,{version:8,package:{id:I.WHITMAN_SAMPLER,version:8,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"patch-midi-follower",midiNotes:"36-51-map-to-sample-slots",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
     {id:"record",control:"button",state:"recording",label:"RECORD INPUT",meta:{momentary:true}},{id:"running",control:"switch",state:"running",label:"RUN"},{id:"previewPlaying",control:"switch",state:"previewPlaying",label:"PLAY SELECTED"},
     {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1}},{id:"swing",control:"knob",state:"swing",label:"SWING",value:{default:0,min:0,max:100,step:1},meta:{unit:"%"}},{id:"steps",control:"knob",state:"steps",label:"LENGTH",value:{default:32,min:1,max:32,step:1}},
     {id:"sample-slots",kind:"prefab",label:"16 SAMPLE PADS",controls:Array.from({length:SLOT_COUNT},(_,i)=>({id:`sample-${i}`,control:"pad",label:String(i+1).padStart(2,"0"),meta:{slotIndex:i}}))},{id:"step-grid",kind:"prefab",label:"32 STEPS",controls:Array.from({length:STEP_COUNT},(_,i)=>({id:`step-${i}`,control:"button",label:String(i+1),meta:{stepIndex:i,stateful:true}}))},
