@@ -107,12 +107,12 @@ jobs:
           echo "MULTISYNTH_KEY_ALIAS=$MULTISYNTH_KEY_ALIAS" >> "$GITHUB_ENV"
           echo "MULTISYNTH_KEY_PASSWORD=$MULTISYNTH_KEY_PASSWORD" >> "$GITHUB_ENV"
 
-      - run: gradle assembleDebug --stacktrace
+      - run: gradle assembleRelease --stacktrace
         env:
           FREESOUND_API_KEY: ${{ secrets.FREESOUND_API_KEY }}
       - name: Rename APK with build number
-        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MultiSynth-build-${{ github.run_number }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MultiSynth-build-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v6
         with:
           name: MultiSynth-build-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/MultiSynth-build-${{ github.run_number }}.apk
+          path: app/build/outputs/apk/release/MultiSynth-build-${{ github.run_number }}.apk
