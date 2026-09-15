@@ -1,5 +1,15 @@
 MULTISYNTH TODO
 
+TIMING ARCHITECTURE — CLOCK ONLY
+   - PatchTransport is the sole internal timing authority.
+   - MIDI realtime timing is F8 at 24 PPQN with FA/FB/FC transport messages.
+   - Patchable timing uses Clock jacks and clock/tick packets.
+   - Clock packets never enter generic trigger handling.
+   - Father Time is the always-on visible master-clock panel and external clock bridge, not a second scheduler.
+   - Father Time physical MIDI output remains full 24 PPQN; its current patch Clock jack emits one quarter-note tick per 24 F8 pulses.
+   - Timing followers consume PatchTransport/subdivision timing directly.
+   - The retired general control-voltage routing domain is not part of the current architecture; add continuous modulation later only if a real use requires it.
+
 1. PERSISTENCE / RELOAD AUDIT
    - Verify contextual binding-associated persistent state survives save/reload for every affected module.
    - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
