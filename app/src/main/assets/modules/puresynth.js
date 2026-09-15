@@ -33,8 +33,8 @@
   );
 
   contract.defineSurface(ids.PURE_SYNTH,{
-    version:8,
-    package:{id:ids.PURE_SYNTH,version:8,behavior:{
+    version:9,
+    package:{id:ids.PURE_SYNTH,version:9,behavior:{
       role:"pure-waveform-source",audioMode:"generator-or-carrier-processor",noise:true,
       stateOwnership:"module",trianglePeakMorphsToSaw:true,sourceLayer:"DspSources",
       sourceOwnership:"shared-bottom-layer",voiceEnvelope:"built-in-adsr",
@@ -45,8 +45,7 @@
     sources:[
       {id:"source.audio",type:"audioInput",mode:"optional"},
       {id:"source.generated",type:"dspSource",primitive:"DspSources.oscillator|DspSources.noise",mode:"waveform-selected"},
-      {id:"source.note",type:"noteInput"},
-      {id:"source.cv",type:"cvInput"}
+      {id:"source.note",type:"noteInput"}
     ],
     actions:[
       {id:"action.voice",type:"pureOscillator"},
@@ -55,7 +54,7 @@
       {id:"action.hold",type:"continuousMaster",state:"hold"}
     ],
     nodes:{connections:[
-      ["source.generated","action.voice"],["source.note","action.voice"],["source.cv","action.voice"],
+      ["source.generated","action.voice"],["source.note","action.voice"],
       ["controller.keyboard","action.voice"],["controller.hold","action.hold"],
       ["action.voice","action.envelope"],["controller.adsr","action.envelope"],
       ["controller.waveform.sine","action.shape"],["controller.waveform.square","action.shape"],
