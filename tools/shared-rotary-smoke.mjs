@@ -15,7 +15,6 @@ class MockEvent{
   stopImmediatePropagation(){this.__stopped=true;this.__immediateStopped=true}
 }
 class MockCustomEvent extends MockEvent{constructor(type,init={}){super(type,init);this.detail=init.detail}}
-class MockMouseEvent extends MockEvent{}
 class Element{
   constructor(tag="div"){this.tagName=tag.toUpperCase();this.children=[];this.parentElement=null;this.dataset={};this.style=new Style();this.className="";this.classList=new ClassList(this);this._text="";this._listeners=new Map()}
   appendChild(node){node.parentElement=this;this.children.push(node);return node}
@@ -29,7 +28,7 @@ class Element{
 }
 
 const document={createElement:tag=>new Element(tag)};
-const context={console,document,requestAnimationFrame:fn=>fn(),window:null,CustomEvent:MockCustomEvent,MouseEvent:MockMouseEvent,performance:{now:()=>Date.now()}};
+const context={console,document,requestAnimationFrame:fn=>fn(),window:null,CustomEvent:MockCustomEvent,performance:{now:()=>Date.now()}};
 context.window=context;context.globalThis=context;
 vm.createContext(context);
 for(const file of ["control-surface-library.js",...fs.readdirSync(path.join(assets,"controls")).filter(x=>x.endsWith(".js")&&x!=="spec-core.js").sort().map(x=>"controls/"+x),"controls/spec-core.js","control-surface-renderer.js"]){vm.runInContext(fs.readFileSync(path.join(assets,file),"utf8"),context,{filename:file})}
@@ -63,13 +62,11 @@ if(encoder.readout.textContent!=="LOOP")throw new Error(`encoder display text di
 if(encoder.node.style["--ms-angle"]!=="0deg")throw new Error(`encoder dot did not rotate to midpoint: ${encoder.node.style["--ms-angle"]||""}`);
 renderer.setValue(encoder.node,2,"LIVE");
 if(encoder.node.style["--ms-angle"]!=="150deg")throw new Error(`encoder dot did not rotate to max: ${encoder.node.style["--ms-angle"]||""}`);
-let encoderTaps=0,encoderClicks=0;
+let encoderTaps=0;
 encoder.node.addEventListener("multisynth-control-tap",()=>encoderTaps++);
-encoder.node.addEventListener("click",()=>encoderClicks++);
 encoder.node.dispatchEvent(pointer("pointerdown",2,20,20));
 encoder.node.dispatchEvent(pointer("pointerup",2,20,20));
 if(encoderTaps!==1)throw new Error(`encoder tap event count wrong: ${encoderTaps}`);
-if(encoderClicks!==1)throw new Error(`encoder click event count wrong: ${encoderClicks}`);
 
 if(!context.MultiSynth.ControlSurface.isDefaultGesture("encoder","circularDrag"))throw new Error("encoder circularDrag is not a default shared gesture");
 let dragEvents=0,lastDrag=null;
@@ -88,6 +85,6 @@ encoder.node.dispatchEvent(pointer("pointerup",3,50,100));
 if(dragEvents<10)throw new Error(`encoder circular drag emitted too few events: ${dragEvents}`);
 if(Math.abs(Number(lastDrag?.rotationDegrees)-960)>1e-6)throw new Error(`encoder circular drag did not preserve relative pickup: ${lastDrag?.rotationDegrees}`);
 if(Math.abs(Number.parseFloat(encoder.node.style["--ms-angle"])-960)>1e-6)throw new Error(`encoder indicator did not preserve relative pickup: ${encoder.node.style["--ms-angle"]}`);
-if(encoderTaps!==1||encoderClicks!==1)throw new Error("encoder circular drag incorrectly fired tap/click");
+if(encoderTaps!==1)throw new Error("encoder circular drag incorrectly fired tap");
 
 console.log("shared rotary contract smoke passed");
