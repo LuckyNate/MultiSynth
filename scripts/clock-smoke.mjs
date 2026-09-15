@@ -55,7 +55,8 @@ assert.doesNotMatch(cvBus,/clockTargets|walkClock|clockSourceFor|\.clockTick\(|s
 assert.match(father,/midiStatus:0xf8/);
 assert.match(father,/subscribeMidi/);
 assert.doesNotMatch(father,/clockTick|clockStart|clockStop|hasClockUpstream/);
-assert.doesNotMatch(whitman,/cvTrigger|clockTick|clockStart|clockStop|CvBus\?\.send/);
+assert.doesNotMatch(whitman,/state:"cvTrigger"|id:"cvTrigger"|label:"CV TRIGGER"|clockTick|clockStart|clockStop|CvBus\?\.send/);
+assert.match(whitman,/delete next\.cvTrigger/);
 assert.doesNotMatch(timeBandits,/clockTick|clockStart|clockStop|CvBus\?\.send/);
 assert.match(randrone,/PatchTransport\?\.subscribeTick/);
 assert.doesNotMatch(randrone,/clockTick|setTimeout\(\(\)=>schedule/);
