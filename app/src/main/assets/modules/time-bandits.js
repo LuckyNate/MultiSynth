@@ -76,7 +76,6 @@
   }
 
   function roll(chance){return Math.random()*100<chance}
-
   function primeProbabilityQueue(u,startStep){
     u.probabilityEvents=eventList(u.state,startStep);
     u.probabilityCursor=0;
@@ -116,7 +115,7 @@
     input.connect(mix);drums.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
     const u={id:api.instanceId,ctx:c,input,drums,mix,output,state:api.state,transport:null,cvStep:0,auditionTimer:0,buffers:Array(BASE.length).fill(null),sampleIds:Array.from({length:BASE.length},(_,i)=>api.state.sampleIds?.[i]||null),renderTokens:Array(BASE.length).fill(0),probabilityQueue:[],probabilityEvents:[],probabilityCursor:0};
     primeProbabilityQueue(u,0);
-    u.transport=RS.transport(c,{getState:()=>u.state,onStep:(st,t,meta)=>{fire(u,st,t);if(!meta?.external&&st%4===0)MS.CvBus?.send(u.id,{kind:"trigger",value:1,gate:true,bpm:Number(u.state.bpm)||120,substep:st,beat:Math.floor(st/4),time:t})},maxSteps:32});
+    u.transport=RS.transport(c,{getState:()=>u.state,onStep:(st,t)=>fire(u,st,t),maxSteps:32});
     hydrate(u).catch(e=>console.error("Time Bandits PCM hydrate",e));
     if(api.state.running)u.transport.start();
     return u;
@@ -133,18 +132,15 @@
 
   function trigger({runtime,state},packet={}){
     const u=runtime.user;if(!u?.ctx)return false;
-    const len=Math.max(1,Math.min(32,Math.round(Number(state.steps)||32))),start=u.cvStep%len,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/Math.max(20,Math.min(300,Number(state.bpm)||120))/4;
+    const len=Math.max(1,Math.min(32,Math.round(Number(state.steps)||32))),start=u.cvStep%len,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/Math.max(20,Math.min(300,Number(MS.PatchTransport?.bpm)||Number(state.bpm)||120))/4;
     if(!u.probabilityQueue?.length)primeProbabilityQueue(u,start);
     for(let n=0;n<4;n++){const st=(start+n)%len;fire(u,st,base+n*sixteenth)}
     u.cvStep=(start+4)%len;
     return true;
   }
 
-  function clockStart({runtime}){const u=runtime.user;if(u){u.cvStep=0;primeProbabilityQueue(u,0)}u?.transport.clockStart()}
-  function clockStop({runtime}){runtime.user?.transport.clockStop()}
-  function clockTick({runtime},tick){return runtime.user?.transport.clockTick(tick)??false}
   function destroy({runtime}){const u=runtime.user;if(!u)return;clearTimeout(u.auditionTimer);u.transport.destroy();for(const n of [u.input,u.drums,u.mix,u.output])try{n.disconnect()}catch(_){}}
 
   MS.TimeBanditsPreview=Object.freeze({render:renderPreview});
-  C.define({type:I.TIME_BANDITS,version:"module-builder-15",description:"BEAT RED 16-VOICE 32-STEP DRUM SYNTH WITH FOUR-ROLL PREQUEUED TRIGGER PROBABILITY",defaults:defaults(),resources:["midi","storage"],create,setState,trigger,clockStart,clockStop,clockTick,destroy});
+  C.define({type:I.TIME_BANDITS,version:"midi-clock-1",description:"BEAT RED 16-VOICE 32-STEP DRUM SYNTH · PATCH MIDI CLOCK · FOUR-ROLL PREQUEUED TRIGGER PROBABILITY",defaults:defaults(),resources:["midi","storage"],create,setState,trigger,destroy});
 })(window);
