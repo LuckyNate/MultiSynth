@@ -3,7 +3,7 @@
   const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds,RS=MS.ModuleStandard,D=MS.DspSources;
   if(!C||!I||!RS||!D)return;
 
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
+  const MIDI_BASE_NOTE=36,clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
   const BASE=[
     {name:"SUB",pitch:42,decay:1200,bend:-700,tone:28,character:65,level:88,kind:"sub"},
     {name:"KICK",pitch:58,decay:520,bend:-1500,tone:52,character:72,level:92,kind:"kick"},
@@ -113,7 +113,7 @@
     const c=api.context,input=c.createGain(),drums=c.createGain(),mix=c.createGain(),output=c.createGain();
     normalizePattern(api.state);normalizeProbabilities(api.state);normalizeVoices(api.state);normalizeKnobLocks(api.state);
     input.connect(mix);drums.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
-    const u={id:api.instanceId,ctx:c,input,drums,mix,output,state:api.state,transport:null,cvStep:0,auditionTimer:0,buffers:Array(BASE.length).fill(null),sampleIds:Array.from({length:BASE.length},(_,i)=>api.state.sampleIds?.[i]||null),renderTokens:Array(BASE.length).fill(0),probabilityQueue:[],probabilityEvents:[],probabilityCursor:0};
+    const u={id:api.instanceId,ctx:c,input,drums,mix,output,state:api.state,transport:null,auditionTimer:0,buffers:Array(BASE.length).fill(null),sampleIds:Array.from({length:BASE.length},(_,i)=>api.state.sampleIds?.[i]||null),renderTokens:Array(BASE.length).fill(0),probabilityQueue:[],probabilityEvents:[],probabilityCursor:0};
     primeProbabilityQueue(u,0);
     u.transport=RS.transport(c,{getState:()=>u.state,onStep:(st,t)=>fire(u,st,t),maxSteps:32});
     hydrate(u).catch(e=>console.error("Time Bandits PCM hydrate",e));
@@ -130,17 +130,10 @@
     if(!state.running&&("selected" in patch||"voices" in patch||"auditionNonce" in patch)){clearTimeout(u.auditionTimer);u.auditionTimer=setTimeout(()=>audition(u),18)}
   }
 
-  function trigger({runtime,state},packet={}){
-    const u=runtime.user;if(!u?.ctx)return false;
-    const len=Math.max(1,Math.min(32,Math.round(Number(state.steps)||32))),start=u.cvStep%len,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/Math.max(20,Math.min(300,Number(MS.PatchTransport?.bpm)||Number(state.bpm)||120))/4;
-    if(!u.probabilityQueue?.length)primeProbabilityQueue(u,start);
-    for(let n=0;n<4;n++){const st=(start+n)%len;fire(u,st,base+n*sixteenth)}
-    u.cvStep=(start+4)%len;
-    return true;
-  }
-
+  function noteOn({runtime},note){const u=runtime.user,n=Math.round(Number(note));if(!u?.ctx||!Number.isFinite(n))return false;const voice=n-MIDI_BASE_NOTE;if(voice<0||voice>=BASE.length)return false;hit(u,voice,u.ctx.currentTime);return true}
+  function noteOff(){return true}
   function destroy({runtime}){const u=runtime.user;if(!u)return;clearTimeout(u.auditionTimer);u.transport.destroy();for(const n of [u.input,u.drums,u.mix,u.output])try{n.disconnect()}catch(_){}}
 
   MS.TimeBanditsPreview=Object.freeze({render:renderPreview});
-  C.define({type:I.TIME_BANDITS,version:"midi-clock-1",description:"BEAT RED 16-VOICE 32-STEP DRUM SYNTH · PATCH MIDI CLOCK · FOUR-ROLL PREQUEUED TRIGGER PROBABILITY",defaults:defaults(),resources:["midi","storage"],create,setState,trigger,destroy});
+  C.define({type:I.TIME_BANDITS,version:"midi-native-2",description:"BEAT RED 16-VOICE 32-STEP DRUM SYNTH · MIDI NOTES 36–51 · PATCH MIDI CLOCK · FOUR-ROLL PREQUEUED PROBABILITY",defaults:defaults(),resources:["midi","storage"],create,setState,noteOn,noteOff,destroy});
 })(window);
