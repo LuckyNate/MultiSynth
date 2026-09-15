@@ -38,7 +38,7 @@ assert.doesNotMatch(clockStandard,/setClockBpm|startClock|subscribeClock|clockSt
 
 assert.match(moduleContract,/clock:typeof def\.clock/);
 assert.match(moduleContract,/function clock\(id,packet=/);
-assert.doesNotMatch(moduleContract,/incoming\?\.kind==="trigger"&&r\.definition\.trigger/);
+assert.doesNotMatch(moduleContract,/trigger:typeof def\.trigger|function trigger\(|\btrigger,/);
 
 assert.match(graph,/new AudioWorkletNode\(ctx,"multisynth-clock-processor"/);
 assert.match(graph,/PatchTransport\?\.ingestTimebase/);
@@ -54,6 +54,8 @@ assert.match(midi,/sendNative\(0xf8/);
 assert.match(midi,/sendNative\(0xfa/);
 assert.match(midi,/sendNative\(0xfb/);
 assert.match(midi,/sendNative\(0xfc/);
+assert.match(midi,/multisynth-midi-message/);
+assert.doesNotMatch(midi,/multisynth-usb-cv|receiveCV|emitCV/);
 
 assert.match(father,/version:"midi-master-4"/);
 assert.match(father,/always-on-midi-master-clock/);
@@ -66,11 +68,18 @@ assert.equal((father.match(/subscribeMidi/g)||[]).length,1,"Father Time must cre
 assert.match(father,/sendClockPulse/);
 assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.start\(|T\.stop\(|T\?\.setBpm/);
 
-assert.match(whitman,/S\.transport/);
-assert.match(timeBandits,/RS\.transport/);
-assert.match(randrone,/PatchTransport\?\.subscribeTick/);
+assert.match(whitman,/function noteOn/);
+assert.match(whitman,/MIDI_BASE_NOTE=36/);
+assert.doesNotMatch(whitman,/function trigger\(/);
+assert.match(timeBandits,/function noteOn/);
+assert.match(timeBandits,/MIDI_BASE_NOTE=36/);
+assert.doesNotMatch(timeBandits,/function trigger\(/);
+assert.match(randrone,/function noteOn/);
+assert.doesNotMatch(randrone,/trigger:/);
 assert.match(manifest,/\[I\.FATHER_TIME\].*\["clockSource","clockFollower","midi"/s);
-assert.doesNotMatch(manifest,/"clockSource".*I\.WHITMAN_SAMPLER/);
+assert.match(manifest,/\[I\.WHITMAN_SAMPLER\].*"noteInput"/s);
+assert.match(manifest,/\[I\.TIME_BANDITS\].*"noteInput"/s);
+assert.match(manifest,/\[I\.RANDRONE\].*"noteInput"/s);
 
 const context={console,MultiSynth:{},setTimeout,clearTimeout,performance:{now:()=>0}};
 context.window=context;
@@ -106,13 +115,14 @@ assert.equal(T.running,false,"FC must be MIDI Stop");
 T.releaseExternalClock();
 offTick();offPulse();
 
-const wireClocks=[],wireNotes=[];
-const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(){return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}}}};
+const wireClocks=[],wireNotes=[],wireEvents=[];
+const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(e){wireEvents.push(e);return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}}}};
 midiContext.window=midiContext;
 vm.createContext(midiContext);
 vm.runInContext(midi,midiContext,{filename:"native-midi.js"});
-midiContext.MultiSynthNativeMidi.receive([0x90,60,0xf8,100,61,0xf8,110]);
+midiContext.MultiSynthNativeMidi.receive([0x90,60,0xf8,100,61,0xf8,110,0xb0,7,96]);
 assert.deepEqual(wireNotes,[[60,100],[61,110]],"realtime bytes must not corrupt Note On running status");
 assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach transport individually");
+assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain a real MIDI channel event");
 
-console.log("clock smoke: PASS — one real 24 PPQN transport with explicit clock jacks");
+console.log("clock smoke: PASS — real MIDI notes + one 24 PPQN transport with explicit clock jacks");
