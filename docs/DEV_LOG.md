@@ -1,5 +1,20 @@
 # MultiSynth Development Log
 
+## 2026-09-14 — Real MIDI performance architecture
+
+MultiSynth performance and timing are now defined in MIDI terms rather than generic CV/trigger abstractions.
+
+- MIDI realtime owns synchronization: F8 clock at 24 PPQN, with FA/FB/FC for Start/Continue/Stop.
+- MIDI Note On/Off owns playable musical events.
+- MIDI Control Change, pitch bend, channel pressure, poly pressure and program change remain MIDI channel messages rather than being repackaged as control-voltage packets.
+- PatchTransport remains the sole internal clock authority.
+- Patchable timing uses explicit Clock jacks and clock/tick packets.
+- ModuleContract no longer exposes a generic trigger bus. Playable modules use `noteOn`/`noteOff`; timing modules use the clock path.
+
+Whitman Sampler now maps MIDI notes 36–51 to its 16 sample slots and applies MIDI velocity to sample level. Time Bandits maps MIDI notes 36–51 to its 16 drum voices. RanDrone treats MIDI Note On as its explicit random-event performance input while continuing to follow PatchTransport for synchronized automatic behavior.
+
+The Android/native MIDI parser now emits real MIDI channel-message metadata through `multisynth-midi-message` instead of translating note, CC, pressure, pitch and program messages into a CV-shaped event vocabulary.
+
 ## 2026-09-14 — Clock-only timing architecture
 
 The former generic control-voltage routing concept has been retired from the active architecture. MultiSynth now treats timing as timing: `PatchTransport` is the sole internal clock authority, physical MIDI realtime remains F8 at 24 PPQN with FA/FB/FC transport messages, and patchable timing uses explicit Clock jacks and `clock`/`tick` packets.
@@ -32,7 +47,7 @@ READOUT now lives directly in `control-surface-library.js` with the other canoni
 
 ## 2026-09-01 — Live-control audio rebuild regression
 
-A crackling regression was traced to live control handlers calling `NodeAudioGraph.rebuild()` while knobs/dials were moving. Rebuilding the graph during continuous interaction tears down/reconnects audio repeatedly and is not a valid parameter-update path.
+A crackling regression was traced to live control handlers calling `NodeAudioGraph.rebuild()` while knobs/dials were moving. Rebuilding the graph during continuous interaction tears down/reconnects the audio graph repeatedly and is not a valid parameter-update path.
 
 Rule established and documented in `docs/DESIGN.md`: live controls update canonical module state and the existing DSP runtime only. `NodeAudioGraph.rebuild()` is structural-only and must not be called from knob, dial, fader, ribbon, pad/step-drag, or other continuous control/performance movement.
 
