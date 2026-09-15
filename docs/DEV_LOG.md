@@ -1,5 +1,17 @@
 # MultiSynth Development Log
 
+## 2026-09-14 — Clock-only timing architecture
+
+The former generic control-voltage routing concept has been retired from the active architecture. MultiSynth now treats timing as timing: `PatchTransport` is the sole internal clock authority, physical MIDI realtime remains F8 at 24 PPQN with FA/FB/FC transport messages, and patchable timing uses explicit Clock jacks and `clock`/`tick` packets.
+
+The graph now has Carrier and Clock routing domains. Generic module boilerplate no longer creates control-voltage jacks on every module. Clock-aware modules declare `clockFollower`/`clockSource` capabilities, and Father Time exposes dynamic Clock jacks rather than routing timing through generic trigger packets.
+
+`ModuleContract.clock()` is a dedicated clock path. Clock packets do not automatically invoke module trigger behavior. This closes the failure mode where Father Time timing pulses could enter Whitman Sampler through its ordinary trigger handler and multiply sequencer activity.
+
+Father Time remains an always-on front panel for the shared transport. Physical MIDI output continues at full 24 PPQN. Its current patch Clock jack emits one quarter-note tick, derived from every 24th F8 pulse. Multiple Father Time instances share one physical MIDI clock-out subscription.
+
+The retired routing bus was removed and replaced by `clock-bus.js`. Node graph serialization now stores explicit `clock` connections.
+
 ## 2026-09-09 — Control lab → canon promotion workflow
 
 New shared controls are now developed outside the locked canonical library first. Experimental control implementations are development-only and may be consumed by Test Module/development tooling, but production modules must never depend on them.
