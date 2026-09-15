@@ -61,8 +61,8 @@
     if(!Library?.get)return;const full=await Library.get(id);if(!full)return;
     updateSample(index,{name:full.name,pcmKey:full.id,start:0,end:Number(full.duration)||0});
   }
-  async function drawLibrary(){
-    return screen.runUpdating(async()=>{
+  async function drawLibrary({updating=false}={}){
+    const work=async()=>{
       const token=++libraryToken,chosen=selected(),chosenKey=slotAt(chosen).pcmKey||null,scroll=screenFace?.scrollTop||0,next=document.createElement("div");next.className="whitman-library-list";
       const items=Library?.list?await Library.list():[];if(token!==libraryToken)return;let activeRow=null;
       if(!items.length){const empty=document.createElement("div");empty.className="whitman-library-empty";empty.textContent="NO SAVED SAMPLES";next.appendChild(empty);}else for(const item of items){
@@ -73,7 +73,8 @@
       }
       if(token!==libraryToken)return;libraryList.replaceWith(next);libraryList=next;
       if(screenFace){screenFace.scrollTop=Math.min(scroll,Math.max(0,screenFace.scrollHeight-screenFace.clientHeight));if(activeRow)requestAnimationFrame(()=>{if(token!==libraryToken||!activeRow.isConnected)return;const top=activeRow.offsetTop,bottom=top+activeRow.offsetHeight,viewTop=screenFace.scrollTop,viewBottom=viewTop+screenFace.clientHeight;if(top<viewTop)screenFace.scrollTop=top;else if(bottom>viewBottom)screenFace.scrollTop=Math.max(0,bottom-screenFace.clientHeight);});}
-    });
+    };
+    return updating?screen.runUpdating(work):work();
   }
 
   function paintSlots(){const current=selected();slotNodes.forEach((node,index)=>{node.dataset.selected=index===current?"1":"0";node.dataset.loaded=slotAt(index).pcmKey?"1":"0";});}
@@ -82,9 +83,9 @@
 
   function refreshSelection({redrawLibrary=false,rebind=false}={}){paintSlots();paintSteps();if(rebind)bindSelectedParams();else paintSelectedParams();if(redrawLibrary)drawLibrary().catch(console.error);}
 
-  paintGlobal();bindSelectedParams();paintSlots();paintSteps();drawLibrary().catch(console.error);
+  paintGlobal();bindSelectedParams();paintSlots();paintSteps();drawLibrary({updating:true}).catch(console.error);
 
-  const onPcmLibrary=()=>drawLibrary().catch(console.error),onGrainLibrary=()=>drawLibrary().catch(console.error);
+  const onPcmLibrary=()=>drawLibrary({updating:true}).catch(console.error),onGrainLibrary=()=>drawLibrary({updating:true}).catch(console.error);
   parent.addEventListener("multisynth-pcm-library",onPcmLibrary);parent.addEventListener("multisynth-grain-library",onGrainLibrary);
   const onStateSync=event=>{
     const previous=state,next={...(def.defaults||{}),...(event.detail||{})};state=next;paintGlobal();
