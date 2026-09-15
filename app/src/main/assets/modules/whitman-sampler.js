@@ -8,13 +8,13 @@
   const emptySequence=()=>Array(STEP_COUNT).fill(0);
   const emptySlot=i=>({name:`SAMPLE ${String(i+1).padStart(2,"0")}`,pcmKey:null,start:0,end:0,pitch:0,level:1,leftLevel:1,rightLevel:1,lagMs:0,locks:{},sequence:emptySequence()});
   const defaults=()=>({
-    bpm:120,swing:0,steps:32,running:false,recording:false,recordSlot:0,selectedSample:0,previewPlaying:false,cvTrigger:true,
+    bpm:120,swing:0,steps:32,running:false,recording:false,recordSlot:0,selectedSample:0,previewPlaying:false,
     locks:{},samples:Array.from({length:SLOT_COUNT},(_,i)=>emptySlot(i))
   });
 
   function normalizedState(saved={}){
     const base=defaults(),next={...base,...saved},legacySteps=Array.isArray(saved.stepsData)?saved.stepsData:null;
-    delete next.stepsData;
+    delete next.stepsData;delete next.cvTrigger;
     next.samples=Array.from({length:SLOT_COUNT},(_,i)=>{
       const source=saved.samples?.[i]||{},legacySequence=legacySteps?Array.from({length:STEP_COUNT},(_,step)=>Array.isArray(legacySteps[step])&&legacySteps[step].map(Number).includes(i)?1:0):emptySequence();
       const sequence=Array.from({length:STEP_COUNT},(_,step)=>Array.isArray(source.sequence)?(source.sequence[step]?1:0):legacySequence[step]);
@@ -95,10 +95,7 @@
     input.connect(through).connect(mix);samplerOut.connect(mix);mix.connect(output);api.setInput(input);api.setOutput(output);
     const runtime={id:api.instanceId,ctx,input,through,samplerOut,mix,output,state:api.state,emit:api.emit,player:null,transport:null,capture:null,previewTimer:null,cvStep:0,loadedKeys:Array(SLOT_COUNT).fill(null),loadingKeys:Array(SLOT_COUNT).fill(null),loadSerial:Array(SLOT_COUNT).fill(0)};
     runtime.player=S.sampler(ctx,samplerOut,{maxLag:.05});
-    runtime.transport=S.transport(ctx,{getState:()=>runtime.state,maxSteps:STEP_COUNT,onStep:(step,time,meta)=>{
-      fireStep(runtime,step,time);
-      if(!meta?.external&&step%4===0)MS.CvBus?.send(runtime.id,{kind:"trigger",clock:true,value:1,gate:true,bpm:Number(runtime.state.bpm)||120,substep:step,beat:Math.floor(step/4),time});
-    }});
+    runtime.transport=S.transport(ctx,{getState:()=>runtime.state,maxSteps:STEP_COUNT,onStep:(step,time)=>fireStep(runtime,step,time)});
     runtime.capture=S.capture(ctx,input,{onCapture:result=>{
       const slot=clamp(runtime.state.recordSlot??runtime.state.selectedSample,0,SLOT_COUNT-1);
       installBuffer(runtime,slot,result.pcm,result.sampleRate);runtime.loadedKeys[slot]=null;runtime.loadingKeys[slot]=null;
@@ -121,19 +118,15 @@
   function trigger({runtime,state},packet={}){
     const u=runtime.user;if(!u?.ctx)return false;
     if(packet.sampleIndex!==undefined&&packet.sampleIndex!==null)return play(u,packet.sampleIndex,Number(packet.time)||u.ctx.currentTime);
-    if(!state.cvTrigger)return true;
-    const length=clamp(Math.round(state.steps||32),1,STEP_COUNT),start=u.cvStep%length,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/clamp(state.bpm||120,30,300)/4;
+    const length=clamp(Math.round(state.steps||32),1,STEP_COUNT),start=u.cvStep%length,base=Number(packet.time)||u.ctx.currentTime,sixteenth=60/clamp(MS.PatchTransport?.bpm||state.bpm||120,30,300)/4;
     for(let n=0;n<4;n++)fireStep(u,(start+n)%length,base+n*sixteenth);
     u.cvStep=(start+4)%length;return true;
   }
-  function clockStart({runtime}){const u=runtime.user;if(u)u.cvStep=0;u?.transport.clockStart();}
-  function clockStop({runtime}){runtime.user?.transport.clockStop();}
-  function clockTick({runtime},tick){return runtime.user?.transport.clockTick(tick)??false;}
   function destroy({runtime}){const u=runtime.user;if(!u)return;stopPreview(u);for(let i=0;i<SLOT_COUNT;i++)u.loadSerial[i]++;u.transport.destroy();u.capture?.destroy();u.player.stopAll();try{u.player.buffers?.clear?.();}catch(_){}for(const node of [u.input,u.through,u.samplerOut,u.mix,u.output])try{node.disconnect();}catch(_){}}
 
-  C.define({type:I.WHITMAN_SAMPLER,version:5,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 16×32 STEP SAMPLE-OWNED SEQUENCERS",defaults:defaults(),resources:["pcm","storage"],create,setState,trigger,clockStart,clockStop,clockTick,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
-  C.defineSurface(I.WHITMAN_SAMPLER,{version:5,package:{id:I.WHITMAN_SAMPLER,version:5,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"internal-or-follower",cvMode:"quarter-note-trigger",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
-    {id:"record",control:"button",state:"recording",label:"RECORD INPUT",meta:{momentary:true}},{id:"running",control:"switch",state:"running",label:"RUN"},{id:"previewPlaying",control:"switch",state:"previewPlaying",label:"PLAY SELECTED"},{id:"cvTrigger",control:"switch",state:"cvTrigger",label:"CV TRIGGER"},
+  C.define({type:I.WHITMAN_SAMPLER,version:6,description:"WHITMAN SAMPLER · 16 PCM SLOTS · 16×32 STEP SAMPLE-OWNED SEQUENCERS · PATCH MIDI CLOCK",defaults:defaults(),resources:["pcm","storage"],create,setState,trigger,destroy,serialize:({state})=>normalizedState(state),restore:({saved})=>normalizedState(saved)});
+  C.defineSurface(I.WHITMAN_SAMPLER,{version:6,package:{id:I.WHITMAN_SAMPLER,version:6,behavior:{role:"16-slot-32-step-pcm-sampler",audioMode:"additive-pass-through",clockMode:"patch-midi-follower",cvMode:"trigger-on-arrival",stateOwnership:"module"}},faceplate:{livery:"whitman-sampler",primary:"#3b2118",secondary:"#f1dfbd",tertiary:"#9d6a45"},defaults:defaults(),controls:[
+    {id:"record",control:"button",state:"recording",label:"RECORD INPUT",meta:{momentary:true}},{id:"running",control:"switch",state:"running",label:"RUN"},{id:"previewPlaying",control:"switch",state:"previewPlaying",label:"PLAY SELECTED"},
     {id:"bpm",control:"knob",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:1}},{id:"swing",control:"knob",state:"swing",label:"SWING",value:{default:0,min:0,max:100,step:1},meta:{unit:"%"}},{id:"steps",control:"knob",state:"steps",label:"LENGTH",value:{default:32,min:1,max:32,step:1}},
     {id:"sample-slots",kind:"prefab",label:"16 SAMPLE PADS",controls:Array.from({length:SLOT_COUNT},(_,i)=>({id:`sample-${i}`,control:"pad",label:String(i+1).padStart(2,"0"),meta:{slotIndex:i}}))},{id:"step-grid",kind:"prefab",label:"32 STEPS",controls:Array.from({length:STEP_COUNT},(_,i)=>({id:`step-${i}`,control:"button",label:String(i+1),meta:{stepIndex:i,stateful:true}}))},
     {id:"pitch",control:"knob",label:"PITCH",value:{default:0,min:-24,max:24,step:1},meta:{perSelectedSample:true,unit:" st"}},{id:"level",control:"knob",label:"LEVEL",value:{default:1,min:0,max:1,step:.01},meta:{perSelectedSample:true}},{id:"leftLevel",control:"knob",label:"LEFT",value:{default:1,min:0,max:1,step:.01},meta:{perSelectedSample:true}},{id:"rightLevel",control:"knob",label:"RIGHT",value:{default:1,min:0,max:1,step:.01},meta:{perSelectedSample:true}},{id:"lagMs",control:"knob",label:"L/R LAG",value:{default:0,min:-.05,max:.05,step:.001},meta:{perSelectedSample:true,unit:" s"}},{id:"library",control:"screen",label:"PCM LIBRARY",meta:{scroll:true}}
