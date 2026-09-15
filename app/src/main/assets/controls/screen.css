@@ -1,9 +1,9 @@
-.ms-screen{position:relative}
-.ms-screen .ms-control-face{width:var(--ms-width);height:var(--ms-height);min-width:0;max-width:100%;box-sizing:border-box;border-radius:var(--ms-corner);overflow:hidden;background:#101417}
+.ms-screen{position:relative;min-width:0}
+.ms-screen .ms-control-face{position:relative;width:var(--ms-width);height:var(--ms-height);min-width:0;max-width:100%;box-sizing:border-box;border-radius:var(--ms-corner);overflow:hidden;background:#101417;touch-action:none}
 .ms-screen .ms-control-face>*{min-width:0;max-width:100%;box-sizing:border-box}
-.ms-screen-glass{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.09),transparent 35%);pointer-events:none}
-.ms-screen--scroll .ms-control-face{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+.ms-screen-glass{position:absolute;inset:0;z-index:20;background:linear-gradient(135deg,rgba(255,255,255,.09),transparent 35%);pointer-events:none}
+.ms-screen--scroll .ms-control-face{overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;touch-action:none}
 .ms-screen--scroll .ms-control-face::-webkit-scrollbar{display:none}
 .ms-screen--scroll[data-screen-dragging="1"] .ms-control-face{user-select:none}
-.ms-screen-updating{position:absolute;top:0;left:0;width:var(--ms-width);height:var(--ms-height);max-width:100%;box-sizing:border-box;border-radius:var(--ms-corner);display:flex;align-items:center;justify-content:center;z-index:30;background:rgba(16,20,23,.88);color:var(--ms-control-accent);font:700 13px/1 ui-monospace,monospace;letter-spacing:.14em;text-align:center;pointer-events:auto;user-select:none}
+.ms-screen-updating{position:absolute;inset:0;width:var(--ms-width);height:var(--ms-height);max-width:100%;box-sizing:border-box;border-radius:var(--ms-corner);display:flex;align-items:center;justify-content:center;z-index:30;background:rgba(16,20,23,.88);color:var(--ms-control-accent);font:700 13px/1 ui-monospace,monospace;letter-spacing:.14em;text-align:center;pointer-events:auto;user-select:none}
 .ms-screen-updating[hidden]{display:none}
