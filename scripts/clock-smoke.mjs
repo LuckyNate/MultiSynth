@@ -33,6 +33,9 @@ assert.doesNotMatch(transportSource,/horizon/);
 assert.match(clockStandard,/PatchTransport/);
 assert.match(clockStandard,/subscribeTick/);
 assert.match(clockStandard,/subscribeMidi/);
+assert.match(clockStandard,/getPatchState/);
+assert.match(clockStandard,/setPatchState/);
+assert.match(clockStandard,/pulse%6===0/);
 assert.doesNotMatch(clockStandard,/external=true|setClockBpm|startClock|subscribeClock|clockStart|clockTick|clockStop/);
 assert.doesNotMatch(moduleContract,/subscribeClock|setClockBpm|startClock|stopClock|clockStart|clockTick|clockStop/);
 
@@ -45,10 +48,10 @@ assert.match(midi,/sendNative\(0xf8/);
 assert.match(midi,/sendNative\(0xfa/);
 assert.match(midi,/sendNative\(0xfb/);
 assert.match(midi,/sendNative\(0xfc/);
-assert.doesNotMatch(midi,/midiClockPulses|setFatherTimeSlaved|clockBpm/);
+assert.doesNotMatch(midi,/midiClockPulses|setFatherTimeSlaved|clockBpm|setPatchState/);
 
 assert.match(cvBus,/receiveMidi/);
-assert.doesNotMatch(cvBus,/clockTargets|walkClock|clockSourceFor|\.clockTick\(/);
+assert.doesNotMatch(cvBus,/clockTargets|walkClock|clockSourceFor|\.clockTick\(|setPatchState/);
 assert.match(father,/midiStatus:0xf8/);
 assert.match(father,/subscribeMidi/);
 assert.doesNotMatch(father,/clockTick|clockStart|clockStop|hasClockUpstream/);
@@ -100,7 +103,7 @@ assert.equal(T.external,false,"loss/release of external clock must fall back to 
 offTick();offPulse();
 
 const wireClocks=[],wireNotes=[];
-const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(){return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}},NodeGraphEngine:{setPatchState(){}}}};
+const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(){return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}}}};
 midiContext.window=midiContext;
 vm.createContext(midiContext);
 vm.runInContext(midi,midiContext,{filename:"native-midi.js"});
