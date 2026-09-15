@@ -52,15 +52,17 @@ assert.doesNotMatch(midi,/midiClockPulses|setFatherTimeSlaved|clockBpm|setPatchS
 
 assert.match(cvBus,/receiveMidi/);
 assert.doesNotMatch(cvBus,/clockTargets|walkClock|clockSourceFor|\.clockTick\(|setPatchState/);
-assert.match(father,/version:"midi-master-2"/);
+assert.match(father,/version:"midi-master-3"/);
 assert.match(father,/always-on-midi-master-clock/);
+assert.match(father,/single-shared-master-stream/);
+assert.match(father,/midiBridgeInstances=new Set/);
 assert.match(father,/subscribeScheduledPulse/);
-assert.match(father,/subscribeMidi/);
+assert.equal((father.match(/subscribeMidi/g)||[]).length,1,"Father Time must create only one shared MIDI-out subscription");
 assert.match(father,/sendClockPulse/);
 assert.match(father,/midiStatus:0xf8/);
 assert.match(father,/controls:\[\{id:"bpm"/);
 assert.match(father,/id:"pulse",control:"led",label:"MIDI CLOCK"/);
-assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.start\(|T\.stop\(|clockTick|clockStart|clockStop|hasClockUpstream/);
+assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.start\(|T\.stop\(|clockTick|clockStart|clockStop|hasClockUpstream|T\?\.setBpm/);
 assert.doesNotMatch(whitman,/state:"cvTrigger"|id:"cvTrigger"|label:"CV TRIGGER"|clockTick|clockStart|clockStop|CvBus\?\.send/);
 assert.match(whitman,/delete next\.cvTrigger/);
 assert.doesNotMatch(timeBandits,/clockTick|clockStart|clockStop|CvBus\?\.send/);
