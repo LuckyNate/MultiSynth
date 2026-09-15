@@ -1,16 +1,25 @@
 "use strict";
 (function(global){
-const MS=global.MultiSynth=global.MultiSynth||{},PCM=MS.RawPCMLibrary||MS.PCMLibrary,DB_NAME="multisynth-grain-library",DB_VERSION=1,STORE="grains";let dbp=null;
+const MS=global.MultiSynth=global.MultiSynth||{},PCM=MS.RawPCMLibrary||MS.PCMLibrary,DB_NAME="multisynth-grain-library",DB_VERSION=1,STORE="grains",FOLDER_STORAGE_KEY="multisynth-sample-folders-v2";let dbp=null;
 const folderDefs=new Map([
- ["mic",{id:"mic",label:"MIC SAMPLES",order:10}],
- ["input",{id:"input",label:"INPUT SAMPLES",order:20}],
- ["grains",{id:"grains",label:"GRAIN SAMPLES",order:30}],
- ["processed",{id:"processed",label:"PROCESSED SAMPLES",order:40}],
- ["imported",{id:"imported",label:"IMPORTED SAMPLES",order:50}],
- ["other",{id:"other",label:"OTHER SAMPLES",order:999}]
+ ["mic",{id:"mic",label:"MIC SAMPLES",order:10,parentId:null,builtin:true}],
+ ["input",{id:"input",label:"INPUT SAMPLES",order:20,parentId:null,builtin:true}],
+ ["grains",{id:"grains",label:"GRAIN SAMPLES",order:30,parentId:null,builtin:true}],
+ ["processed",{id:"processed",label:"PROCESSED SAMPLES",order:40,parentId:null,builtin:true}],
+ ["imported",{id:"imported",label:"IMPORTED SAMPLES",order:50,parentId:null,builtin:true}],
+ ["other",{id:"other",label:"OTHER SAMPLES",order:999,parentId:null,builtin:true}]
 ]);
-function safeFolder(id){id=String(id||"").toLowerCase();return folderDefs.has(id)?id:"other"}
-function registerFolder(def){const id=String(def?.id||"").toLowerCase().replace(/[^a-z0-9_-]/g,"");if(!id||id==="root"||id==="..")throw new Error("Invalid sample folder");folderDefs.set(id,{id,label:String(def?.label||id.toUpperCase()),order:Number(def?.order)||500});return id}
+function sanitizeFolderId(id){return String(id||"").toLowerCase().replace(/[^a-z0-9_-]/g,"")}
+function loadFolders(){try{const saved=JSON.parse(global.localStorage?.getItem(FOLDER_STORAGE_KEY)||"[]");if(Array.isArray(saved))for(const raw of saved){const id=sanitizeFolderId(raw?.id);if(!id||id==="root"||id===".."||folderDefs.has(id))continue;folderDefs.set(id,{id,label:String(raw?.label||id.toUpperCase()),order:Number(raw?.order)||500,parentId:raw?.parentId?sanitizeFolderId(raw.parentId):null,builtin:false})}}catch(_){}}
+function persistFolders(){try{const custom=[...folderDefs.values()].filter(f=>!f.builtin).map(({id,label,order,parentId})=>({id,label,order,parentId:parentId||null}));global.localStorage?.setItem(FOLDER_STORAGE_KEY,JSON.stringify(custom))}catch(_){}}
+loadFolders();
+function safeFolder(id){id=sanitizeFolderId(id);return folderDefs.has(id)?id:"other"}
+function createsCycle(id,parentId){let at=parentId;while(at){if(at===id)return true;at=folderDefs.get(at)?.parentId||null}return false}
+function registerFolder(def){const id=sanitizeFolderId(def?.id);if(!id||id==="root"||id==="..")throw new Error("Invalid sample folder");const parentId=def?.parentId?sanitizeFolderId(def.parentId):null;if(parentId&&!folderDefs.has(parentId))throw new Error("Parent sample folder not found");if(createsCycle(id,parentId))throw new Error("Sample folder cycle");const existing=folderDefs.get(id);folderDefs.set(id,{id,label:String(def?.label||existing?.label||id.toUpperCase()),order:Number(def?.order)||existing?.order||500,parentId,builtin:!!existing?.builtin});persistFolders();return id}
+function createFolder(label,parentId=null){label=String(label||"").trim();if(!label)throw new Error("Folder name required");parentId=parentId?safeFolder(parentId):null;let base=sanitizeFolderId(label)||"folder",id=base,n=2;while(folderDefs.has(id))id=`${base}-${n++}`;folderDefs.set(id,{id,label,order:500,parentId,builtin:false});persistFolders();return{...folderDefs.get(id)}}
+function renameFolder(id,label){id=safeFolder(id);label=String(label||"").trim();if(!label)throw new Error("Folder name required");const f=folderDefs.get(id);if(!f)return false;f.label=label;persistFolders();return true}
+function moveFolder(id,parentId=null){id=safeFolder(id);const f=folderDefs.get(id);if(!f)return false;parentId=parentId?safeFolder(parentId):null;if(createsCycle(id,parentId))throw new Error("Sample folder cycle");f.parentId=parentId;persistFolders();return true}
+async function removeFolder(id){id=safeFolder(id);const f=folderDefs.get(id);if(!f||f.builtin)return false;const children=[...folderDefs.values()].some(x=>x.parentId===id);if(children)throw new Error("Folder contains subfolders");const all=await unifiedList();if(all.some(x=>classify(x)===id))throw new Error("Folder contains samples");folderDefs.delete(id);persistFolders();return true}
 function classify(rec){if(rec?.folder&&folderDefs.has(String(rec.folder)))return String(rec.folder);if(rec?.library==="grain"||String(rec?.id||"").startsWith("grain-"))return"grains";const s=(String(rec?.source||"")+" "+(rec?.tags||[]).join(" ")).toLowerCase();if(s.includes("mic"))return"mic";if(s.includes("input")||s.includes("capture"))return"input";if(s.includes("sample-surgery")||s.includes("big-deal")||s.includes("granulator")||s.includes("chop"))return"processed";if(s.includes("import"))return"imported";return"other"}
 function open(){if(dbp)return dbp;dbp=new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(STORE)){const s=db.createObjectStore(STORE,{keyPath:"id"});s.createIndex("createdAt","createdAt");s.createIndex("name","name")}};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});return dbp}
 function tx(mode,fn){return open().then(db=>new Promise((resolve,reject)=>{const t=db.transaction(STORE,mode),s=t.objectStore(STORE);let result;try{result=fn(s,t)}catch(e){reject(e);return}t.oncomplete=()=>resolve(result);t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error||new Error("Grain transaction aborted"))}))}
@@ -26,11 +35,11 @@ async function unifiedList(){const [pcm,grains]=await Promise.all([PCM?.list?.()
 async function getUnified(key){if(String(key||"").startsWith("grain-")){const g=await get(key);return g?{...g,library:"grain",folder:classify(g),source:"grain-library"}:null}const p=await PCM?.get?.(key);if(p)return{...p,library:"pcm",folder:classify(p)};const g=await get(key);return g?{...g,library:"grain",folder:classify(g),source:"grain-library"}:null}
 async function setUnifiedFolder(key,folder){folder=safeFolder(folder);return String(key||"").startsWith("grain-")?setFolder(key,folder):PCM.setFolder?.(key,folder)}
 async function copyToFolder(key,folder){folder=safeFolder(folder);const rec=await getUnified(key);if(!rec?.data?.length)return null;const copyName=String(rec.name||"SAMPLE")+" COPY";if(rec.library==="grain")return save({name:copyName,sampleRate:rec.sampleRate,data:rec.data,sourceId:rec.sourceId,sourceName:rec.sourceName,startFrame:rec.startFrame,endFrame:rec.endFrame,tags:[...(rec.tags||[]),"copy"],folder});return PCM.save({name:copyName,sampleRate:rec.sampleRate,data:rec.data,source:rec.source||"sample-library-copy",tags:[...(rec.tags||[]),"copy"],folder})}
+async function folders(){const all=await unifiedList(),counts={};for(const x of all){const f=classify(x);counts[f]=(counts[f]||0)+1}return[...folderDefs.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label)).map(f=>({...f,count:counts[f.id]||0}))}
 const Unified=Object.freeze({
  list:unifiedList,
  async listFolder(folder){folder=safeFolder(folder);return(await unifiedList()).filter(x=>classify(x)===folder)},
- async folders(){const all=await unifiedList(),counts={};for(const x of all){const f=classify(x);counts[f]=(counts[f]||0)+1}return[...folderDefs.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label)).map(f=>({...f,count:counts[f.id]||0}))},
- folderFor:rec=>classify(rec),registerFolder,
+ folders,folderFor:rec=>classify(rec),registerFolder,createFolder,renameFolder,moveFolder,removeFolder,
  get:getUnified,
  save:v=>PCM.save(v),saveCapture:(...a)=>PCM.saveCapture(...a),remove:key=>String(key||"").startsWith("grain-")?remove(key):PCM.remove(key),rename:(key,name)=>String(key||"").startsWith("grain-")?rename(key,name):PCM.rename(key,name),setFolder:setUnifiedFolder,copyToFolder,open:()=>Promise.all([PCM?.open?.(),open()])
 });
