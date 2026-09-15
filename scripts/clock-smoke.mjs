@@ -6,6 +6,7 @@ const read=path=>fs.readFileSync(path,"utf8");
 const worklet=read("app/src/main/assets/worklets/multisynth-clock-processor.js");
 const transportSource=read("app/src/main/assets/patch-transport.js");
 const clockStandard=read("app/src/main/assets/clock-standard.js");
+const moduleContract=read("app/src/main/assets/module-contract.js");
 const graph=read("app/src/main/assets/node-audio-graph.js");
 const midi=read("app/src/main/assets/native-midi.js");
 const cvBus=read("app/src/main/assets/cv-bus.js");
@@ -33,6 +34,7 @@ assert.match(clockStandard,/PatchTransport/);
 assert.match(clockStandard,/subscribeTick/);
 assert.match(clockStandard,/subscribeMidi/);
 assert.doesNotMatch(clockStandard,/external=true|setClockBpm|startClock|subscribeClock|clockStart|clockTick|clockStop/);
+assert.doesNotMatch(moduleContract,/subscribeClock|setClockBpm|startClock|stopClock|clockStart|clockTick|clockStop/);
 
 assert.match(graph,/new AudioWorkletNode\(ctx,"multisynth-clock-processor"/);
 assert.match(graph,/PatchTransport\?\.ingestTimebase/);
