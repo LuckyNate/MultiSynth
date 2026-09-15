@@ -14,6 +14,7 @@ const preloadCache=new Map(),preloadPromises=new Map(),preloadControllers=new Ma
 try{const runtime=HostMS.ModuleContract?.getRuntime?.(instanceId);clipOn=runtime?.state?.clip!==false;loopOn=!!runtime?.state?.loop}catch(_){}
 let captureReady=false,captureRequest=false,recording=false,recordStartedPlayback=false,chunks=[],frames=0,sampleRate=48000;
 const mount=(parent,desc,visual={})=>R.mount(parent,{...desc,meta:{...(desc.meta||{}),visual:{...(desc.meta?.visual||{}),...visual}}});
+const libraryHost=document.querySelector(".libraryScreen");if(libraryHost){const content=[...libraryHost.childNodes],screen=mount(libraryHost,{id:"source",control:"screen",label:"FREESOUND MEDIA LIBRARY",meta:{scroll:true}},{variant:"scroll",width:900,height:320,touchWidth:900,touchHeight:320}),face=screen.querySelector(".ms-control-face");if(face)face.append(...content);libraryHost.querySelectorAll(".libraryRow[data-slot]").forEach(row=>row.classList.add("ms-button"))}
 const button=(parent,id,label,fn)=>{const node=mount(parent,{id,control:"button",label},{variant:"rect"});node.onclick=fn;return node};
 button(searchHost,"search-go","GO",()=>searchForm?.requestSubmit?.());
 const loop=mount(transportHost,{id:"loop",control:"switch",label:"LOOP"},{variant:"toggle"}),clip=mount(transportHost,{id:"clip",control:"switch",label:"CLIP"},{variant:"toggle"}),copy=button(transportHost,"copy","COPY TO SAMPLE",copyToSample),record=button(transportHost,"record","HOLD TO RECORD",()=>{});record.onclick=null;
