@@ -17,7 +17,7 @@ class Param{
   cancelScheduledValues(){}
 }
 class Node{
-  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0}
+  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0;this.buffer=null}
   connect(n){return n}
   disconnect(){}
   start(){}
@@ -41,7 +41,7 @@ const prefabs={ADSR_DEFAULTS:{attack:.005,decay:.08,sustain:1,release:.08},adsr:
 const S={
   oscillator:(ctx,type="sine",frequency=null)=>{const n=new Node(ctx);n.type=type;if(Number.isFinite(Number(frequency)))n.frequency.value=Number(frequency);return n},
   voiceEnvelope:(ctx,state)=>{const node=new Node(ctx);return{node,gateOn(){},gateOff(t=ctx.currentTime){node.gain.value=0;return t+Math.max(.001,Number(state.release)||.08)+.002},forceOff(t=ctx.currentTime){node.gain.value=0;return t},setState(next){state={...state,...next}}}},
-  noise:(ctx)=>new Node(ctx),bufferSource:(ctx)=>new Node(ctx),shapedBuffer:()=>({})
+  noise:(ctx)=>new Node(ctx),bufferSource:(ctx,buffer=null)=>{const n=new Node(ctx);n.buffer=buffer;return n},shapedBuffer:(_ctx,length,shape)=>({length,samples:Array.from({length},(_,i)=>shape(i,length))})
 };
 const contract={define:def=>defs.set(def.type,def),getDefinition:()=>({}),defineSurface:(_type,s)=>{surface=s}};
 const context={console,Math,Number,String,Boolean,Array,Object,Map,Set,Float32Array,setTimeout,clearTimeout,window:null,MultiSynth:{ModuleIds:ids,ModuleContract:contract,ControlPrefabs:prefabs,DspSources:S}};
@@ -96,25 +96,32 @@ state.clickAcceleration=88;
 def.noteOn({runtime,state},62,100);
 const click=user.voices.get("62");
 if(click?.quadEngine!=="click")throw new Error("CLICK context did not select click engine");
-const clickSource=click.sources[0];
-if(clickSource.periodicWaveCount<1)throw new Error("CLICK engine is not using its periodic click waveform");
-if(clickSource.type==="sawtooth")throw new Error("CLICK engine regressed to a sawtooth oscillator");
-if(clickSource.__msQuadClickModel!=="atomic-triggered-bipolar-click")throw new Error("CLICK engine is not the atomic triggered bipolar click model");
+const clickSource=click.sources[0],clickRepeater=click.clickRepeater;
+if(!clickRepeater)throw new Error("CLICK engine did not create a finite-click repeater");
+if(clickSource.periodicWaveCount!==0)throw new Error("CLICK engine still uses a PeriodicWave shortcut");
+if(clickSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK engine is not literal finite repeated samples");
+if(!clickSource.buffer||!(clickSource.buffer.length>0))throw new Error("CLICK source does not contain a finite sample buffer");
 if("__msQuadClickOverlapCount" in clickSource)throw new Error("CLICK engine still contains artificial overlap-count logic");
-if(clickSource.__msQuadClickAcceleration!==88)throw new Error("CLICK acceleration was not applied to the atomic click ramp");
+if(clickSource.__msQuadClickAcceleration!==88)throw new Error("CLICK acceleration was not applied to the finite click sample");
 const expectedHz=440*Math.pow(2,(62-69)/12);
 if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK trigger rate is not the played note frequency in Hz");
+if(Math.abs(clickRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
+if(clickRepeater.feedback.gain.value!==1)throw new Error("CLICK finite sample repeater is not sustaining literal delayed copies");
 const highAccelerationDuration=clickSource.__msQuadClickDuration;
-if(!(highAccelerationDuration>0))throw new Error("CLICK atomic ramp duration missing");
-const clickUpdates=clickSource.periodicWaveCount;
+if(!(highAccelerationDuration>0))throw new Error("CLICK finite ramp duration missing");
 state.clickAcceleration=35;
 def.setState({runtime,state});
-if(clickSource.periodicWaveCount<=clickUpdates)throw new Error("CLICK acceleration SHAPE did not rebuild the active waveform");
-if(clickSource.__msQuadClickAcceleration!==35)throw new Error("CLICK active waveform did not retain the new acceleration value");
-if(clickSource.__msQuadClickModel!=="atomic-triggered-bipolar-click")throw new Error("CLICK SHAPE update changed the atomic trigger model");
-if(!(clickSource.__msQuadClickDuration>highAccelerationDuration))throw new Error("CLICK lower acceleration did not broaden the atomic ramp");
-if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
+const reshapedSource=click.sources[0],reshapedRepeater=click.clickRepeater;
+if(reshapedSource===clickSource)throw new Error("CLICK SHAPE did not replace the finite click sample");
+if(clickRepeater.feedback.gain.value!==0)throw new Error("CLICK SHAPE left the old finite click train running");
+if(reshapedSource.periodicWaveCount!==0)throw new Error("CLICK SHAPE regressed to PeriodicWave");
+if(reshapedSource.__msQuadClickAcceleration!==35)throw new Error("CLICK finite sample did not retain the new acceleration value");
+if(reshapedSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK SHAPE changed the finite sample trigger model");
+if(!(reshapedSource.__msQuadClickDuration>highAccelerationDuration))throw new Error("CLICK lower acceleration did not broaden the finite ramp");
+if(Math.abs(reshapedSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
+if(Math.abs(reshapedRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
 def.noteOff({runtime,state},62);
-if(clickSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the oscillator source");
+if(reshapedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
+if(reshapedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: four engines, contextual SHAPE, atomic bipolar click triggered at note Hz, natural overlap, active shape update, and Note Off release passed");
+console.log("quadsynth: four engines, contextual SHAPE, literal finite bipolar click samples repeated at note Hz with natural overlap, active shape update, and Note Off release passed");
