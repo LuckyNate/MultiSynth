@@ -61,19 +61,18 @@ assert.match(midi,/multisynth-midi-message/);
 assert.match(midi,/NodeAudioGraph\?\.midi/);
 assert.doesNotMatch(midi,/multisynth-usb-cv|receiveCV|emitCV/);
 
-assert.match(father,/version:"midi-master-5"/);
+assert.match(father,/version:"midi-master-6"/);
 assert.match(father,/always-on-midi-master-clock/);
 assert.match(father,/single-shared-master-stream/);
 assert.match(father,/dynamicPorts:\{clockOut:"used-plus-one"\}/);
-assert.match(father,/sendClock/);
-assert.match(father,/kind:"clock"/);
-assert.match(father,/p%24!==0/);
-assert.match(father,/T\.setBpm\?\./);
-assert.match(father,/T\.start\?\./);
+assert.match(father,/T\.subscribePulse/);
+assert.doesNotMatch(father,/subscribeScheduledPulse/);
+assert.match(father,/T\.setBpm/);
+assert.match(father,/T\.start\(\)/);
 assert.match(father,/!T\.external&&!T\.running/);
-assert.equal((father.match(/subscribeMidi/g)||[]).length,1,"Father Time must create only one shared MIDI-out subscription");
+assert.match(father,/p%24!==0/);
 assert.match(father,/sendClockPulse/);
-assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.stop\(/);
+assert.doesNotMatch(father,/setTimeout|setInterval|state:"running"|id:"running"|label:"RUN"|T\.stop\(/);
 
 assert.match(whitman,/function noteOn/);
 assert.match(whitman,/MIDI_BASE_NOTE=36/);
@@ -136,4 +135,4 @@ assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach transpo
 assert.ok(wireMidi.some(e=>e.type==="controlChange"&&e.control===7&&e.value===96),"CC must enter the real module MIDI path");
 assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain observable as a real MIDI channel event");
 
-console.log("clock smoke: PASS — Father Time internal MIDI master + real MIDI channel messages + external clock override");
+console.log("clock smoke: PASS — one AudioWorklet timebase, Father Time owns the shared internal master, real MIDI channel messages, external clock override");
