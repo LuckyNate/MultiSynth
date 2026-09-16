@@ -28,16 +28,15 @@
       }},node:"controller.shape"},
     {id:"modulation",control:"knob",state:"modulation",label:"MOD",value:{default:0,min:0,max:1,step:.01},meta:{midi:{cc:1}},node:"controller.modulation"},
     {id:"sustain-pedal",control:"switch",state:"sustainPedal",label:"SUSTAIN",value:{default:false},meta:{midi:{cc:64}},node:"controller.sustain"},
-    {id:"expression",control:"fader",state:"expression",label:"EXPRESSION",value:{default:1,min:0,max:1,step:.01},meta:{midi:{cc:11}},node:"controller.expression"},
-    {id:"level",control:"fader",state:"level",label:"LEVEL",value:{default:.8,min:0,max:1,step:.01},meta:{midi:{cc:7}},node:"controller.level"},
+    {id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:.8,min:0,max:1,step:.01},meta:{midi:{cc:7}},node:"controller.level"},
     prefabs.adsr(),
     prefabs.performanceKeyboard(),
     {id:"scope",control:"oscilloscope",label:"OUTPUT",meta:{displayOnly:true},node:"indicator.scope"}
   );
 
   contract.defineSurface(ids.PURE_SYNTH,{
-    version:11,
-    package:{id:ids.PURE_SYNTH,version:11,behavior:{
+    version:12,
+    package:{id:ids.PURE_SYNTH,version:12,behavior:{
       role:"canonical-basic-midi-synth",audioMode:"generator-or-carrier-processor",noise:true,
       stateOwnership:"module",trianglePeakMorphsToSaw:true,sourceLayer:"DspSources",
       sourceOwnership:"shared-bottom-layer",voiceEnvelope:"built-in-adsr",
@@ -62,7 +61,7 @@
     nodes:{connections:[
       ["source.generated","action.voice"],["source.midi","action.voice"],
       ["controller.keyboard","action.voice"],["controller.modulation","action.modulation"],
-      ["controller.sustain","action.sustain"],["controller.expression","action.expression"],
+      ["controller.sustain","action.sustain"],
       ["action.voice","action.envelope"],["controller.adsr","action.envelope"],
       ["controller.waveform.sine","action.shape"],["controller.waveform.square","action.shape"],
       ["controller.waveform.triangle","action.shape"],["controller.waveform.white","action.shape"],
