@@ -10,6 +10,7 @@ const defaults={
 };
 const engines=[
   ["click","CLICK"],
+  ["twin","TWIN"],
   ["sine","SINE"],
   ["triangle","TRIANGLE"],
   ["square","SQUARE"]
@@ -23,6 +24,7 @@ controls.push(
     contextState:"selectedEngine",
     contexts:{
       click:{state:"clickAcceleration",label:"ACCELERATION",default:88,min:0,max:100,step:1,unit:"%"},
+      twin:{state:"clickAcceleration",label:"ACCELERATION",default:88,min:0,max:100,step:1,unit:"%"},
       sine:{state:"sinePhase",label:"PHASE",default:0,min:0,max:360,step:1,unit:"°"},
       triangle:{state:"trianglePeak",label:"PEAK",default:.5,min:0,max:1,step:.01,unit:""},
       square:{state:"squareDuty",label:"DUTY",default:50,min:5,max:95,step:1,unit:"%"}
@@ -40,7 +42,7 @@ C.defineSurface(I.QUAD_SYNTH,{
     sourceLayer:"DspSources",
     sourceOwnership:"shared-bottom-layer",
     voiceEnvelope:"built-in-adsr",
-    engineSelection:"click-sine-triangle-square",
+    engineSelection:"click-twin-sine-triangle-square",
     shape:"selected-engine-context-sensitive"
   }},
   faceplate:{livery:"amber-four-engine",primary:"#171006",secondary:"#ffb000",tertiary:"#ffe2a0"},
@@ -57,7 +59,7 @@ C.defineSurface(I.QUAD_SYNTH,{
   ],
   nodes:{connections:[
     ["source.engine","action.voice"],["source.midi","action.voice"],["controller.keyboard","action.voice"],
-    ["controller.engine.click","action.voice"],["controller.engine.sine","action.voice"],
+    ["controller.engine.click","action.voice"],["controller.engine.twin","action.voice"],["controller.engine.sine","action.voice"],
     ["controller.engine.triangle","action.voice"],["controller.engine.square","action.voice"],
     ["controller.shape","action.shape"],["action.shape","action.voice"],
     ["action.voice","action.envelope"],["controller.adsr","action.envelope"]
