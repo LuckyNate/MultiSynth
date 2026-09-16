@@ -76,6 +76,10 @@ assert.doesNotMatch(father,/setTimeout|setInterval|state:"running"|id:"running"|
 
 assert.match(whitman,/function noteOn/);
 assert.match(whitman,/MIDI_BASE_NOTE=36/);
+assert.match(whitman,/subscribeScheduledPulse/);
+assert.match(whitman,/function onScheduledPulse/);
+assert.match(whitman,/pulse%6!==0/);
+assert.doesNotMatch(whitman,/status!==MIDI\.CLOCK/);
 assert.doesNotMatch(whitman,/function trigger\(/);
 assert.match(timeBandits,/function noteOn/);
 assert.match(timeBandits,/MIDI_BASE(?:_NOTE)?=36/);
@@ -135,4 +139,4 @@ assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach transpo
 assert.ok(wireMidi.some(e=>e.type==="controlChange"&&e.control===7&&e.value===96),"CC must enter the real module MIDI path");
 assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain observable as a real MIDI channel event");
 
-console.log("clock smoke: PASS — one AudioWorklet timebase, Father Time owns the shared internal master, real MIDI channel messages, external clock override");
+console.log("clock smoke: PASS — one AudioWorklet timebase, Father Time owns the shared internal master, Whitman schedules ahead from shared MIDI timing, real MIDI channel messages, external clock override");
