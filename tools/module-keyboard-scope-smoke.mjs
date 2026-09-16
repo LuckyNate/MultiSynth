@@ -7,7 +7,7 @@ const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const source=fs.readFileSync(path.join(repo,"app/src/main/assets/node-audio-graph.js"),"utf8");
 
 class Param{constructor(v=0){this.value=v}setTargetAtTime(v){this.value=v}}
-class Node{constructor(freq=0){this.frequency=new Param(freq);this.gain=new Param(1)}connect(n){return n}disconnect(){}}
+class Node{constructor(freq=0){this.frequency=new Param(freq);this.gain=new Param(1);this.threshold=new Param();this.ratio=new Param();this.knee=new Param();this.attack=new Param();this.release=new Param();this.fftSize=0}connect(n){return n}disconnect(){}}
 class AudioContext{constructor(){this.state="running";this.currentTime=0;this.destination=new Node()}createGain(){return new Node()}createDynamicsCompressor(){return new Node()}createAnalyser(){return new Node()}resume(){return Promise.resolve()}}
 
 const modules=[{id:"quad",type:"quadsynth",enabled:true},{id:"sampler",type:"whitman-sampler",enabled:true}];
