@@ -102,6 +102,8 @@ A module does not own generic physical controller behavior.
 
 **The module decides what a control means. The control decides how that physical control works.**
 
+When two modules solve the same class of problem, the established software pattern is reused wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, editor/runtime separation, and control behavior. Instrument-specific behavior is the reason to diverge; similarity is the reason to copy the working pattern rather than invent a parallel implementation.
+
 ---
 
 ## 6. Shared Control Architecture
@@ -245,7 +247,9 @@ Modules do not create private schedulers when they need synchronization. Timing-
 
 A sixteenth-note boundary is derived every six `F8` pulses. Other musical divisions are derived from the same authoritative pulse count.
 
-Internal and external MIDI timing enter the same `PatchTransport`; downstream modules do not need separate internal/external scheduler implementations.
+For internally generated timing, sequencers that need precise audio scheduling use `PatchTransport.subscribeScheduledPulse()` lookahead and schedule sound/event consequences against future AudioContext timestamps. They do not wait for a live main-thread F8 callback and then attempt to start audio at a timestamp that may already be in the past.
+
+External MIDI clock remains live because future external F8 pulses cannot be known in advance. Internal and external MIDI timing still enter the same `PatchTransport`; downstream musical semantics remain identical even though only the internal source can be scheduled ahead.
 
 ---
 
@@ -260,7 +264,7 @@ Its responsibilities are:
 - send real physical MIDI realtime clock/transport messages;
 - expose patchable Clock jacks derived from the master timeline.
 
-Father Time is always on and has no RUN state.
+Father Time is always on and has no RUN state. Its rebuilt face contains the BPM encoder and MIDI CLOCK activity LED; START/CONTINUE/STOP are transport semantics, not duplicate front-panel scheduler controls.
 
 Physical MIDI clock remains 24 PPQN. Father Time's current patch Clock jack emits one quarter-note tick derived from every 24th MIDI clock pulse.
 
@@ -278,7 +282,11 @@ A clock-aware module must not infer BPM by running its own timer, start a privat
 
 Playable modules use `noteInput` capability metadata and `ModuleContract.noteOn()` / `noteOff()` handlers.
 
-Whitman Sampler maps MIDI notes 36–51 to its 16 sample slots. Time Bandits maps MIDI notes 36–51 to its 16 drum voices. RanDrone uses MIDI Note On as its explicit manual/random-event performance input.
+Whitman Sampler maps MIDI notes 36–51 to its 16 sample slots. Time Bandits maps MIDI notes 36–51 to its 16 drum voices. Both internal sequencers emit real MIDI Note On/Off into the same note-receiver path used by external MIDI instead of directly invoking private playback functions.
+
+Whitman Sampler is the reference implementation for the shared 16-slot/32-step pattern architecture. Time Bandits copies that applicable pattern/event/timing implementation and retains only the drum-machine behavior that is genuinely instrument-specific.
+
+RanDrone uses MIDI Note On as its explicit manual/random-event performance input.
 
 The current timing participants include Father Time, Whitman Sampler, Time Bandits and RanDrone.
 
@@ -310,7 +318,11 @@ Normal control movement applies state to the existing runtime. Structural routin
 
 Only the designated output path reaches the device audio destination.
 
-Ordinary modules do not silently connect themselves directly to device output. Output modules are explicit members of the module/routing architecture.
+The Output Mixer is the terminal audio path to the device speaker. Ordinary modules do not silently connect themselves directly to device output. Audio output modules are explicit members of the module/routing architecture.
+
+Physical MIDI output is likewise explicit. `MIDIchlorian` is the terminal physical MIDI sink for ordinary MIDI channel/performance messages and module-emitted pattern MIDI. It uses the existing native MIDI bridge rather than introducing a second MIDI protocol.
+
+Physical realtime clock/transport ownership remains separate: Father Time is the sole F8/FA/FB/FC hardware bridge. MIDIchlorian does not duplicate realtime messages, so adding a MIDI output module cannot double-clock external devices.
 
 ---
 
@@ -341,10 +353,13 @@ Timing/MIDI smoke tests must prove:
 - one real 24-PPQN MIDI clock authority;
 - sample-accurate internal F8 boundaries;
 - identical subdivision semantics for internal and external MIDI clock;
-- no module-local timing scheduler replacing the transport;
+- internally scheduled sequencers use transport lookahead rather than main-thread live-F8 audio scheduling;
+- no module-local timing scheduler replaces the transport;
 - clock-jack packets stay on the clock path and cannot become note events;
 - Father Time cannot multiply physical MIDI clock output;
+- MIDIchlorian cannot duplicate Father Time realtime clock/transport output;
 - MIDI Note On/Off reaches modules through the note contract rather than a generic trigger/CV bus;
+- internal sequencer events use the same real MIDI note path as external performance where applicable;
 - MIDI channel messages remain MIDI channel messages.
 
 Control verification remains separate and must not be changed as part of timing/MIDI work.
