@@ -30,15 +30,14 @@
     {id:"sustain-pedal",control:"switch",state:"sustainPedal",label:"SUSTAIN",value:{default:false},meta:{midi:{cc:64}},node:"controller.sustain"},
     {id:"expression",control:"fader",state:"expression",label:"EXPRESSION",value:{default:1,min:0,max:1,step:.01},meta:{midi:{cc:11}},node:"controller.expression"},
     {id:"level",control:"fader",state:"level",label:"LEVEL",value:{default:.8,min:0,max:1,step:.01},meta:{midi:{cc:7}},node:"controller.level"},
-    {id:"program",control:"encoder",state:"program",label:"PROGRAM",value:{default:0,min:0,max:127,step:1},meta:{midi:{message:"programChange"}},node:"controller.program"},
     prefabs.adsr(),
     prefabs.performanceKeyboard(),
     {id:"scope",control:"oscilloscope",label:"OUTPUT",meta:{displayOnly:true},node:"indicator.scope"}
   );
 
   contract.defineSurface(ids.PURE_SYNTH,{
-    version:10,
-    package:{id:ids.PURE_SYNTH,version:10,behavior:{
+    version:11,
+    package:{id:ids.PURE_SYNTH,version:11,behavior:{
       role:"canonical-basic-midi-synth",audioMode:"generator-or-carrier-processor",noise:true,
       stateOwnership:"module",trianglePeakMorphsToSaw:true,sourceLayer:"DspSources",
       sourceOwnership:"shared-bottom-layer",voiceEnvelope:"built-in-adsr",
