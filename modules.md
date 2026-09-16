@@ -26,6 +26,10 @@ Every module is reviewed and rebuilt in this order:
 
 The design review happens before code changes. Module renames, feature changes, control assignments, and rebuild implementation are approved module-by-module before repository writes.
 
+## Hard rename rule
+
+When a module rename is approved, the rename is exhaustive and atomic. Every repository reference to the old module identity is renamed in the same change: display name, canonical module ID, manifest/catalog entries, filenames, script/editor references, surface or package IDs, CSS selectors/themes where identity-bearing, tests, docs, persistence keys or mappings, and any other code or data reference. Do not preserve the old identity through aliases, compatibility mappings, duplicate registrations, fallback names, or transitional shims. After the rename, a repository-wide search for the old name and old identifier must return no live references except historical material that is intentionally outside the active codebase.
+
 ---
 
 ## +1 Merger — build spec
