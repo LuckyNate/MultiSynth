@@ -141,4 +141,4 @@ if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same perio
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: CLICK is a continuous hyperbolic ramp oscillator with a rounded -1 turn and sharp +1 spike; TWIN is the distinct split hyperbolic twin-ramp oscillator; neither uses trigger, delay, overlap, or finite-click playback");
+console.log("quadsynth: CLICK uses the asymmetric 0→2 minus 1 bipolar ramp with one sharp +1 spine; TWIN uses the reflected bipolar ramp with a slow smooth zero crossing between down and up spikes; neither uses trigger, delay, overlap, or finite-click playback");
