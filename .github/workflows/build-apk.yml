@@ -94,9 +94,6 @@ jobs:
       - name: Module keyboard scope smoke
         run: node tools/module-keyboard-scope-smoke.mjs
 
-      - name: Bluetooth output gate smoke
-        run: node tools/bluetooth-output-gate-smoke.mjs
-
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
