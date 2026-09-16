@@ -74,7 +74,7 @@
     const clamp=v=>Math.min(max,Math.max(min,Number(v))),quant=v=>{v=clamp(v);return round3(step>0?clamp(min+Math.round((v-min)/step)*step):v)};
     root.__msResetKnobDrag=()=>{if(state.pointer!=null){try{root.releasePointerCapture?.(state.pointer)}catch(_){}}state.pointer=null;state.startY=0;state.startValue=quant(d.value?.value??d.value?.default??min)};
     root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0||root.dataset.locked==="1")return;state.pointer=e.pointerId;state.startY=e.clientY;const bound=Number(root.__msKnobBinding?.value),painted=Number(root.dataset.value);state.startValue=quant(Number.isFinite(painted)?painted:Number.isFinite(bound)?bound:d.value?.value??d.value?.default??min);root.setPointerCapture?.(state.pointer);e.preventDefault()});
-    root.addEventListener("pointermove",e=>{if(e.pointerId!==state.pointer||root.dataset.locked==="1")return;const deltaPixels=state.startY-e.clientY,next=quant(state.startValue+deltaPixels/180*(max-min));root.commitControlValue?.(next);root.dispatchEvent(new CustomEvent("multisynth-control-knob-delta",{bubbles:true,detail:{delta:deltaPixels/180,deltaPixels,controlId:d.id,stateKey:d.state,event:e}}));e.preventDefault()});
+    root.addEventListener("pointermove",e=>{if(e.pointerId!==state.pointer||root.dataset.locked==="1")return;const deltaPixels=state.startY-e.clientY,next=quant(state.startValue+deltaPixels/360*(max-min));root.commitControlValue?.(next);root.dispatchEvent(new CustomEvent("multisynth-control-knob-delta",{bubbles:true,detail:{delta:deltaPixels/360,deltaPixels,controlId:d.id,stateKey:d.state,event:e}}));e.preventDefault()});
     const end=e=>{if(e.pointerId!==state.pointer)return;try{root.releasePointerCapture?.(state.pointer)}catch(_){}state.pointer=null;state.startY=0};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
   function installFaderDrag(root,d,visual){
@@ -185,7 +185,7 @@
   function installKnobFreewheel(root,d){
     const v=freewheelValueState(root,d);let active=false,pointer=null,startY=0,startValue=v.get();v.set(startValue);
     root.addEventListener("pointerdown",e=>{if(e.button!=null&&e.button!==0||root.dataset.locked==="1")return;active=true;pointer=e.pointerId;startY=e.clientY;startValue=v.get();root.setPointerCapture?.(pointer);e.preventDefault()});
-    root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer||root.dataset.locked==="1")return;v.set(startValue+(startY-e.clientY)/180*(v.max-v.min));e.preventDefault()});
+    root.addEventListener("pointermove",e=>{if(!active||e.pointerId!==pointer||root.dataset.locked==="1")return;v.set(startValue+(startY-e.clientY)/360*(v.max-v.min));e.preventDefault()});
     const end=e=>{if(e.pointerId!==pointer)return;active=false;try{root.releasePointerCapture?.(pointer)}catch(_){}pointer=null};root.addEventListener("pointerup",end);root.addEventListener("pointercancel",end);return root;
   }
   function installEncoderFreewheel(root,d){return root}
