@@ -91,4 +91,21 @@ def.setState({runtime,state});
 if(square.sources[0].periodicWaveCount<=waveUpdates)throw new Error("SQUARE duty SHAPE did not update the active waveform");
 def.noteOff({runtime,state},61);
 
-console.log("quadsynth: four engines, contextual SHAPE, active shape update, and Note Off release passed");
+state.selectedEngine="click";
+state.clickAcceleration=88;
+def.noteOn({runtime,state},62,100);
+const click=user.voices.get("62");
+if(click?.quadEngine!=="click")throw new Error("CLICK context did not select click engine");
+const clickSource=click.sources[0];
+if(clickSource.periodicWaveCount<1)throw new Error("CLICK engine is not using the overlapping-click periodic waveform");
+if(clickSource.type==="sawtooth")throw new Error("CLICK engine regressed to a sawtooth oscillator");
+if(clickSource.__msQuadClickAcceleration!==88)throw new Error("CLICK acceleration was not applied to the click-spacing waveform");
+const clickUpdates=clickSource.periodicWaveCount;
+state.clickAcceleration=35;
+def.setState({runtime,state});
+if(clickSource.periodicWaveCount<=clickUpdates)throw new Error("CLICK acceleration SHAPE did not rebuild the active click waveform");
+if(clickSource.__msQuadClickAcceleration!==35)throw new Error("CLICK active waveform did not retain the new acceleration value");
+def.noteOff({runtime,state},62);
+if(clickSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the oscillator source");
+
+console.log("quadsynth: four engines, contextual SHAPE, mirrored overlapping-click acceleration, active shape update, and Note Off release passed");
