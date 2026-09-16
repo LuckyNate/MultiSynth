@@ -2,6 +2,12 @@
 
 This file is the functional rebuild contract for MultiSynth. MultiSynth is a MIDI instrument. Each module is defined from the musician's point of view first, then rebuilt from the floor up around real MIDI behavior and the canonical control library.
 
+## Product design principle
+
+MultiSynth must be an awesome toy for a dabbler and a powerful instrument for a musician. The same patching and performance surface must have a low floor and a high ceiling: a new or casual user should be able to connect modules, twist controls, trigger sounds, build loops, and make something satisfying without understanding the deeper architecture, while an experienced musician must be able to address the same instrument through real MIDI, external controllers, synchronized transport, sequencing, expressive control, routing, recording, arrangement, mixdown, and finished export workflows.
+
+Do not split this into separate beginner and professional modes. The simple surface and the deep system are the same instrument. Advanced capability should emerge naturally from the same controls, modules, patching model, and MIDI contract rather than being hidden behind a different product personality. Every rebuild decision should preserve immediate playability without sacrificing professional depth.
+
 ## Global MIDI Rule
 
 Every production module with controllable musical state must be controllable through real MIDI messages. No fake CV control vocabulary, generic trigger packet standing in for a note, or private MIDI-like event type may replace a message already defined by MIDI.
