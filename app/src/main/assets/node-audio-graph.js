@@ -21,7 +21,7 @@ function rebuild(){if(queued)return;queued=true;queueMicrotask(syncNow)}
 function start(){ensureContext();ensureClock().catch(()=>{});ensureRouteWatch();if(!started){E().on("graph-changed",rebuild);started=true}rebuild();return api}
 function resume(){ensureContext();refreshOutputRoute();return ctx.state==="suspended"?ctx.resume():Promise.resolve()}
 function eachNote(fn){for(const m of E().graph().modules)if(m.enabled!==false&&has(m,"noteInput")){runtime(m);try{fn(m)}catch(e){console.error(e)}}}
-function eachMidi(fn){for(const m of E().graph().modules){if(m.enabled===false)continue;runtime(m);try{fn(m)}catch(e){console.error(e)}}
+function eachMidi(fn){for(const m of E().graph().modules){if(m.enabled===false)continue;runtime(m);try{fn(m)}catch(e){console.error(e)}}}
 function moduleById(id){const m=E().getModule?.(id)||E().graph().modules.find(x=>x.id===id);return m?.enabled===false?null:m||null}
 function dispatchMidi(packet={}){resume();let count=0;eachMidi(m=>{if(C().midi(m.id,packet))count++});return count}
 function dispatchModuleMidi(id,packet={}){const m=moduleById(id);if(!m)return false;resume();runtime(m);return !!C().midi(m.id,packet)}
