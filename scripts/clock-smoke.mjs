@@ -61,16 +61,19 @@ assert.match(midi,/multisynth-midi-message/);
 assert.match(midi,/NodeAudioGraph\?\.midi/);
 assert.doesNotMatch(midi,/multisynth-usb-cv|receiveCV|emitCV/);
 
-assert.match(father,/version:"midi-master-4"/);
+assert.match(father,/version:"midi-master-5"/);
 assert.match(father,/always-on-midi-master-clock/);
 assert.match(father,/single-shared-master-stream/);
 assert.match(father,/dynamicPorts:\{clockOut:"used-plus-one"\}/);
 assert.match(father,/sendClock/);
 assert.match(father,/kind:"clock"/);
 assert.match(father,/p%24!==0/);
+assert.match(father,/T\.setBpm\?\./);
+assert.match(father,/T\.start\?\./);
+assert.match(father,/!T\.external&&!T\.running/);
 assert.equal((father.match(/subscribeMidi/g)||[]).length,1,"Father Time must create only one shared MIDI-out subscription");
 assert.match(father,/sendClockPulse/);
-assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.start\(|T\.stop\(|T\?\.setBpm/);
+assert.doesNotMatch(father,/state:"running"|id:"running"|label:"RUN"|T\.stop\(/);
 
 assert.match(whitman,/function noteOn/);
 assert.match(whitman,/MIDI_BASE_NOTE=36/);
@@ -95,6 +98,9 @@ T.subscribeTick(t=>internalTicks.push({...t}));
 T.subscribePulse(p=>internalPulses.push({...p}));
 T.subscribeMidi(e=>midiEvents.push({...e}));
 T.setBpm(120);
+T.start();
+assert.equal(T.running,true,"internal master must be running when Father Time owns transport");
+assert.equal(midiEvents.at(-1)?.status,0xfa,"internal master start must emit literal FA");
 for(let frame=0;frame<=12288;frame+=128)T.ingestTimebase({frame,time:frame/48000,sampleRate:48000});
 assert.equal(internalPulses.length,12,"120 BPM should produce twelve MIDI clock pulses in 0.256 seconds");
 assert.equal(internalTicks.length,2,"six MIDI clocks must derive one sixteenth boundary");
@@ -130,4 +136,4 @@ assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach transpo
 assert.ok(wireMidi.some(e=>e.type==="controlChange"&&e.control===7&&e.value===96),"CC must enter the real module MIDI path");
 assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain observable as a real MIDI channel event");
 
-console.log("clock smoke: PASS — real MIDI channel messages + one 24 PPQN transport with explicit clock jacks");
+console.log("clock smoke: PASS — Father Time internal MIDI master + real MIDI channel messages + external clock override");
