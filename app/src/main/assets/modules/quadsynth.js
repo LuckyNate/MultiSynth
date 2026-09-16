@@ -1,1 +1,66 @@
-"use strict";(function(g){const M=g.MultiSynth||{},I=M.ModuleIds,C=M.ModuleContract,P=M.ControlPrefabs;if(!I||!C)return;C.getDefinition(I.QUAD_SYNTH);const names=["click","sine","saw","square"],defaults={level:.8,carrier:1,...(P?.ADSR_DEFAULTS||{attack:.005,decay:.08,sustain:1,release:.08}),clickLevel:1,clickOctave:0,clickTune:0,clickPhase:0,clickMute:false,clickSolo:false,sineLevel:0,sineOctave:0,sineTune:0,sinePhase:0,sineMute:false,sineSolo:false,sawLevel:0,sawOctave:0,sawTune:0,sawPhase:0,sawMute:false,sawSolo:false,squareLevel:0,squareOctave:0,squareTune:0,squarePhase:0,squareMute:false,squareSolo:false};const controls=[P.performanceKeyboard(),P.adsr(),{id:"carrier",control:"knob",state:"carrier",label:"CARRIER",value:{default:1,min:0,max:1,step:.01},node:"controller.carrier"},{id:"level",control:"encoder",state:"level",label:"MASTER LEVEL",value:{default:.8,min:0,max:1,step:.01},node:"controller.level"}];for(const n of names){controls.push({id:n+"Level",control:"knob",state:n+"Level",label:n.toUpperCase()+" LEVEL",value:{min:0,max:1,step:.01},node:"controller."+n+"Level"},P.selector({id:n+"Octave",state:n+"Octave",label:n.toUpperCase()+" OCTAVE",options:[-4,-3,-2,-1,0,1,2,3,4]}),{id:n+"Tune",control:"knob",state:n+"Tune",label:n.toUpperCase()+" TUNE",value:{min:-100,max:100,step:1},meta:{unit:"¢"},node:"controller."+n+"Tune"},{id:n+"Phase",control:"encoder",state:n+"Phase",label:n.toUpperCase()+" PHASE",value:{min:0,max:360,step:1},meta:{unit:"°",cyclical:true},node:"controller."+n+"Phase"},{id:n+"Mute",control:"switch",state:n+"Mute",label:n.toUpperCase()+" MUTE",node:"controller."+n+"Mute"},{id:n+"Solo",control:"switch",state:n+"Solo",label:n.toUpperCase()+" SOLO",node:"controller."+n+"Solo"})}C.defineSurface(I.QUAD_SYNTH,{version:4,package:{id:I.QUAD_SYNTH,version:4,behavior:{role:"additive-source",audioMode:"generator-or-carrier-modulator",stateOwnership:"module",sourceLayer:"DspSources",sourceOwnership:"shared-bottom-layer",voiceEnvelope:"built-in-adsr"}},faceplate:{livery:"amber-four-channel",primary:"#171006",secondary:"#ffb000",tertiary:"#ffe2a0"},defaults,controls,sources:[{id:"source.audio",type:"audioInput",mode:"optional"},{id:"source.oscillators",type:"dspSource",primitive:"DspSources.oscillator",mode:"additive-four-voice-bank"},{id:"source.note",type:"noteInput"}],actions:[{id:"action.voices",type:"fourOscillatorVoice"},{id:"action.envelope",type:"builtInAdsrVca"}],nodes:{connections:[["source.oscillators","action.voices"],["source.note","action.voices"],["controller.keyboard","action.voices"],["action.voices","action.envelope"],["controller.adsr","action.envelope"],["controller.carrier","action.voices"],["controller.level","action.voices"]]}})})(window);
+"use strict";
+(function(g){
+const M=g.MultiSynth||{},I=M.ModuleIds,C=M.ModuleContract,P=M.ControlPrefabs;
+if(!I||!C||!P)return;
+C.getDefinition(I.QUAD_SYNTH);
+const defaults={
+  level:.8,carrier:1,expression:1,sustainPedal:false,pitchBend:0,modulation:0,
+  ...(P.ADSR_DEFAULTS||{attack:.005,decay:.08,sustain:1,release:.08}),
+  selectedEngine:"click",clickAcceleration:88,sinePhase:0,trianglePeak:.5,squareDuty:50
+};
+const engines=[
+  ["click","CLICK"],
+  ["sine","SINE"],
+  ["triangle","TRIANGLE"],
+  ["square","SQUARE"]
+];
+const controls=engines.map(([value,label])=>({
+  id:"engine-"+value,control:"button",state:"selectedEngine",label,
+  value:{value},meta:{exclusiveGroup:"selectedEngine"},node:"controller.engine."+value
+}));
+controls.push(
+  {id:"shape",control:"encoder",label:"SHAPE",value:{default:0,min:0,max:100,step:1},meta:{
+    contextState:"selectedEngine",
+    contexts:{
+      click:{state:"clickAcceleration",label:"ACCELERATION",default:88,min:0,max:100,step:1,unit:"%"},
+      sine:{state:"sinePhase",label:"PHASE",default:0,min:0,max:360,step:1,unit:"°"},
+      triangle:{state:"trianglePeak",label:"PEAK",default:.5,min:0,max:1,step:.01,unit:""},
+      square:{state:"squareDuty",label:"DUTY",default:50,min:5,max:95,step:1,unit:"%"}
+    }
+  },node:"controller.shape"},
+  P.adsr(),
+  P.performanceKeyboard()
+);
+C.defineSurface(I.QUAD_SYNTH,{
+  version:5,
+  package:{id:I.QUAD_SYNTH,version:5,behavior:{
+    role:"four-engine-contextual-performance-synth",
+    audioMode:"generator-or-carrier-processor",
+    stateOwnership:"module",
+    sourceLayer:"DspSources",
+    sourceOwnership:"shared-bottom-layer",
+    voiceEnvelope:"built-in-adsr",
+    engineSelection:"click-sine-triangle-square",
+    shape:"selected-engine-context-sensitive"
+  }},
+  faceplate:{livery:"amber-four-engine",primary:"#171006",secondary:"#ffb000",tertiary:"#ffe2a0"},
+  defaults,controls,
+  sources:[
+    {id:"source.audio",type:"audioInput",mode:"optional"},
+    {id:"source.engine",type:"dspSource",primitive:"DspSources.oscillator",mode:"selected-engine"},
+    {id:"source.midi",type:"midiInput",mode:"note-and-channel-messages"}
+  ],
+  actions:[
+    {id:"action.voice",type:"selectedQuadEngineVoice"},
+    {id:"action.shape",type:"contextualEngineShape"},
+    {id:"action.envelope",type:"builtInAdsrVca"}
+  ],
+  nodes:{connections:[
+    ["source.engine","action.voice"],["source.midi","action.voice"],["controller.keyboard","action.voice"],
+    ["controller.engine.click","action.voice"],["controller.engine.sine","action.voice"],
+    ["controller.engine.triangle","action.voice"],["controller.engine.square","action.voice"],
+    ["controller.shape","action.shape"],["action.shape","action.voice"],
+    ["action.voice","action.envelope"],["controller.adsr","action.envelope"]
+  ]}
+});
+})(window);
