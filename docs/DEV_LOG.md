@@ -1,5 +1,27 @@
 # MultiSynth Development Log
 
+## 2026-09-16 — Timing stabilization, shared pattern architecture, and physical MIDI output
+
+This rebuild pass closed the timing/output loop around the real-MIDI architecture.
+
+Whitman Sampler no longer drives internal pattern hits from live F8 callbacks crossing the AudioWorklet/main-thread boundary. Internal pattern playback now consumes `PatchTransport.subscribeScheduledPulse()` lookahead timing, derives a sixteenth every six F8 pulses, applies swing to the scheduled timestamp, and schedules playback against future AudioContext time. External MIDI clock still uses live incoming F8 because future external clock pulses cannot be known in advance.
+
+Extended listening verified the practical result: timing remained solid over a long unattended run rather than accumulating audible main-thread jitter.
+
+Time Bandits was rebuilt to copy Whitman's applicable software patterns rather than maintaining a parallel drum-specific sequencing architecture. Its 16-voice/32-step pattern system, transport handling, scheduled-pulse timing, normalized state/lifecycle shape, editor/runtime separation, and internal MIDI event path now follow the same implementation pattern. Drum-specific synthesis, probability, microtiming, ratchets, locks, mute/solo, fill behavior and per-track features remain instrument-specific. Manual play, external MIDI and sequencer playback converge on the same real MIDI note receiver.
+
+The rebuild rule established by this pass is explicit: when modules solve the same class of problem, reuse the established architecture, state model, MIDI/event flow, timing/scheduling pattern, lifecycle handling, editor structure and control behavior wherever applicable. Divergence is reserved for behavior that is genuinely instrument-specific. Do not independently reinvent near-identical module infrastructure.
+
+Output ownership was also verified. The designated Output Mixer path is the audio endpoint that reaches the device speaker; ordinary modules do not silently connect themselves to device output.
+
+`MIDIchlorian` was added as the physical MIDI-output module. It forwards standard MIDI channel traffic and module-emitted pattern MIDI through the existing native MIDI bridge to the selected physical MIDI destination. The native bridge now exposes generic channel-message sending rather than only realtime-clock helpers.
+
+Father Time remains the sole owner of physical MIDI realtime timing output. MIDIchlorian does not duplicate F8/FA/FB/FC, preventing double-clocking of external hardware. Father Time remains always on, with only its BPM encoder and MIDI CLOCK activity LED on the module face, and continues to own the shared 24-PPQN realtime clock/transport bridge.
+
+The clock smoke path now guards Whitman's scheduled transport architecture so a regression back to main-thread live-F8 pattern timing fails CI. The MIDIchlorian integration build completed successfully.
+
+Completed in `modules.md` for this rebuild pass: Father Time, Whitman Sampler, Time Bandits and MIDIchlorian.
+
 ## 2026-09-14 — Real MIDI performance architecture
 
 MultiSynth performance and timing are now defined in MIDI terms rather than generic CV/trigger abstractions.
