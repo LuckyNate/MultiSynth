@@ -2,6 +2,17 @@
 
 This file is the functional rebuild contract for MultiSynth. MultiSynth is a MIDI instrument. Each module is defined from the musician's point of view first, then rebuilt from the floor up around real MIDI behavior and the canonical control library.
 
+## Rebuild status
+
+Completed in the current rebuild pass:
+
+- **Father Time — COMPLETE**
+- **Whitman Sampler — COMPLETE**
+- **Time Bandits — COMPLETE**
+- **MIDIchlorian — COMPLETE**
+
+Completed means the module has been rebuilt against the current real-MIDI/timing architecture and is no longer part of the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens it.
+
 ## Product design principle
 
 MultiSynth must be an awesome toy for a dabbler and a powerful instrument for a musician. The same patching and performance surface must have a low floor and a high ceiling: a new or casual user should be able to connect modules, twist controls, trigger sounds, build loops, and make something satisfying without understanding the deeper architecture, while an experienced musician must be able to address the same instrument through real MIDI, external controllers, synchronized transport, sequencing, expressive control, routing, recording, arrangement, mixdown, and finished export workflows.
@@ -160,17 +171,17 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** synchronized delay derives timing from real MIDI clock; it never estimates tempo with a private scheduler.
 
-## Father Time — build spec
+## Father Time — build spec — COMPLETE
 
 **Purpose:** Represent and control the one authoritative musical timeline for the entire patch and bridge it to real external MIDI clock/transport.
 
 **MIDI IN/OUT:** F8 Timing Clock at 24 PPQN; FA Start; FB Continue; FC Stop. External realtime MIDI can become the authoritative source; internal transport emits the same real messages outward.
 
-**Controls:** BPM — knob/encoder with readout; START — button; CONTINUE — button; STOP — button; clock activity — LED; source/status — readout.
+**Controls:** BPM — encoder; MIDI CLOCK activity — LED. Father Time is always on and has no RUN/START/STOP front-panel control.
 
-**State:** internal BPM and persistent clock-source configuration where needed.
+**State:** shared transport BPM plus any persistent clock-source configuration owned by the transport/native MIDI path.
 
-**Behavior:** one timeline only; never a second scheduler.
+**Behavior:** one timeline only; never a second scheduler. Father Time is the visible master-clock panel and physical MIDI realtime bridge. Multiple Father Time instances share one physical realtime output stream.
 
 ## Garage Band — build spec
 
@@ -271,6 +282,20 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 **State:** drive, gain, master, mute, profile.
 
 **Behavior:** terminal level/drive processing; no private control protocol.
+
+## MIDIchlorian — build spec — COMPLETE
+
+**Purpose:** Physical MIDI output endpoint for the patch. It is the MIDI counterpart to the audio output path: normal performance/control MIDI leaves MultiSynth through this module and the selected native MIDI destination.
+
+**MIDI OUT:** Forwards standard channel messages already produced by the patch, including Note On/Off, CC, Pitch Bend, Channel Pressure, Poly Pressure, Program Change, and channel-mode messages. It does not synthesize a private packet format.
+
+**Realtime ownership:** MIDIchlorian does not duplicate F8/FA/FB/FC. Father Time remains the single physical realtime-clock/transport bridge so external devices cannot be double-clocked.
+
+**Controls:** output/status presentation only as required by the selected native MIDI destination. No musical timing controls.
+
+**State:** output enable/destination state where provided by the native bridge.
+
+**Behavior:** terminal physical MIDI sink. Module-emitted sequencer MIDI from Whitman Sampler and Time Bandits follows the same standard MIDI output path as externally generated/internal performance messages.
 
 ## No Quarter — build spec
 
@@ -454,19 +479,19 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** every playable chop is a genuine MIDI note destination.
 
-## Time Bandits — build spec
+## Time Bandits — build spec — COMPLETE
 
 **Purpose:** Sixteen-voice, 32-step drum machine that supports direct MIDI performance and synchronized pattern programming through the same note path.
 
 **MIDI IN:** Notes 36–51 trigger the 16 voices with velocity; Note Off may choke/stop voices where appropriate; assigned CCs control voice and selected-step parameters; F8/FA/FB/FC govern sequencer timing/transport; Program Change recalls kits/patterns.
 
-**MIDI OUT:** internal sequencing emits the same actual Note On/Off messages used by external performance, including stored velocity. Ratchets, if retained, are multiple real Note On/Off events.
+**MIDI OUT:** internal sequencing emits the same actual Note On/Off messages used by external performance, including stored velocity. Ratchets are multiple real Note On/Off events rather than private retrigger calls.
 
-**Controls:** 16 voice pads — pads; 32 steps — buttons; selected voice parameters — knobs; VELOCITY — knob/encoder; LENGTH — encoder; PLAY/STOP/RESET — buttons/switches; kit/pattern — encoder/readout.
+**Controls:** 16 voice pads; Whitman-style 32-step selected-voice pattern bank; RUN PATTERN; SWING; LENGTH; drum-specific synthesis and advanced step controls remain separate from the common pattern UI.
 
-**State:** kit/voice settings, 32-step pattern data, pattern length, selected voice/step, program.
+**State:** drum/voice settings, 32-step pattern data, shared pattern length, selected voice, advanced per-step drum-machine data where applicable.
 
-**Behavior:** manual play, external MIDI, and sequencer playback converge on one real MIDI note path.
+**Behavior:** manual play, external MIDI, and sequencer playback converge on one real MIDI note receiver. Internal timing follows Whitman's scheduled-pulse pattern: shared PatchTransport lookahead, six F8 pulses per sixteenth, and no private/main-thread live-F8 sequencer scheduler.
 
 ## Unstable Diffusion — build spec
 
@@ -480,16 +505,16 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** unusual sound engine, ordinary real-MIDI performance contract.
 
-## Whitman Sampler — build spec
+## Whitman Sampler — build spec — COMPLETE
 
 **Purpose:** Sixteen-slot performance sampler whose slots can be played manually, externally, or by synchronized sequencing through one shared MIDI note behavior.
 
-**MIDI IN:** Notes 36–51 trigger sample slots with velocity; Note Off stops/gates according to slot mode; assigned CCs control selected slot level, pitch, pan, start/end, loop/choke, and global controls; F8/FA/FB/FC run any internal sequencer; Program Change recalls banks/patterns.
+**MIDI IN:** Notes 36–51 trigger sample slots with velocity; Note Off stops/gates according to slot mode; assigned CCs control selected slot parameters; F8/FA/FB/FC provide transport semantics; Program Change may recall banks/patterns.
 
 **MIDI OUT:** internal sequencing emits actual Note On/Off for slots rather than invoking a private trigger path.
 
-**Controls:** 16 sample pads — pads; 32 sequencer steps when present — buttons; selected slot LEVEL — fader; PAN — knob; PITCH — knob; START/END — encoders/ribbons; LOOP/CHOKE — switches; bank/pattern — encoder/readout.
+**Controls:** 16 sample pads; 32 sequencer steps; RUN PATTERN; SWING; LENGTH; selected-slot pitch, level and stereo controls.
 
-**State:** sample assignments, slot settings, note map, pattern data, bank/program.
+**State:** sample assignments, slot settings, note map, 32-step pattern data, pattern length, transport-following sequencer state.
 
-**Behavior:** manual pad play, external MIDI, and internal sequencing all converge on the same real MIDI note handling.
+**Behavior:** manual pad play, external MIDI, and internal sequencing converge on the same real MIDI note handling. Internal patterns are driven by `PatchTransport.subscribeScheduledPulse()` lookahead, with six F8 pulses per sixteenth and sample starts scheduled to future AudioContext timestamps. Live incoming external F8 remains live because future external pulses cannot be predicted.
