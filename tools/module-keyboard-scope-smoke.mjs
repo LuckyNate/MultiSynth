@@ -14,8 +14,11 @@ const modules=[{id:"quad",type:"quadsynth",enabled:true},{id:"sampler",type:"whi
 const calls=[];
 const panics=[];
 const quadOsc=new Node(440),sampleOsc=new Node(220);
+let clickRetuneHz=null;
+const clickRepeater={frequency:440,source:new Node(),setFrequency(hz){clickRetuneHz=hz;this.frequency=hz;this.source=new Node();return this}};
+const clickVoice={sources:[clickRepeater.source],mods:[],clickRepeater};
 const runtimes=new Map([
-  ["quad",{context:{currentTime:0},user:{voices:new Map([["60",{sources:[quadOsc],mods:[]} ]])}}],
+  ["quad",{context:{currentTime:0},user:{voices:new Map([["60",{sources:[quadOsc],mods:[]}],["62",clickVoice]])}}],
   ["sampler",{context:{currentTime:0},user:{voices:new Map([["60",{sources:[sampleOsc],mods:[]} ]])}}]
 ]);
 const MS={
@@ -41,6 +44,10 @@ const sampleBefore=sampleOsc.frequency.value;
 A.retuneModuleNote("quad",60,72);
 if(quadOsc.frequency.value<=440)throw new Error("module-scoped retune did not reach owning module");
 if(sampleOsc.frequency.value!==sampleBefore)throw new Error("module-scoped retune reached another instrument");
+const oldClickSource=clickVoice.sources[0];
+A.retuneModuleNote("quad",62,74);
+if(Math.abs(clickRetuneHz-880)>.001)throw new Error("performance ribbon did not retune finite CLICK repeater by musical pitch ratio");
+if(clickVoice.sources[0]===oldClickSource||clickVoice.sources[0]!==clickRepeater.source)throw new Error("performance ribbon did not adopt regenerated CLICK sample source");
 calls.length=0;
 A.noteOn(61,99);
 if(calls.map(x=>x.id).sort().join(",")!=="quad,sampler")throw new Error("global MIDI Note On no longer broadcasts to enabled modules");
@@ -49,4 +56,4 @@ const quadHtml=fs.readFileSync(path.join(repo,"app/src/main/assets/quadsynth.htm
 for(const required of ["noteOnTo?.(instance","noteOffTo?.(instance","retuneModuleNote?.(instance","panicModule?.(instance)"]){if(!quadHtml.includes(required))throw new Error(`QuadSynth keyboard missing scoped adapter: ${required}`)}
 if(quadHtml.includes("K.mount(host,{audio:A})"))throw new Error("QuadSynth keyboard still mounts the global broadcast audio API");
 
-console.log("module keyboard scope: onboard QuadSynth MIDI stays local; global MIDI broadcast remains intact");
+console.log("module keyboard scope: onboard QuadSynth MIDI and performance ribbon stay local, including realtime finite CLICK retune; global MIDI broadcast remains intact");
