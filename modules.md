@@ -10,6 +10,7 @@ Completed in the current rebuild pass:
 - **Whitman Sampler — COMPLETE**
 - **Time Bandits — COMPLETE**
 - **MIDIchlorian — COMPLETE**
+- **PureSynth — COMPLETE**
 
 Completed means the module has been rebuilt against the current real-MIDI/timing architecture, has relevant smoke coverage for its rebuilt behavior, and the full CI/build passes. A module must not be marked COMPLETE while its relevant smoke or build is failing. Completed modules leave the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens them.
 
@@ -322,7 +323,7 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** standard MIDI instrument behavior with pulse synthesis as its sound identity.
 
-## PureSynth — build spec
+## PureSynth — build spec — COMPLETE
 
 **Purpose:** Simplest complete conventional MultiSynth voice: basic waveform generation, straightforward shaping, predictable response, and clean reference behavior.
 
