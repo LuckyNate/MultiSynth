@@ -17,7 +17,7 @@ class Param{
   cancelScheduledValues(){}
 }
 class Node{
-  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0;this.buffer=null}
+  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.playbackRate=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0;this.buffer=null}
   connect(n){return n}
   disconnect(){}
   start(){}
@@ -99,39 +99,42 @@ if(click?.quadEngine!=="click")throw new Error("CLICK context did not select cli
 const clickSource=click.sources[0],clickRepeater=click.clickRepeater;
 if(!clickRepeater)throw new Error("CLICK engine did not create a finite-click repeater");
 if(clickSource.periodicWaveCount!==0)throw new Error("CLICK engine still uses a PeriodicWave shortcut");
-if(clickSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK engine is not literal finite repeated samples");
-if(!clickSource.buffer||!(clickSource.buffer.length>0))throw new Error("CLICK source does not contain a finite sample buffer");
+if(clickSource.__msQuadClickModel!=="normalized-4096-click-delay-repeater")throw new Error("CLICK engine is not using the normalized 4096-sample kernel");
+if(clickSource.buffer?.length!==4096||clickSource.__msQuadClickResolution!==4096)throw new Error("CLICK kernel is not fixed at 4096 samples");
 if("__msQuadClickOverlapCount" in clickSource)throw new Error("CLICK engine still contains artificial overlap-count logic");
 if(clickSource.__msQuadClickAcceleration!==0)throw new Error("CLICK zero SHAPE was not applied");
-const expectedHz=440*Math.pow(2,(62-69)/12),period=1/expectedHz,step=.05*period,maxDuration=2.5*period;
+const expectedHz=440*Math.pow(2,(62-69)/12),period=1/expectedHz,ratio=.05,duration=ratio/expectedHz,baseDuration=4096/ctx.sampleRate,expectedPlaybackRate=baseDuration/duration;
 if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK trigger rate is not the played note frequency in Hz");
 if(Math.abs(clickRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
 if(clickRepeater.feedback.gain.value!==1)throw new Error("CLICK finite sample repeater is not sustaining literal delayed copies");
-if(Math.abs(clickSource.__msQuadClickDuration-step)>.000001)throw new Error("CLICK SHAPE 0 is not a 0.05-period tick");
+if(Math.abs(clickSource.__msQuadClickRatio-ratio)>.000001||Math.abs(clickSource.__msQuadClickDuration-duration)>.000001)throw new Error("CLICK SHAPE 0 is not a 0.05-period tick");
+if(Math.abs(clickSource.playbackRate.value-expectedPlaybackRate)>.000001)throw new Error("CLICK normalized kernel playback rate does not produce the requested note-period ratio");
+const zeroShapeBuffer=clickSource.buffer;
 state.clickAcceleration=100;
 def.setState({runtime,state});
 const shapedSource=click.sources[0],shapedRepeater=click.clickRepeater;
-if(shapedSource===clickSource)throw new Error("CLICK SHAPE did not replace the finite click sample");
+if(shapedSource===clickSource)throw new Error("CLICK SHAPE did not replace the finite click source");
 if(clickRepeater.feedback.gain.value!==0)throw new Error("CLICK SHAPE left the old finite click train running");
-if(shapedSource.periodicWaveCount!==0)throw new Error("CLICK SHAPE regressed to PeriodicWave");
+if(shapedSource.buffer===zeroShapeBuffer)throw new Error("CLICK SHAPE did not generate a fresh normalized sample");
+if(shapedSource.buffer?.length!==4096)throw new Error("CLICK SHAPE changed the 4096-sample kernel resolution");
 if(shapedSource.__msQuadClickAcceleration!==100)throw new Error("CLICK full SHAPE was not retained");
-if(shapedSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK SHAPE changed the finite sample trigger model");
-if(Math.abs(shapedSource.__msQuadClickDuration-maxDuration)>.000001)throw new Error("CLICK SHAPE 100 is not capped at 2.50 periods");
-if(Math.abs(shapedSource.__msQuadClickDuration/step-Math.round(shapedSource.__msQuadClickDuration/step))>.000001)throw new Error("CLICK duration is not quantized in 0.05-period increments");
-if(Math.abs(shapedSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
+if(Math.abs(shapedSource.__msQuadClickRatio-2.5)>.000001)throw new Error("CLICK SHAPE 100 is not exactly 2.50 periods");
+if(Math.abs(shapedSource.__msQuadClickDuration-2.5/expectedHz)>.000001)throw new Error("CLICK SHAPE 100 duration is not 2.50 note periods");
 if(Math.abs(shapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
-const preRetuneSource=click.sources[0],preRetuneFeedback=shapedRepeater.feedback,shapePeriods=shapedRepeater.duration/shapedRepeater.period;
+const preRetuneSource=click.sources[0],preRetuneBuffer=preRetuneSource.buffer,preRetuneFeedback=shapedRepeater.feedback,shapePeriods=shapedRepeater.duration/shapedRepeater.period,preRetunePlayback=preRetuneSource.playbackRate.value;
 state.pitchBend=1;
 def.setState({runtime,state});
 const retunedSource=click.sources[0],retunedRepeater=click.clickRepeater,retunedHz=440*Math.pow(2,(63-69)/12);
-if(retunedSource===preRetuneSource)throw new Error("CLICK pitch change reused the old finite sample instead of regenerating it");
+if(retunedSource===preRetuneSource)throw new Error("CLICK pitch change did not restart the time-scaled kernel");
+if(retunedSource.buffer!==preRetuneBuffer)throw new Error("CLICK pitch change changed waveform data instead of time-scaling the same kernel");
 if(preRetuneFeedback.gain.value!==0)throw new Error("CLICK pitch change left the old finite sample train running");
-if(Math.abs(retunedRepeater.frequency-retunedHz)>.001)throw new Error("CLICK regenerated sample did not follow pitch Hz");
-if(Math.abs(retunedRepeater.delay.delayTime.value-1/retunedHz)>.000001)throw new Error("CLICK regenerated trigger interval does not follow pitch Hz");
+if(Math.abs(retunedRepeater.frequency-retunedHz)>.001)throw new Error("CLICK retune did not follow pitch Hz");
+if(Math.abs(retunedRepeater.delay.delayTime.value-1/retunedHz)>.000001)throw new Error("CLICK retuned trigger interval does not follow pitch Hz");
 if(Math.abs(retunedRepeater.duration/retunedRepeater.period-shapePeriods)>.000001)throw new Error("CLICK pitch retune changed the SHAPE-to-period ratio");
-if(!(retunedSource.buffer?.length>0))throw new Error("CLICK pitch retune did not generate a fresh finite sample buffer");
+if(retunedSource.buffer?.length!==4096)throw new Error("CLICK pitch retune changed normalized kernel resolution");
+if(Math.abs(retunedSource.playbackRate.value-preRetunePlayback*retunedHz/expectedHz)>.000001)throw new Error("CLICK pitch retune playback rate is not proportional to note Hz");
 def.noteOff({runtime,state},62);
 if(retunedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
 if(retunedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: CLICK regenerates its finite sample on shape and pitch changes while preserving the selected 0.05-to-2.50-period SHAPE ratio at the current note Hz");
+console.log("quadsynth: CLICK uses one fixed 4096-sample normalized waveform per SHAPE, scales playback rate with note Hz, and preserves an identical SHAPE-to-period ratio/timbre across pitch");
