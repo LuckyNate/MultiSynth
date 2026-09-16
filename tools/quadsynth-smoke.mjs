@@ -56,12 +56,12 @@ if(!def)throw new Error("QuadSynth runtime definition missing");
 if(!surface)throw new Error("QuadSynth surface missing");
 if(surface.version!==5)throw new Error(`unexpected QuadSynth surface version ${surface.version}`);
 const buttons=surface.controls.filter(x=>x?.control==="button"&&x?.state==="selectedEngine");
-if(buttons.length!==4)throw new Error(`expected 4 engine selectors, got ${buttons.length}`);
+if(buttons.length!==5)throw new Error(`expected 5 engine selectors including TWIN, got ${buttons.length}`);
 const engineValues=buttons.map(x=>x.value?.value).join(",");
-if(engineValues!=="click,sine,triangle,square")throw new Error(`wrong engine set: ${engineValues}`);
+if(engineValues!=="click,twin,sine,triangle,square")throw new Error(`wrong engine set: ${engineValues}`);
 const shape=surface.controls.find(x=>x?.id==="shape");
 if(!shape||shape.meta?.contextState!=="selectedEngine")throw new Error("SHAPE is not bound to selectedEngine context");
-const expected={click:"clickAcceleration",sine:"sinePhase",triangle:"trianglePeak",square:"squareDuty"};
+const expected={click:"clickAcceleration",twin:"clickAcceleration",sine:"sinePhase",triangle:"trianglePeak",square:"squareDuty"};
 for(const [engine,state] of Object.entries(expected))if(shape.meta?.contexts?.[engine]?.state!==state)throw new Error(`${engine} SHAPE binding is not ${state}`);
 for(const forbidden of ["carrier","level","clickLevel","sineLevel","sawLevel","squareLevel","clickOctave","clickTune","clickPhase","clickMute","clickSolo"]){if(surface.controls.some(x=>x?.id===forbidden))throw new Error(`obsolete QuadSynth control remains: ${forbidden}`)}
 
@@ -128,14 +128,12 @@ if(Math.abs(shapedSource.__msQuadClickRatio-fullRatio)>.000001)throw new Error("
 if(Math.abs(shapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the note trigger interval");
 const fullSamples=shapedSource.buffer.samples,min1=Math.min(...fullSamples),max1=Math.max(...fullSamples);
 if(min1>-.997||max1<.997)throw new Error("full SHAPE CLICK does not reach the sampled -1/+1 extrema");
-const last=fullSamples.length-1,downIndex=Math.round(.25*last),peakIndex=Math.round(.75*last);
-if(Math.abs(fullSamples[downIndex]+1)>.006)throw new Error("CLICK 1→0 lower-half traversal does not arrive at -1");
-if(Math.abs(fullSamples[peakIndex]-1)>.006)throw new Error("CLICK 0→2 full-ramp traversal does not arrive at +1");
+const last=fullSamples.length-1,downIndex=Math.round(.25*last),midIndex=Math.round(.5*last),peakIndex=Math.round(.75*last);
+if(Math.abs(fullSamples[downIndex]+1)>.006)throw new Error("CLICK lower-half slice does not arrive at -1");
+if(Math.abs(fullSamples[peakIndex]-1)>.006)throw new Error("CLICK full master ramp does not arrive at +1");
+if(fullSamples[midIndex]>-.9)throw new Error("CLICK middle leg is not the single accelerated 0→2 master ramp");
 const leftPeak=fullSamples[peakIndex]-fullSamples[peakIndex-1],rightPeak=fullSamples[peakIndex+1]-fullSamples[peakIndex];
 if(!(leftPeak>0&&rightPeak<0))throw new Error("CLICK +1 peak is rounded instead of a pointed direction reversal");
-const startSlope=fullSamples[1]-fullSamples[0],endSlope=fullSamples[last]-fullSamples[last-1];
-if(!(startSlope<=0&&endSlope<=0))throw new Error("CLICK adjoining down-ramp halves are not both descending through zero");
-if(Math.abs(startSlope-endSlope)>Math.max(.00002,Math.abs(startSlope)*.08))throw new Error("CLICK down-ramp halves do not share the same slope at the zero join");
 const preRetuneSource=click.sources[0],preRetuneBuffer=preRetuneSource.buffer,preRetuneFeedback=shapedRepeater.feedback,preRetuneDuration=shapedRepeater.duration,preRetunePlayback=preRetuneSource.playbackRate.value,preRetuneRatio=shapedRepeater.ratio;
 state.pitchBend=1;
 def.setState({runtime,state});
@@ -153,4 +151,21 @@ def.noteOff({runtime,state},62);
 if(retunedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
 if(retunedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: CLICK uses one normalized 0→2 acceleration ramp shifted by -1 and traversed 1→0, 0→2, 2→1; duration remains independent of note Hz so gap/join/overlap emerge naturally");
+state.pitchBend=0;
+state.selectedEngine="twin";
+state.clickAcceleration=100;
+def.noteOn({runtime,state},63,100);
+const twin=user.voices.get("63");
+if(twin?.quadEngine!=="twin")throw new Error("TWIN context did not select twin-click engine");
+const twinSource=twin.sources[0],twinRepeater=twin.clickRepeater;
+if(!twinRepeater)throw new Error("TWIN did not create a finite-click repeater");
+if(twinSource.__msQuadEngine!=="twin")throw new Error("TWIN source is not identified as twin click");
+if(twinSource.__msQuadClickModel!=="normalized-4096-twin-click-delay-repeater")throw new Error("TWIN did not preserve the accidental twin-click waveform model");
+if(twinRepeater.variant!=="twin")throw new Error("TWIN repeater lost its variant identity");
+const twinSamples=twinSource.buffer.samples,twinMid=twinSamples[Math.round(.5*(twinSamples.length-1))];
+if(Math.abs(twinMid)>.02)throw new Error("TWIN no longer preserves the centered full-ramp-twice hybrid shape");
+if(Math.abs(twinMid-fullSamples[midIndex])<.5)throw new Error("TWIN and corrected CLICK collapsed to the same waveform");
+def.noteOff({runtime,state},63);
+if(twinRepeater.feedback.gain.value!==0)throw new Error("TWIN Note Off did not stop the finite click repeater");
+
+console.log("quadsynth: CLICK slices one accelerated 0→2 master ramp into lower-half/full/upper-half legs; TWIN preserves the prior centered full-ramp-twice click hybrid; both retain finite 4096-sample retrigger behavior");
