@@ -120,8 +120,18 @@ if(Math.abs(shapedSource.__msQuadClickDuration-maxDuration)>.000001)throw new Er
 if(Math.abs(shapedSource.__msQuadClickDuration/step-Math.round(shapedSource.__msQuadClickDuration/step))>.000001)throw new Error("CLICK duration is not quantized in 0.05-period increments");
 if(Math.abs(shapedSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
 if(Math.abs(shapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
+const preRetuneSource=click.sources[0],preRetuneFeedback=shapedRepeater.feedback,shapePeriods=shapedRepeater.duration/shapedRepeater.period;
+state.pitchBend=1;
+def.setState({runtime,state});
+const retunedSource=click.sources[0],retunedRepeater=click.clickRepeater,retunedHz=440*Math.pow(2,(63-69)/12);
+if(retunedSource===preRetuneSource)throw new Error("CLICK pitch change reused the old finite sample instead of regenerating it");
+if(preRetuneFeedback.gain.value!==0)throw new Error("CLICK pitch change left the old finite sample train running");
+if(Math.abs(retunedRepeater.frequency-retunedHz)>.001)throw new Error("CLICK regenerated sample did not follow pitch Hz");
+if(Math.abs(retunedRepeater.delay.delayTime.value-1/retunedHz)>.000001)throw new Error("CLICK regenerated trigger interval does not follow pitch Hz");
+if(Math.abs(retunedRepeater.duration/retunedRepeater.period-shapePeriods)>.000001)throw new Error("CLICK pitch retune changed the SHAPE-to-period ratio");
+if(!(retunedSource.buffer?.length>0))throw new Error("CLICK pitch retune did not generate a fresh finite sample buffer");
 def.noteOff({runtime,state},62);
-if(shapedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
-if(shapedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
+if(retunedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
+if(retunedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: CLICK SHAPE runs from a 0.05-period tick at 0 to a 2.50-period maximum at 100 in 0.05-period increments, with literal finite sample overlap at note Hz");
+console.log("quadsynth: CLICK regenerates its finite sample on shape and pitch changes while preserving the selected 0.05-to-2.50-period SHAPE ratio at the current note Hz");
