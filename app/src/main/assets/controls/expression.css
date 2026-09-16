@@ -1,1 +1,3 @@
-/* EXPRESSION currently reuses the canonical ribbon anatomy; no expression-only CSS exists in control-surface.css. */
+/* EXPRESSION currently reuses the canonical ribbon anatomy. */
+.ms-expression--vertical{height:100%;width:100%;min-height:0;min-width:0}
+.ms-expression--vertical .ms-control-face{width:100%;height:auto;min-height:0;flex:1 1 auto}
