@@ -24,6 +24,11 @@ function releaseMasterMidiBridge(){
   try{unsubscribeMasterMidi()}catch(_){}
   unsubscribeMasterMidi=null;
 }
+function driveInternalMaster(state){
+  const T=MS.PatchTransport;if(!T)return;
+  T.setBpm?.(clampBpm(state?.bpm));
+  if(!T.external&&!T.running)T.start?.();
+}
 function create(api){
   const u={ctx:api.context,unsubscribePulse:null,state:api.state};
   queueMicrotask(()=>{try{attach(C.getRuntime(api.instanceId))}catch(_){}});
@@ -39,6 +44,7 @@ function attach(runtime){
   const u=runtime?.user,T=MS.PatchTransport;if(!u||!T)return;
   midiBridgeInstances.add(runtime.instanceId);
   ensureMasterMidiBridge();
+  driveInternalMaster(u.state);
   if(u.unsubscribePulse)return;
   u.unsubscribePulse=T.subscribeScheduledPulse?.(pulse=>{
     let live=null;try{live=C.getRuntime(runtime.instanceId)}catch(_){}
@@ -51,10 +57,11 @@ function attach(runtime){
 }
 function setState({runtime,state}){
   const u=runtime.user;if(u)u.state=state;
+  driveInternalMaster(state);
   attach(runtime);
 }
 function clock(_ctx,packet={}){return packet}
 function destroy({runtime}){detach(runtime)}
-C.define({type:I.FATHER_TIME,version:"midi-master-4",description:"ALWAYS-ON MIDI MASTER CLOCK · 24 PPQN MIDI · QUARTER-NOTE CLOCK JACK",defaults:defaults(),resources:["midi","storage"],dynamicPorts:{clockOut:"used-plus-one"},create,setState,clock,destroy,serialize:({state})=>({bpm:clampBpm(state?.bpm)}),restore:({saved})=>({bpm:clampBpm(saved?.bpm)})});
-C.defineSurface(I.FATHER_TIME,{version:6,package:{id:I.FATHER_TIME,version:6,behavior:{role:"always-on-midi-master-clock",clock:"midi-24-ppqn",transport:"midi-realtime",midiOut:"single-shared-master-stream",clockJack:"quarter-note-from-midi-clock",usbMidi:"real-midi-realtime",audioMode:"none",clockOutputs:"used-plus-one",stateOwnership:"module"}},faceplate:{livery:"antique-clock",primary:"#21170f",secondary:"#8d6b45",tertiary:"#e7d3ad"},defaults:defaults(),controls:[{id:"bpm",control:"encoder",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:.05},meta:{visual:"clock-dial",unit:" BPM"},node:"controller.bpm"},{id:"pulse",control:"led",label:"MIDI CLOCK",meta:{source:"clock"},node:"indicator.midiClock"}],sources:[{id:"source.patchMidi",type:"midiClock",mode:"24ppqn"}],actions:[{id:"action.midiOut",type:"midiRealtime"},{id:"action.clock",type:"clockJack"}],nodes:{connections:[["source.patchMidi","action.midiOut"],["source.patchMidi","action.clock"],["action.clock","indicator.midiClock"]]}})
+C.define({type:I.FATHER_TIME,version:"midi-master-5",description:"ALWAYS-ON INTERNAL MIDI MASTER CLOCK · 24 PPQN MIDI · EXTERNAL MIDI CLOCK OVERRIDE · QUARTER-NOTE CLOCK JACK",defaults:defaults(),resources:["midi","storage"],dynamicPorts:{clockOut:"used-plus-one"},create,setState,clock,destroy,serialize:({state})=>({bpm:clampBpm(state?.bpm)}),restore:({saved})=>({bpm:clampBpm(saved?.bpm)})});
+C.defineSurface(I.FATHER_TIME,{version:7,package:{id:I.FATHER_TIME,version:7,behavior:{role:"always-on-midi-master-clock",clock:"midi-24-ppqn",transport:"internal-master-with-external-midi-override",midiOut:"single-shared-master-stream",clockJack:"quarter-note-from-midi-clock",usbMidi:"real-midi-realtime",audioMode:"none",clockOutputs:"used-plus-one",stateOwnership:"module"}},faceplate:{livery:"antique-clock",primary:"#21170f",secondary:"#8d6b45",tertiary:"#e7d3ad"},defaults:defaults(),controls:[{id:"bpm",control:"encoder",state:"bpm",label:"BPM",value:{default:120,min:30,max:300,step:.05},meta:{visual:"clock-dial",unit:" BPM"},node:"controller.bpm"},{id:"pulse",control:"led",label:"MIDI CLOCK",meta:{source:"clock"},node:"indicator.midiClock"}],sources:[{id:"source.patchMidi",type:"midiClock",mode:"24ppqn"}],actions:[{id:"action.midiOut",type:"midiRealtime"},{id:"action.clock",type:"clockJack"}],nodes:{connections:[["source.patchMidi","action.midiOut"],["source.patchMidi","action.clock"],["action.clock","indicator.midiClock"]]}})
 })(window);
