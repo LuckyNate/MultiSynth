@@ -11,7 +11,7 @@ Completed in the current rebuild pass:
 - **Time Bandits — COMPLETE**
 - **MIDIchlorian — COMPLETE**
 
-Completed means the module has been rebuilt against the current real-MIDI/timing architecture and is no longer part of the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens it.
+Completed means the module has been rebuilt against the current real-MIDI/timing architecture, has relevant smoke coverage for its rebuilt behavior, and the full CI/build passes. A module must not be marked COMPLETE while its relevant smoke or build is failing. Completed modules leave the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens them.
 
 ## Product design principle
 
@@ -40,8 +40,9 @@ Every module is reviewed and rebuilt in this order:
 5. Assign the simplest appropriate canonical physical controller to every user-facing feature.
 6. Define the exact real MIDI messages and CC mappings for every controllable feature, using standard MIDI assignments where they exist and explicit CC assignments where they do not.
 7. Rebuild the module cleanly from the floor up against this specification. Do not preserve obsolete pseudo-MIDI, fake CV, generic trigger, compatibility, or parallel event paths merely because the old implementation used them.
+8. Update or add smoke coverage for the module's actual rebuilt runtime, MIDI/event behavior, controls, persistence, timing, routing, and other applicable contract points. Run the full CI/build and fix all failures caused or exposed by the rebuild. Do not mark the module COMPLETE until the relevant smoke coverage and the full build pass.
 
-The design review happens before code changes. Module renames, feature changes, control assignments, and rebuild implementation are approved module-by-module before repository writes.
+The design review happens before code changes. Module renames, feature changes, control assignments, and rebuild implementation are approved module-by-module before repository writes. Smoke/build completion is part of the rebuild itself, not a later cleanup pass.
 
 ## Hard rename rule
 
