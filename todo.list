@@ -1,60 +1,48 @@
 MULTISYNTH TODO
 
-TIMING ARCHITECTURE — CLOCK ONLY
-   - PatchTransport is the sole internal timing authority.
-   - MIDI realtime timing is F8 at 24 PPQN with FA/FB/FC transport messages.
-   - Patchable timing uses Clock jacks and clock/tick packets.
-   - Clock packets never enter generic trigger handling.
-   - Father Time is the always-on visible master-clock panel and external clock bridge, not a second scheduler.
-   - Father Time physical MIDI output remains full 24 PPQN; its current patch Clock jack emits one quarter-note tick per 24 F8 pulses.
-   - Timing followers consume PatchTransport/subdivision timing directly.
-   - The retired general control-voltage routing domain is not part of the current architecture; add continuous modulation later only if a real use requires it.
+1. REAL MIDI MODULE REBUILD
 
-1. PERSISTENCE / RELOAD AUDIT
-   - Verify contextual binding-associated persistent state survives save/reload for every affected module.
-   - Reload must reconstruct the correct value, lock/unlock state, and other persistent contextual properties for each binding.
-   - Verify switching among contexts after reload produces the same control state as before reload.
+Goal
+- Rebuild every production module against the current real-MIDI architecture and canonical control library.
+- Reuse established software patterns and implementations wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, persistence, editor/runtime separation, and canonical control behavior.
+- Diverge only for genuine instrument-specific behavior.
+- No bespoke module control geometry/layout. Modules consume canonical controls/prefabs only.
+- A module is COMPLETE only after its actual rebuilt behavior has relevant smoke coverage and the full CI/build is green.
 
-CANONICAL CONTROL LOCK — ACTIVE
-   - The shared control library, including READOUT, is pure canon and untouchable by default.
-   - Canon covers shared control appearance, geometry, interaction, generic I/O behavior, renderer behavior, and readout behavior/styling.
-   - Module/leaf code may consume canonical controls and use their supported theme/CSS hooks without modifying canon.
-   - Any change to an existing canonical control requires two explicit approvals for that exact change:
-     1) Nate explicitly authorizes the specific proposed canonical change.
-     2) The exact authorized scope is repeated back and Nate explicitly confirms it again.
-   - Only after both approvals may that exact canonical change be executed.
-   - Authorization is single-use and applies only to the confirmed change. It does not imply permission for related cleanup, refactors, adjacent controls, styling changes, behavior changes, or follow-up work.
+Progress — COMPLETE
+- Father Time
+- Whitman Sampler
+- Time Bandits
+- MIDIchlorian
+- PureSynth
 
-LEAF CODE STATUS — SETTLED FOR NOW
-   - Existing leaf implementations that currently work are considered settled for this pass.
-   - Do not redesign, refactor, improve, or otherwise alter working leaf behavior while mapping modules to the shared controllers.
-   - This is not a declaration that leaf implementations are permanently frozen or final.
-   - Individual leaf behavior may be revisited later as the instruments evolve.
-   - For now, preserve working leaf behavior while moving controller appearance, interaction, and generic I/O ownership into the canonical shared controllers.
+Progress — PERFORMANCE SYNTH FAMILY FOUNDATION PORTED, INDIVIDUAL REBUILDS STILL OPEN
+- QuadSynth
+- Pulsynth
+- SinLadder
+- Razorback
+- Stinger
+- No Quarter
 
-2. FUTURE MODULE — DJ MIXER
-   - Build a robust two-turntable media performance module.
-   - Two independent decks with media playback.
-   - Support looping and scratching on each deck.
-   - Include transport and deck-level performance controls.
-   - Include mixing between decks, including crossfading and level control.
-   - Treat this as a full performance instrument/module, not a generic mixer.
+Shared performance-synth implementation now copied where applicable
+- real MIDI Note On/Off with velocity
+- Pitch Bend on active voices
+- CC64 sustain with correct UI-switch release behavior
+- CC7 level
+- CC11 expression
+- ADSR MIDI control
+- shared voice bookkeeping and panic
+- active-voice state application
+- persistence/restore and lifecycle cleanup
+- family behavioral smoke coverage is green
 
-3. LOW PRIORITY — GAUGE VISUAL POLISH
-   - Revisit the canonical needle-style meter appearance later.
-   - Current implementation is functional and directionally useful, but the gauge face/visual treatment needs a dedicated polish pass.
-   - Do not change meter behavior or binding semantics as part of that future visual-only pass unless separately authorized.
+Remaining work for each open module
+- review musician-facing identity and exact feature set
+- verify/adjust module-specific real MIDI mappings
+- verify surface uses canonical controls/prefabs with zero bespoke control geometry/layout
+- preserve only instrument-specific DSP/behavior differences
+- add/update module-specific behavioral smoke coverage
+- run full CI/build and fix failures
+- update modules.md and mark COMPLETE only when green
 
-4. LOW PRIORITY — REBUILD CONTROL FREAK
-   - Rebuild Control Freak from its current placeholder surface.
-   - Keep the shared performance keyboard and oscilloscope as the starting face.
-   - Redesign the assignable/rebindable control architecture from scratch.
-   - Rebindable controls need a selector populated from the target module's exposed patch/state contract, filtered to values the physical control can possess.
-   - Define stable binding identity, target-state reflection, persistence, and gesture reset behavior as part of that rebuild.
-
-5. LOW PRIORITY — CANON MODULE / NODE VISUAL POLISH
-   - Beautify the current canonical modules and their tabletop nodes after node/faceplate behavior is stable.
-   - Preserve the existing shared visual-identity system: each node and opened module should use the same module-owned decals, branding, palette, materials, typography, markings, and flavor assets.
-   - Nodes remain branding + connection topology only; do not turn them into miniature control surfaces.
-   - Treat the node as the top of the same standalone module sitting on the graph tabletop; opening the module reveals the actual controls.
-   - Refine enclosure shape, silhouette, decals, materials, wear, labeling, and related visual details without changing module behavior or control architecture unless separately authorized.
+Continue the rebuild module-by-module until every production module in modules.md is COMPLETE.
