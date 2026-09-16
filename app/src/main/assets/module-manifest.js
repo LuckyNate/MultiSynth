@@ -44,6 +44,7 @@
     [I.HOOKWORM]:row(I.HOOKWORM,"looper","#e98232",["audioInput","audioOutput","mic"],["mic","storage"]),
     [I.TAPEWORM]:row(I.TAPEWORM,"looper","#f58ab3",["audioInput","audioOutput","mic"],["mic","storage"]),
     [I.TAIL_GATOR]:row(I.TAIL_GATOR,"routing","#5aa66f",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal",carrierBehavior:"passthrough"}),
+    [I.MIDICHLORIAN]:row(I.MIDICHLORIAN,"routing","#8bcf7a",["midi"],["midi"]),
     [I.BLUETOOTH_OUTPUT]:row(I.BLUETOOTH_OUTPUT,"routing","#6fb7ff",["audioInput","audioOutput","terminalOutput"],["nativeAudio"],{audioRole:"terminal",carrierBehavior:"passthrough"})
   });
   MS.ModuleManifest=Object.freeze({all:Object.freeze(Object.values(M)),get:id=>M[I.canonicalId(id)]||null,require:id=>{const m=M[I.canonicalId(id)];if(!m)throw new Error("Missing module manifest metadata: "+id);return m},has:id=>!!M[I.canonicalId(id)]});

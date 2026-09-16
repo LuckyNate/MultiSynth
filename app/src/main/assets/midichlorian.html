@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" data-module-type="midichlorian">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MIDIchlorian</title>
+<link rel="stylesheet" href="module-instrument-editor.css">
+<link rel="stylesheet" href="control-surface.css">
+<style>html,body{background:#071009;color:#dfffd9}.ms-module-bank{background:#0d1a10;border-color:#375f3d}.midichlorian-note{margin:14px 0;padding:14px;border:1px solid #375f3d;border-radius:8px;background:#0d1a10;font:700 11px/1.5 monospace;letter-spacing:.06em}</style>
+</head>
+<body><main><header><h1>MIDIchlorian</h1><p>REAL MIDI OUT · CHANNEL MESSAGES → DEVICE · CLOCK → FATHER TIME</p></header><section id="controls"></section><div class="midichlorian-note">SENDS MULTISYNTH MIDI PERFORMANCE + PATTERN EVENTS TO THE CONNECTED PHYSICAL MIDI OUTPUT. MIDI REALTIME CLOCK REMAINS OWNED BY FATHER TIME.</div></main>
+<script src="control-surface-library.js"></script>
+<script src="control-surface-spec.js"></script>
+<script src="control-surface-renderer.js"></script>
+<script>
+"use strict";
+(()=>{
+ const q=new URLSearchParams(location.search),instance=q.get("instance"),Host=parent.MultiSynth||{},E=Host.NodeGraphEngine,C=Host.ModuleContract,R=window.MultiSynth?.ControlSurfaceRenderer,root=document.getElementById("controls");
+ if(!instance||!E||!C||!R||!root)return;
+ const module=E.getModule(instance),def=C.getDefinition(module.type);let state={...(def.defaults||{}),...(module.state||{})};
+ const section=document.createElement("section"),title=document.createElement("div"),grid=document.createElement("div");section.className="ms-module-bank";title.className="ms-module-bank-title";title.textContent="DEVICE OUTPUT";grid.className="ms-control-grid ms-layout-transport";section.append(title,grid);root.appendChild(section);
+ const node=R.mount(grid,{id:"enabled",control:"switch",state:"enabled",label:"MIDI OUT",meta:{visual:{variant:"rocker"}}});
+ node.addEventListener("multisynth-control-switch-change",e=>E.setModuleState(instance,{enabled:!!e.detail?.on}));
+ const paint=()=>node.commitSwitchState?.(state.enabled!==false,{silent:true});paint();
+ window.addEventListener("multisynth-state-sync",e=>{state={...(def.defaults||{}),...(e.detail||{})};paint()});
+})();
+</script>
+<script src="module-nameplate.js"></script>
+</body></html>
