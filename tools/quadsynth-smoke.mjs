@@ -103,12 +103,13 @@ if(clickSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Erro
 if(!clickSource.buffer||!(clickSource.buffer.length>0))throw new Error("CLICK source does not contain a finite sample buffer");
 if("__msQuadClickOverlapCount" in clickSource)throw new Error("CLICK engine still contains artificial overlap-count logic");
 if(clickSource.__msQuadClickAcceleration!==88)throw new Error("CLICK acceleration was not applied to the finite click sample");
-const expectedHz=440*Math.pow(2,(62-69)/12);
+const expectedHz=440*Math.pow(2,(62-69)/12),period=1/expectedHz,step=.05*period,maxDuration=2.5*period;
 if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK trigger rate is not the played note frequency in Hz");
-if(Math.abs(clickRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
+if(Math.abs(clickRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
 if(clickRepeater.feedback.gain.value!==1)throw new Error("CLICK finite sample repeater is not sustaining literal delayed copies");
 const highAccelerationDuration=clickSource.__msQuadClickDuration;
-if(Math.abs(highAccelerationDuration-2.5/expectedHz)>.000001)throw new Error("CLICK finite ramp is not capped at 2.5 note periods");
+if(highAccelerationDuration>maxDuration+.000001)throw new Error("CLICK finite ramp exceeded the 2.50-period maximum");
+if(Math.abs(highAccelerationDuration/step-Math.round(highAccelerationDuration/step))>.000001)throw new Error("CLICK finite ramp is not quantized in 0.05-period increments");
 state.clickAcceleration=35;
 def.setState({runtime,state});
 const reshapedSource=click.sources[0],reshapedRepeater=click.clickRepeater;
@@ -117,11 +118,13 @@ if(clickRepeater.feedback.gain.value!==0)throw new Error("CLICK SHAPE left the o
 if(reshapedSource.periodicWaveCount!==0)throw new Error("CLICK SHAPE regressed to PeriodicWave");
 if(reshapedSource.__msQuadClickAcceleration!==35)throw new Error("CLICK finite sample did not retain the new acceleration value");
 if(reshapedSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK SHAPE changed the finite sample trigger model");
-if(Math.abs(reshapedSource.__msQuadClickDuration-highAccelerationDuration)>.000001)throw new Error("CLICK SHAPE changed the 2.5-period duration instead of only shaping the click");
+if(reshapedSource.__msQuadClickDuration<highAccelerationDuration-.000001)throw new Error("CLICK lower acceleration unexpectedly shortened the finite ramp");
+if(reshapedSource.__msQuadClickDuration>maxDuration+.000001)throw new Error("CLICK lower acceleration exceeded the 2.50-period maximum");
+if(Math.abs(reshapedSource.__msQuadClickDuration/step-Math.round(reshapedSource.__msQuadClickDuration/step))>.000001)throw new Error("CLICK reshaped ramp is not quantized in 0.05-period increments");
 if(Math.abs(reshapedSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
-if(Math.abs(reshapedRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
+if(Math.abs(reshapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
 def.noteOff({runtime,state},62);
 if(reshapedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
 if(reshapedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: four engines, contextual SHAPE, literal finite bipolar click samples capped at 2.5 note periods and repeated at note Hz with natural overlap, active shape update, and Note Off release passed");
+console.log("quadsynth: four engines, contextual SHAPE, literal finite bipolar click samples using 0.05-period duration steps capped at 2.50 periods, repeated at note Hz with natural overlap, active shape update, and Note Off release passed");
