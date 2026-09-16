@@ -1,0 +1,94 @@
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import {fileURLToPath} from "node:url";
+
+const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+const assets=path.join(repo,"app/src/main/assets");
+const defs=new Map();
+let surface=null;
+
+class Param{
+  constructor(v=0){this.value=v}
+  setTargetAtTime(v){this.value=v}
+  setValueAtTime(v){this.value=v}
+  linearRampToValueAtTime(v){this.value=v}
+  exponentialRampToValueAtTime(v){this.value=v}
+  cancelScheduledValues(){}
+}
+class Node{
+  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0}
+  connect(n){return n}
+  disconnect(){}
+  start(){}
+  stop(t=0){this.stoppedAt=t}
+  setPeriodicWave(){this.periodicWaveCount++}
+}
+class AudioContext{
+  constructor(){this.currentTime=0;this.sampleRate=48000}
+  createGain(){return new Node(this)}
+  createOscillator(){return new Node(this)}
+  createDynamicsCompressor(){return new Node(this)}
+  createWaveShaper(){return new Node(this)}
+  createBiquadFilter(){return new Node(this)}
+  createDelay(){return new Node(this)}
+  createPeriodicWave(){return {}}
+  createBuffer(){return {getChannelData:()=>new Float32Array(128)}}
+  createBufferSource(){return new Node(this)}
+}
+const ids={PURE_SYNTH:"puresynth",QUAD_SYNTH:"quadsynth",PULSYNTH:"pulsynth",SIN_LADDER:"sinladder",RAZORBACK:"razorback",STINGER:"stinger",NO_QUARTER:"no-quarter",themeFor:x=>x};
+const prefabs={ADSR_DEFAULTS:{attack:.005,decay:.08,sustain:1,release:.08},adsr:()=>({kind:"prefab",id:"adsr",controls:[]}),performanceKeyboard:()=>({kind:"prefab",id:"keyboard",controls:[]})};
+const S={
+  oscillator:(ctx,type="sine",frequency=null)=>{const n=new Node(ctx);n.type=type;if(Number.isFinite(Number(frequency)))n.frequency.value=Number(frequency);return n},
+  voiceEnvelope:(ctx,state)=>{const node=new Node(ctx);return{node,gateOn(){},gateOff(t=ctx.currentTime){node.gain.value=0;return t+Math.max(.001,Number(state.release)||.08)+.002},forceOff(t=ctx.currentTime){node.gain.value=0;return t},setState(next){state={...state,...next}}}},
+  noise:(ctx)=>new Node(ctx),bufferSource:(ctx)=>new Node(ctx),shapedBuffer:()=>({})
+};
+const contract={define:def=>defs.set(def.type,def),getDefinition:()=>({}),defineSurface:(_type,s)=>{surface=s}};
+const context={console,Math,Number,String,Boolean,Array,Object,Map,Set,Float32Array,setTimeout,clearTimeout,window:null,MultiSynth:{ModuleIds:ids,ModuleContract:contract,ControlPrefabs:prefabs,DspSources:S}};
+context.window=context;
+vm.createContext(context);
+const load=rel=>vm.runInContext(fs.readFileSync(path.join(assets,rel),"utf8"),context,{filename:rel});
+load("modules/carrier-engine.js");
+load("modules/quadsynth.js");
+
+const def=defs.get(ids.QUAD_SYNTH);
+if(!def)throw new Error("QuadSynth runtime definition missing");
+if(!surface)throw new Error("QuadSynth surface missing");
+if(surface.version!==5)throw new Error(`unexpected QuadSynth surface version ${surface.version}`);
+const buttons=surface.controls.filter(x=>x?.control==="button"&&x?.state==="selectedEngine");
+if(buttons.length!==4)throw new Error(`expected 4 engine selectors, got ${buttons.length}`);
+const engineValues=buttons.map(x=>x.value?.value).join(",");
+if(engineValues!=="click,sine,triangle,square")throw new Error(`wrong engine set: ${engineValues}`);
+const shape=surface.controls.find(x=>x?.id==="shape");
+if(!shape||shape.meta?.contextState!=="selectedEngine")throw new Error("SHAPE is not bound to selectedEngine context");
+const expected={click:"clickAcceleration",sine:"sinePhase",triangle:"trianglePeak",square:"squareDuty"};
+for(const [engine,state] of Object.entries(expected))if(shape.meta?.contexts?.[engine]?.state!==state)throw new Error(`${engine} SHAPE binding is not ${state}`);
+for(const forbidden of ["carrier","level","clickLevel","sineLevel","sawLevel","squareLevel","clickOctave","clickTune","clickPhase","clickMute","clickSolo"]){if(surface.controls.some(x=>x?.id===forbidden))throw new Error(`obsolete QuadSynth control remains: ${forbidden}`)}
+
+const ctx=new AudioContext();
+const state={...def.defaults,selectedEngine:"triangle"};
+let input=null,output=null;
+const user=def.create({context:ctx,state,setInput:n=>input=n,setOutput:n=>output=n});
+const runtime={type:ids.QUAD_SYNTH,user,node:{hasUpstream:false}};
+if(!input||!output)throw new Error("QuadSynth runtime endpoints missing");
+def.noteOn({runtime,state},60,100);
+const voice=user.voices.get("60");
+if(!voice)throw new Error("QuadSynth Note On did not create a voice");
+if(voice.sources.length!==1)throw new Error(`QuadSynth must create exactly one selected engine, got ${voice.sources.length}`);
+if(voice.quadEngine!=="triangle"||voice.sources[0].__msQuadEngine!=="triangle")throw new Error("selected TRIANGLE engine was not used");
+const source=voice.sources[0];
+def.noteOff({runtime,state},60);
+if(user.voices.has("60"))throw new Error("QuadSynth Note Off left the voice registered");
+if(source.stoppedAt==null)throw new Error("QuadSynth Note Off did not stop the oscillator source");
+
+state.selectedEngine="square";
+def.noteOn({runtime,state},61,100);
+const square=user.voices.get("61");
+if(square?.quadEngine!=="square")throw new Error("SQUARE context did not select square engine");
+const waveUpdates=square.sources[0].periodicWaveCount;
+state.squareDuty=23;
+def.setState({runtime,state});
+if(square.sources[0].periodicWaveCount<=waveUpdates)throw new Error("SQUARE duty SHAPE did not update the active waveform");
+def.noteOff({runtime,state},61);
+
+console.log("quadsynth: four engines, contextual SHAPE, active shape update, and Note Off release passed");
