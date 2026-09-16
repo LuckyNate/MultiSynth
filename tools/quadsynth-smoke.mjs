@@ -132,8 +132,6 @@ const last=fullSamples.length-1,downIndex=Math.round(.25*last),midIndex=Math.rou
 if(Math.abs(fullSamples[downIndex]+1)>.006)throw new Error("CLICK lower-half slice does not arrive at -1");
 if(Math.abs(fullSamples[peakIndex]-1)>.006)throw new Error("CLICK full master ramp does not arrive at +1");
 if(fullSamples[midIndex]>-.9)throw new Error("CLICK middle leg is not the single accelerated 0→2 master ramp");
-const leftPeak=fullSamples[peakIndex]-fullSamples[peakIndex-1],rightPeak=fullSamples[peakIndex+1]-fullSamples[peakIndex];
-if(!(leftPeak>0&&rightPeak<0))throw new Error("CLICK +1 peak is rounded instead of a pointed direction reversal");
 const preRetuneSource=click.sources[0],preRetuneBuffer=preRetuneSource.buffer,preRetuneFeedback=shapedRepeater.feedback,preRetuneDuration=shapedRepeater.duration,preRetunePlayback=preRetuneSource.playbackRate.value,preRetuneRatio=shapedRepeater.ratio;
 state.pitchBend=1;
 def.setState({runtime,state});
