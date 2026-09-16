@@ -99,16 +99,18 @@ if(click?.quadEngine!=="click")throw new Error("CLICK context did not select cli
 const clickSource=click.sources[0];
 if(clickSource.periodicWaveCount<1)throw new Error("CLICK engine is not using its periodic click waveform");
 if(clickSource.type==="sawtooth")throw new Error("CLICK engine regressed to a sawtooth oscillator");
-if(clickSource.__msQuadClickModel!=="mirrored-bipolar-overlap")throw new Error("CLICK engine is not the full mirrored bipolar click model");
-if(clickSource.__msQuadClickLayers!==3)throw new Error("CLICK engine is not overlapping the three full click curves");
+if(clickSource.__msQuadClickModel!=="mirrored-bipolar-shape-derived-overlap")throw new Error("CLICK engine is not the mirrored bipolar shape-derived overlap model");
+if(!(clickSource.__msQuadClickOverlapCount>1))throw new Error("CLICK overlap count was not derived from SHAPE");
 if(clickSource.__msQuadClickAcceleration!==88)throw new Error("CLICK acceleration was not applied to the mirrored ramp curvature");
-const clickUpdates=clickSource.periodicWaveCount;
+const highOverlap=clickSource.__msQuadClickOverlapCount,clickUpdates=clickSource.periodicWaveCount;
 state.clickAcceleration=35;
 def.setState({runtime,state});
 if(clickSource.periodicWaveCount<=clickUpdates)throw new Error("CLICK acceleration SHAPE did not rebuild the active waveform");
 if(clickSource.__msQuadClickAcceleration!==35)throw new Error("CLICK active waveform did not retain the new acceleration value");
-if(clickSource.__msQuadClickModel!=="mirrored-bipolar-overlap")throw new Error("CLICK SHAPE update changed the click model instead of only its curve");
+if(clickSource.__msQuadClickModel!=="mirrored-bipolar-shape-derived-overlap")throw new Error("CLICK SHAPE update changed the click model instead of only its curve");
+if(clickSource.__msQuadClickOverlapCount===highOverlap)throw new Error("CLICK crossings are still fixed instead of being derived from SHAPE");
+if(!(clickSource.__msQuadClickOverlapCount<highOverlap))throw new Error("CLICK lower acceleration did not reduce shape-derived overlap density");
 def.noteOff({runtime,state},62);
 if(clickSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the oscillator source");
 
-console.log("quadsynth: four engines, contextual SHAPE, full mirrored bipolar overlapping-click curves, active shape update, and Note Off release passed");
+console.log("quadsynth: four engines, contextual SHAPE, mirrored bipolar clicks with shape-derived crossings, active shape update, and Note Off release passed");
