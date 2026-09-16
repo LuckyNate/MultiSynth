@@ -1,5 +1,15 @@
 # MultiSynth Modules — Real MIDI Rebuild Specification
 
+## TOP PRIORITY — CANONICAL CONTROLS ONLY, ZERO BESPOKE MODULE CONTROL LAYOUT
+
+No production module may define bespoke control geometry or control layout. This is a hard architecture rule and takes priority over every module-specific build spec below.
+
+Modules choose canonical controls/prefabs and define their musical meaning, state, defaults, MIDI mapping, and ordering. Modules must not define per-module control widths, heights, touch sizes, spacing, positioning, one-off control CSS, renderer geometry overrides, or local replacements for canonical controls. A module must not pass custom visual geometry into a canonical control to make it fit that module.
+
+If an existing canonical control or prefab cannot represent the required physical control, fix or extend the canonical control library first, then use that shared implementation from the module. Any legitimate new shape/layout becomes a reusable canonical control variant or prefab, never a module-only special case.
+
+The purpose of the control library is to make module production consistent and fast. Rebuilds must reuse it rather than recreating control presentation inside modules.
+
 This file is the functional rebuild contract for MultiSynth. MultiSynth is a MIDI instrument. Each module is defined from the musician's point of view first, then rebuilt from the floor up around real MIDI behavior and the canonical control library.
 
 ## Rebuild status
@@ -38,9 +48,9 @@ Every module is reviewed and rebuilt in this order:
 2. Review whether the current name is strong, memorable, and actually fits that identity.
 3. If the name is weak, propose replacements and agree on one before rebuilding it. A proposed rename does not change repository identity until Nate explicitly approves that specific rename.
 4. Define the smallest complete feature set and its real-MIDI behavior. Minimal means no speculative extras; complete means the module performs its intended musical job without placeholders.
-5. Assign the simplest appropriate canonical physical controller to every user-facing feature.
+5. Assign the simplest appropriate canonical physical controller to every user-facing feature. Do not add module-owned geometry or layout overrides.
 6. Define the exact real MIDI messages and CC mappings for every controllable feature, using standard MIDI assignments where they exist and explicit CC assignments where they do not.
-7. Rebuild the module cleanly from the floor up against this specification. Do not preserve obsolete pseudo-MIDI, fake CV, generic trigger, compatibility, or parallel event paths merely because the old implementation used them.
+7. Rebuild the module cleanly from the floor up against this specification. Do not preserve obsolete pseudo-MIDI, fake CV, generic trigger, compatibility, or parallel event paths merely because the old implementation used them. Reuse canonical controls/prefabs exactly; if they are insufficient, improve the shared library first instead of creating a bespoke module control/layout.
 8. Update or add smoke coverage for the module's actual rebuilt runtime, MIDI/event behavior, controls, persistence, timing, routing, and other applicable contract points. Run the full CI/build and fix all failures caused or exposed by the rebuild. Do not mark the module COMPLETE until the relevant smoke coverage and the full build pass.
 
 The design review happens before code changes. Module renames, feature changes, control assignments, and rebuild implementation are approved module-by-module before repository writes. Smoke/build completion is part of the rebuild itself, not a later cleanup pass.
