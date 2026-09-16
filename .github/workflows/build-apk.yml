@@ -88,6 +88,9 @@ jobs:
       - name: Runtime smoke
         run: node tools/runtime-smoke.mjs
 
+      - name: QuadSynth rebuild smoke
+        run: node tools/quadsynth-smoke.mjs
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
