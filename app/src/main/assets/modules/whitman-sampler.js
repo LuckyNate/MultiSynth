@@ -13,15 +13,12 @@
     samples:Array.from({length:SLOT_COUNT},(_,i)=>emptySlot(i))
   });
 
+  function stepVelocity(value){if(value===true||Number(value)===1)return 127;return clamp(Math.round(Number(value)||0),0,127);}
   function normalizedState(saved={}){
     const base=defaults(),next={...base,...saved};
     next.samples=Array.from({length:SLOT_COUNT},(_,i)=>{
       const source=saved.samples?.[i]||{};
-      const sequence=Array.from({length:STEP_COUNT},(_,step)=>{
-        const value=Array.isArray(source.sequence)?source.sequence[step]:0;
-        if(value===true)return 127;
-        return clamp(Math.round(Number(value)||0),0,127);
-      });
+      const sequence=Array.from({length:STEP_COUNT},(_,step)=>stepVelocity(Array.isArray(source.sequence)?source.sequence[step]:0));
       return {...emptySlot(i),...source,stereo:clamp(source.stereo??0,-1,1),sequence};
     });
     next.selectedSample=clamp(next.selectedSample,0,SLOT_COUNT-1);
@@ -106,7 +103,7 @@
   function fireStep(runtime,step,time){
     releasePatternNotes(runtime,time);
     for(let index=0;index<SLOT_COUNT;index++){
-      const velocity=clamp(Math.round(runtime.state.samples?.[index]?.sequence?.[step]||0),0,127);
+      const velocity=stepVelocity(runtime.state.samples?.[index]?.sequence?.[step]);
       if(!velocity)continue;
       const note=MIDI_BASE_NOTE+index;
       emitInternalNote(runtime,MIDI.NOTE_ON,note,velocity,time);
@@ -122,7 +119,10 @@
     const pulse=Number(event.pulse)||T.pulse;
     if(!pulse||pulse%6!==0)return;
     runtime.step=(runtime.step+1)%clamp(runtime.state.steps,1,STEP_COUNT);
-    fireStep(runtime,runtime.step,event.time??runtime.ctx.currentTime);
+    const baseTime=event.time??runtime.ctx.currentTime;
+    const sixteenth=60/Math.max(20,Number(event.bpm)||T.bpm||120)/4;
+    const swingDelay=(runtime.step%2===1)?sixteenth*.5*(clamp(runtime.state.swing,0,100)/100):0;
+    fireStep(runtime,runtime.step,baseTime+swingDelay);
   }
 
   function stopPreview(runtime){if(runtime.previewTimer)clearTimeout(runtime.previewTimer);runtime.previewTimer=null;}
