@@ -17,12 +17,12 @@ class Param{
   cancelScheduledValues(){}
 }
 class Node{
-  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.playbackRate=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0;this.buffer=null}
+  constructor(ctx){this.context=ctx;this.frequency=new Param(440);this.gain=new Param(1);this.playbackRate=new Param(1);this.Q=new Param();this.delayTime=new Param();this.threshold=new Param();this.knee=new Param();this.ratio=new Param();this.attack=new Param();this.release=new Param();this.stoppedAt=null;this.periodicWaveCount=0;this.periodicWave=null;this.buffer=null}
   connect(n){return n}
   disconnect(){}
   start(){}
   stop(t=0){this.stoppedAt=t}
-  setPeriodicWave(){this.periodicWaveCount++}
+  setPeriodicWave(w){this.periodicWaveCount++;this.periodicWave=w}
 }
 class AudioContext{
   constructor(){this.currentTime=0;this.sampleRate=48000}
@@ -32,7 +32,7 @@ class AudioContext{
   createWaveShaper(){return new Node(this)}
   createBiquadFilter(){return new Node(this)}
   createDelay(){return new Node(this)}
-  createPeriodicWave(){return {}}
+  createPeriodicWave(real,imag,options){return {real:Array.from(real||[]),imag:Array.from(imag||[]),options}}
   createBuffer(){return {getChannelData:()=>new Float32Array(128)}}
   createBufferSource(){return new Node(this)}
 }
@@ -50,8 +50,6 @@ vm.createContext(context);
 const load=rel=>vm.runInContext(fs.readFileSync(path.join(assets,rel),"utf8"),context,{filename:rel});
 load("modules/carrier-engine.js");
 load("modules/quadsynth.js");
-
-const overlapPeak=(samples,duration,period)=>{const last=samples.length-1,sampleAt=u=>{if(u<0||u>=1)return 0;const x=u*last,i=Math.floor(x),t=x-i,a=samples[i]||0,b=samples[Math.min(last,i+1)]||0;return a+(b-a)*t};let peak=0;for(let i=0;i<1024;i++){const t=i/1024*period;let sum=0;for(let age=t;age<duration;age+=period)sum+=sampleAt(age/duration);peak=Math.max(peak,Math.abs(sum))}return peak};
 
 const def=defs.get(ids.QUAD_SYNTH);
 if(!def)throw new Error("QuadSynth runtime definition missing");
@@ -98,82 +96,49 @@ state.clickAcceleration=0;
 def.noteOn({runtime,state},62,100);
 const click=user.voices.get("62");
 if(click?.quadEngine!=="click")throw new Error("CLICK context did not select click engine");
-const clickSource=click.sources[0],clickRepeater=click.clickRepeater;
-if(!clickRepeater)throw new Error("CLICK engine did not create a finite-click repeater");
-if(clickSource.periodicWaveCount!==0)throw new Error("CLICK engine still uses a PeriodicWave shortcut");
-if(clickSource.__msQuadClickModel!=="normalized-4096-click-delay-repeater")throw new Error("CLICK engine is not using the normalized 4096-sample kernel");
-if(clickSource.buffer?.length!==4096||clickSource.__msQuadClickResolution!==4096)throw new Error("CLICK kernel is not fixed at 4096 samples");
-if("__msQuadClickOverlapCount" in clickSource)throw new Error("CLICK engine still contains artificial overlap-count logic");
-if(clickSource.__msQuadClickAcceleration!==0)throw new Error("CLICK zero SHAPE was not applied");
-const expectedHz=440*Math.pow(2,(62-69)/12),period=1/expectedHz,duration=.0015,ratio=duration/period,baseDuration=4096/ctx.sampleRate,expectedPlaybackRate=baseDuration/duration;
-if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK trigger rate is not the played note frequency in Hz");
-if(Math.abs(clickRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
-if(clickRepeater.feedback.gain.value!==1)throw new Error("CLICK finite sample repeater is not sustaining literal delayed copies");
-if(Math.abs(clickSource.__msQuadClickDuration-duration)>.000001)throw new Error("CLICK SHAPE 0 does not produce the shortest absolute finite click");
-if(Math.abs(clickSource.__msQuadClickRatio-ratio)>.000001)throw new Error("CLICK overlap ratio is not derived from absolute click duration versus note period");
-if(Math.abs(clickSource.playbackRate.value-expectedPlaybackRate)>.000001)throw new Error("CLICK normalized kernel playback rate does not produce the finite click duration");
-const zeroSamples=clickSource.buffer.samples,min0=Math.min(...zeroSamples),max0=Math.max(...zeroSamples);
-if(min0>-.999||max0<.999)throw new Error("shortest CLICK does not still reach full -1/+1 amplitude");
-if(Math.abs(zeroSamples[0])>.000001||Math.abs(zeroSamples.at(-1))>.000001)throw new Error("CLICK finite event does not begin and end at zero");
-const zeroShapeBuffer=clickSource.buffer;
+const clickSource=click.sources[0];
+if(click.clickRepeater)throw new Error("CLICK still creates the retired trigger/repeater path");
+if(clickSource.buffer)throw new Error("CLICK still uses a finite sample buffer");
+if(clickSource.__msQuadShapeModel!=="hyperbolic-ramp-periodic")throw new Error("CLICK is not the hyperbolic periodic ramp voice");
+if(clickSource.__msQuadShapeAcceleration!==0)throw new Error("CLICK zero SHAPE was not applied");
+if(clickSource.periodicWaveCount!==1||!clickSource.periodicWave)throw new Error("CLICK did not create a real PeriodicWave oscillator");
+const expectedHz=440*Math.pow(2,(62-69)/12);
+if(Math.abs(clickSource.frequency.value-expectedHz)>.001)throw new Error("CLICK oscillator frequency is not the played note frequency");
+const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice();
+if(zeroReal.length<100||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks harmonic content");
+if(!zeroReal.some((v,i)=>i>0&&Math.abs(v)>.000001)&&!zeroImag.some((v,i)=>i>0&&Math.abs(v)>.000001))throw new Error("CLICK periodic waveform is silent");
 state.clickAcceleration=100;
 def.setState({runtime,state});
-const shapedSource=click.sources[0],shapedRepeater=click.clickRepeater;
-if(shapedSource===clickSource)throw new Error("CLICK SHAPE did not replace the finite click source");
-if(clickRepeater.feedback.gain.value!==0)throw new Error("CLICK SHAPE left the old finite click train running");
-if(shapedSource.buffer===zeroShapeBuffer)throw new Error("CLICK SHAPE did not generate a fresh normalized sample");
-if(shapedSource.buffer?.length!==4096)throw new Error("CLICK SHAPE changed the 4096-sample kernel resolution");
-if(shapedSource.__msQuadClickAcceleration!==100)throw new Error("CLICK full SHAPE was not retained");
-const fullDuration=.048,fullRatio=fullDuration/period;
-if(Math.abs(shapedSource.__msQuadClickDuration-fullDuration)>.000001)throw new Error("CLICK SHAPE duration is not derived independently of note Hz");
-if(Math.abs(shapedSource.__msQuadClickRatio-fullRatio)>.000001)throw new Error("CLICK full SHAPE overlap is not the natural duration/period interaction");
-if(Math.abs(shapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the note trigger interval");
-const fullSamples=shapedSource.buffer.samples,min1=Math.min(...fullSamples),max1=Math.max(...fullSamples);
-if(min1>-.997||max1<.997)throw new Error("full SHAPE CLICK does not reach the sampled -1/+1 extrema");
-const fullSteadyPeak=overlapPeak(fullSamples,fullDuration,period);
-if(Math.abs(fullSteadyPeak*shapedRepeater.outputGain-1)>.01)throw new Error("CLICK overlap compensation does not normalize the resulting sustained waveform");
-if(Math.abs(shapedRepeater.compensation.gain.value-shapedRepeater.outputGain)>.000001)throw new Error("CLICK overlap compensation gain is not applied to the output sum");
-const last=fullSamples.length-1,downIndex=Math.round(.25*last),midIndex=Math.round(.5*last),peakIndex=Math.round(.75*last);
-if(Math.abs(fullSamples[downIndex]+1)>.006)throw new Error("CLICK lower-half slice does not arrive at -1");
-if(Math.abs(fullSamples[peakIndex]-1)>.006)throw new Error("CLICK full master ramp does not arrive at +1");
-if(fullSamples[midIndex]>-.9)throw new Error("CLICK middle leg is not the single accelerated 0→2 master ramp");
-const preRetuneSource=click.sources[0],preRetuneBuffer=preRetuneSource.buffer,preRetuneFeedback=shapedRepeater.feedback,preRetuneDuration=shapedRepeater.duration,preRetunePlayback=preRetuneSource.playbackRate.value,preRetuneRatio=shapedRepeater.ratio;
+if(click.sources[0]!==clickSource)throw new Error("CLICK SHAPE replaced the oscillator instead of reshaping it");
+if(clickSource.__msQuadShapeAcceleration!==100)throw new Error("CLICK full SHAPE was not retained");
+if(clickSource.periodicWaveCount<2)throw new Error("CLICK SHAPE did not rebuild the hyperbolic periodic waveform");
+const fullWave=clickSource.periodicWave;
+const changed=fullWave.real.some((v,i)=>Math.abs(v-(zeroReal[i]||0))>.000001)||fullWave.imag.some((v,i)=>Math.abs(v-(zeroImag[i]||0))>.000001);
+if(!changed)throw new Error("CLICK SHAPE does not change the periodic waveform");
 state.pitchBend=1;
 def.setState({runtime,state});
-const retunedSource=click.sources[0],retunedRepeater=click.clickRepeater,retunedHz=440*Math.pow(2,(63-69)/12);
-if(retunedSource===preRetuneSource)throw new Error("CLICK pitch change did not restart the trigger train");
-if(retunedSource.buffer!==preRetuneBuffer)throw new Error("CLICK pitch change changed waveform data");
-if(preRetuneFeedback.gain.value!==0)throw new Error("CLICK pitch change left the old finite sample train running");
-if(Math.abs(retunedRepeater.frequency-retunedHz)>.001)throw new Error("CLICK retune did not follow pitch Hz");
-if(Math.abs(retunedRepeater.delay.delayTime.value-1/retunedHz)>.000001)throw new Error("CLICK retuned trigger interval does not follow pitch Hz");
-if(Math.abs(retunedRepeater.duration-preRetuneDuration)>.000001)throw new Error("CLICK pitch retune changed the independently generated click duration");
-if(Math.abs(retunedSource.playbackRate.value-preRetunePlayback)>.000001)throw new Error("CLICK pitch retune changed finite click playback speed");
-if(Math.abs(retunedRepeater.ratio-preRetuneRatio*retunedHz/expectedHz)>.000001)throw new Error("CLICK overlap ratio did not change naturally with note frequency");
-if(retunedSource.buffer?.length!==4096)throw new Error("CLICK pitch retune changed normalized kernel resolution");
-const retunedSteadyPeak=overlapPeak(retunedSource.buffer.samples,retunedRepeater.duration,retunedRepeater.period);
-if(Math.abs(retunedSteadyPeak*retunedRepeater.outputGain-1)>.01)throw new Error("CLICK retune did not recompute resulting-waveform normalization");
+const retunedHz=440*Math.pow(2,(63-69)/12);
+if(click.sources[0]!==clickSource)throw new Error("CLICK pitch bend replaced the oscillator");
+if(Math.abs(clickSource.frequency.value-retunedHz)>.001)throw new Error("CLICK pitch bend did not retune the oscillator frequency");
 def.noteOff({runtime,state},62);
-if(retunedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
-if(retunedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
+if(clickSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the periodic oscillator");
 
 state.pitchBend=0;
 state.selectedEngine="twin";
 state.clickAcceleration=100;
 def.noteOn({runtime,state},63,100);
 const twin=user.voices.get("63");
-if(twin?.quadEngine!=="twin")throw new Error("TWIN context did not select twin-click engine");
-const twinSource=twin.sources[0],twinRepeater=twin.clickRepeater;
-if(!twinRepeater)throw new Error("TWIN did not create a finite-click repeater");
-if(twinSource.__msQuadEngine!=="twin")throw new Error("TWIN source is not identified as twin click");
-if(twinSource.__msQuadClickModel!=="normalized-4096-twin-click-delay-repeater")throw new Error("TWIN did not preserve the accidental twin-click waveform model");
-if(twinRepeater.variant!=="twin")throw new Error("TWIN repeater lost its variant identity");
-const twinSamples=twinSource.buffer.samples,twinMid=twinSamples[Math.round(.5*(twinSamples.length-1))];
-if(Math.abs(twinMid)>.02)throw new Error("TWIN no longer preserves the centered full-ramp-twice hybrid shape");
-if(Math.abs(twinMid-fullSamples[midIndex])<.5)throw new Error("TWIN and corrected CLICK collapsed to the same waveform");
-const twinSteadyPeak=overlapPeak(twinSamples,twinRepeater.duration,twinRepeater.period);
-if(Math.abs(twinSteadyPeak*twinRepeater.outputGain-1)>.01)throw new Error("TWIN overlap compensation does not normalize the resulting sustained waveform");
-if(Math.abs(twinRepeater.compensation.gain.value-twinRepeater.outputGain)>.000001)throw new Error("TWIN overlap compensation gain is not applied to the output sum");
+if(twin?.quadEngine!=="twin")throw new Error("TWIN context did not select twin engine");
+const twinSource=twin.sources[0];
+if(twin.clickRepeater)throw new Error("TWIN still creates the retired trigger/repeater path");
+if(twinSource.buffer)throw new Error("TWIN still uses a finite sample buffer");
+if(twinSource.__msQuadShapeModel!=="hyperbolic-twin-periodic")throw new Error("TWIN is not the hyperbolic periodic twin voice");
+if(twinSource.__msQuadShapeAcceleration!==100)throw new Error("TWIN full SHAPE was not retained");
+if(twinSource.periodicWaveCount!==1||!twinSource.periodicWave)throw new Error("TWIN did not create a real PeriodicWave oscillator");
+const twinWave=twinSource.periodicWave;
+const differsFromClick=twinWave.real.some((v,i)=>Math.abs(v-(fullWave.real[i]||0))>.000001)||twinWave.imag.some((v,i)=>Math.abs(v-(fullWave.imag[i]||0))>.000001);
+if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same periodic waveform");
 def.noteOff({runtime,state},63);
-if(twinRepeater.feedback.gain.value!==0)throw new Error("TWIN Note Off did not stop the finite click repeater");
+if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: CLICK/TWIN retain their finite 4096-sample shapes while compensating the actual overlapped sustained waveform to full-scale peak output");
+console.log("quadsynth: CLICK is a continuous hyperbolic ramp oscillator with a rounded -1 turn and sharp +1 spike; TWIN is the distinct split hyperbolic twin-ramp oscillator; neither uses trigger, delay, overlap, or finite-click playback");
