@@ -51,6 +51,8 @@ const load=rel=>vm.runInContext(fs.readFileSync(path.join(assets,rel),"utf8"),co
 load("modules/carrier-engine.js");
 load("modules/quadsynth.js");
 
+const overlapPeak=(samples,duration,period)=>{const last=samples.length-1,sampleAt=u=>{if(u<0||u>=1)return 0;const x=u*last,i=Math.floor(x),t=x-i,a=samples[i]||0,b=samples[Math.min(last,i+1)]||0;return a+(b-a)*t};let peak=0;for(let i=0;i<1024;i++){const t=i/1024*period;let sum=0;for(let age=t;age<duration;age+=period)sum+=sampleAt(age/duration);peak=Math.max(peak,Math.abs(sum))}return peak};
+
 const def=defs.get(ids.QUAD_SYNTH);
 if(!def)throw new Error("QuadSynth runtime definition missing");
 if(!surface)throw new Error("QuadSynth surface missing");
@@ -128,6 +130,9 @@ if(Math.abs(shapedSource.__msQuadClickRatio-fullRatio)>.000001)throw new Error("
 if(Math.abs(shapedRepeater.delay.delayTime.value-period)>.000001)throw new Error("CLICK SHAPE changed the note trigger interval");
 const fullSamples=shapedSource.buffer.samples,min1=Math.min(...fullSamples),max1=Math.max(...fullSamples);
 if(min1>-.997||max1<.997)throw new Error("full SHAPE CLICK does not reach the sampled -1/+1 extrema");
+const fullSteadyPeak=overlapPeak(fullSamples,fullDuration,period);
+if(Math.abs(fullSteadyPeak*shapedRepeater.outputGain-1)>.01)throw new Error("CLICK overlap compensation does not normalize the resulting sustained waveform");
+if(Math.abs(shapedRepeater.compensation.gain.value-shapedRepeater.outputGain)>.000001)throw new Error("CLICK overlap compensation gain is not applied to the output sum");
 const last=fullSamples.length-1,downIndex=Math.round(.25*last),midIndex=Math.round(.5*last),peakIndex=Math.round(.75*last);
 if(Math.abs(fullSamples[downIndex]+1)>.006)throw new Error("CLICK lower-half slice does not arrive at -1");
 if(Math.abs(fullSamples[peakIndex]-1)>.006)throw new Error("CLICK full master ramp does not arrive at +1");
@@ -145,6 +150,8 @@ if(Math.abs(retunedRepeater.duration-preRetuneDuration)>.000001)throw new Error(
 if(Math.abs(retunedSource.playbackRate.value-preRetunePlayback)>.000001)throw new Error("CLICK pitch retune changed finite click playback speed");
 if(Math.abs(retunedRepeater.ratio-preRetuneRatio*retunedHz/expectedHz)>.000001)throw new Error("CLICK overlap ratio did not change naturally with note frequency");
 if(retunedSource.buffer?.length!==4096)throw new Error("CLICK pitch retune changed normalized kernel resolution");
+const retunedSteadyPeak=overlapPeak(retunedSource.buffer.samples,retunedRepeater.duration,retunedRepeater.period);
+if(Math.abs(retunedSteadyPeak*retunedRepeater.outputGain-1)>.01)throw new Error("CLICK retune did not recompute resulting-waveform normalization");
 def.noteOff({runtime,state},62);
 if(retunedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
 if(retunedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
@@ -163,7 +170,10 @@ if(twinRepeater.variant!=="twin")throw new Error("TWIN repeater lost its variant
 const twinSamples=twinSource.buffer.samples,twinMid=twinSamples[Math.round(.5*(twinSamples.length-1))];
 if(Math.abs(twinMid)>.02)throw new Error("TWIN no longer preserves the centered full-ramp-twice hybrid shape");
 if(Math.abs(twinMid-fullSamples[midIndex])<.5)throw new Error("TWIN and corrected CLICK collapsed to the same waveform");
+const twinSteadyPeak=overlapPeak(twinSamples,twinRepeater.duration,twinRepeater.period);
+if(Math.abs(twinSteadyPeak*twinRepeater.outputGain-1)>.01)throw new Error("TWIN overlap compensation does not normalize the resulting sustained waveform");
+if(Math.abs(twinRepeater.compensation.gain.value-twinRepeater.outputGain)>.000001)throw new Error("TWIN overlap compensation gain is not applied to the output sum");
 def.noteOff({runtime,state},63);
 if(twinRepeater.feedback.gain.value!==0)throw new Error("TWIN Note Off did not stop the finite click repeater");
 
-console.log("quadsynth: CLICK slices one accelerated 0→2 master ramp into lower-half/full/upper-half legs; TWIN preserves the prior centered full-ramp-twice click hybrid; both retain finite 4096-sample retrigger behavior");
+console.log("quadsynth: CLICK/TWIN retain their finite 4096-sample shapes while compensating the actual overlapped sustained waveform to full-scale peak output");
