@@ -77,7 +77,7 @@
   root.innerHTML="";root.classList.add("ms-module-surface");const scope=document.getElementById("timeBanditsSharedScope");if(scope)root.appendChild(scope.content.cloneNode(true));
   const transport=bank("TRANSPORT","ms-layout-transport"),voices=bank("VOICE","ms-layout-pads tb-voice-grid"),steps=bank("32 STEPS","ms-layout-steps"),laneControls=bank("TRACK","ms-layout-params"),stepControls=bank("SELECTED STEP","ms-layout-params"),synthControls=bank("SYNTH / PARAM LOCKS","ms-layout-params");
   const nodes={};
-  const bindKnob=(node,get,set,min,max,step=1)=>{const b={get value(){return get()},set value(v){set(v)},get locked(){return false},set locked(){}};R.bindKnob(node,b);node.setModuleValue?.(get());return b};
+  const bindKnob=(node,get,set,min,max,step=1)=>{const b={get value(){return get()},set value(v){set(v)},get locked(){return false},set locked(v){}};R.bindKnob(node,b);node.setModuleValue?.(get());return b};
   const run=mount(transport,{id:"running",control:"switch",label:"RUN"},{variant:"vertical"});run.addEventListener("multisynth-control-switch-change",e=>send({running:!!e.detail?.on}));
   const bpm=mount(transport,{id:"bpm",control:"knob",label:"BPM",value:{default:120,min:20,max:300,step:1}},{variant:"cap",valueReadout:true});bindKnob(bpm,()=>state.bpm,v=>send({bpm:clamp(v,20,300)}),20,300,1);
   const swing=mount(transport,{id:"swing",control:"knob",label:"SWING",value:{default:0,min:0,max:100,step:1},meta:{unit:"%"}},{variant:"cap",valueReadout:true});bindKnob(swing,()=>state.swing,v=>send({swing:clamp(v,0,100)}),0,100,1);
