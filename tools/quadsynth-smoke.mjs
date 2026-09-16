@@ -108,7 +108,7 @@ if(Math.abs(clickSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CL
 if(Math.abs(clickRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK repeat interval is not 1 / note Hz");
 if(clickRepeater.feedback.gain.value!==1)throw new Error("CLICK finite sample repeater is not sustaining literal delayed copies");
 const highAccelerationDuration=clickSource.__msQuadClickDuration;
-if(!(highAccelerationDuration>0))throw new Error("CLICK finite ramp duration missing");
+if(Math.abs(highAccelerationDuration-2.5/expectedHz)>.000001)throw new Error("CLICK finite ramp is not capped at 2.5 note periods");
 state.clickAcceleration=35;
 def.setState({runtime,state});
 const reshapedSource=click.sources[0],reshapedRepeater=click.clickRepeater;
@@ -117,11 +117,11 @@ if(clickRepeater.feedback.gain.value!==0)throw new Error("CLICK SHAPE left the o
 if(reshapedSource.periodicWaveCount!==0)throw new Error("CLICK SHAPE regressed to PeriodicWave");
 if(reshapedSource.__msQuadClickAcceleration!==35)throw new Error("CLICK finite sample did not retain the new acceleration value");
 if(reshapedSource.__msQuadClickModel!=="finite-click-delay-repeater")throw new Error("CLICK SHAPE changed the finite sample trigger model");
-if(!(reshapedSource.__msQuadClickDuration>highAccelerationDuration))throw new Error("CLICK lower acceleration did not broaden the finite ramp");
+if(Math.abs(reshapedSource.__msQuadClickDuration-highAccelerationDuration)>.000001)throw new Error("CLICK SHAPE changed the 2.5-period duration instead of only shaping the click");
 if(Math.abs(reshapedSource.__msQuadClickRateHz-expectedHz)>.001)throw new Error("CLICK SHAPE changed trigger Hz instead of only shaping the click");
 if(Math.abs(reshapedRepeater.delay.delayTime.value-1/expectedHz)>.000001)throw new Error("CLICK SHAPE changed the repeat interval");
 def.noteOff({runtime,state},62);
 if(reshapedRepeater.feedback.gain.value!==0)throw new Error("CLICK Note Off did not stop the finite click repeater");
 if(reshapedSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the finite click source");
 
-console.log("quadsynth: four engines, contextual SHAPE, literal finite bipolar click samples repeated at note Hz with natural overlap, active shape update, and Note Off release passed");
+console.log("quadsynth: four engines, contextual SHAPE, literal finite bipolar click samples capped at 2.5 note periods and repeated at note Hz with natural overlap, active shape update, and Note Off release passed");
