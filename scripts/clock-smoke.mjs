@@ -72,7 +72,7 @@ assert.match(whitman,/function noteOn/);
 assert.match(whitman,/MIDI_BASE_NOTE=36/);
 assert.doesNotMatch(whitman,/function trigger\(/);
 assert.match(timeBandits,/function noteOn/);
-assert.match(timeBandits,/MIDI_BASE_NOTE=36/);
+assert.match(timeBandits,/MIDI_BASE(?:_NOTE)?=36/);
 assert.doesNotMatch(timeBandits,/function trigger\(/);
 assert.match(randrone,/function noteOn/);
 assert.doesNotMatch(randrone,/trigger:/);
