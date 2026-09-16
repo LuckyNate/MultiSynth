@@ -36,6 +36,8 @@ assert.match(clockStandard,/subscribeMidi/);
 assert.match(clockStandard,/pulse%6===0/);
 assert.doesNotMatch(clockStandard,/setClockBpm|startClock|subscribeClock|clockStart|clockTick|clockStop/);
 
+assert.match(moduleContract,/midiMessage:typeof def\.midiMessage/);
+assert.match(moduleContract,/function midi\(id,packet=/);
 assert.match(moduleContract,/clock:typeof def\.clock/);
 assert.match(moduleContract,/function clock\(id,packet=/);
 assert.doesNotMatch(moduleContract,/trigger:typeof def\.trigger|function trigger\(|\btrigger,/);
@@ -43,6 +45,7 @@ assert.doesNotMatch(moduleContract,/trigger:typeof def\.trigger|function trigger
 assert.match(graph,/new AudioWorkletNode\(ctx,"multisynth-clock-processor"/);
 assert.match(graph,/PatchTransport\?\.ingestTimebase/);
 assert.match(graph,/sendClock:/);
+assert.match(graph,/midi:/);
 
 assert.match(clockBus,/MS\.ClockBus/);
 assert.match(clockBus,/e\.type!=="clock"/);
@@ -55,6 +58,7 @@ assert.match(midi,/sendNative\(0xfa/);
 assert.match(midi,/sendNative\(0xfb/);
 assert.match(midi,/sendNative\(0xfc/);
 assert.match(midi,/multisynth-midi-message/);
+assert.match(midi,/NodeAudioGraph\?\.midi/);
 assert.doesNotMatch(midi,/multisynth-usb-cv|receiveCV|emitCV/);
 
 assert.match(father,/version:"midi-master-4"/);
@@ -115,14 +119,15 @@ assert.equal(T.running,false,"FC must be MIDI Stop");
 T.releaseExternalClock();
 offTick();offPulse();
 
-const wireClocks=[],wireNotes=[],wireEvents=[];
-const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(e){wireEvents.push(e);return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},noteOn(note,velocity){wireNotes.push([note,velocity])},noteOff(){}}}};
+const wireClocks=[],wireMidi=[],wireEvents=[];
+const midiContext={console,performance:{now:()=>0},CustomEvent:class{constructor(type,o={}){this.type=type;this.detail=o.detail}},document:{readyState:"complete",getElementById(){return null},querySelectorAll(){return[]}},dispatchEvent(e){wireEvents.push(e);return true},MultiSynth:{PatchTransport:{external:false,bpm:120,receiveMidi(status){wireClocks.push(status);return true}},NodeAudioGraph:{context:{currentTime:0},midi(packet){wireMidi.push({...packet});return 1},panic(){}}}};
 midiContext.window=midiContext;
 vm.createContext(midiContext);
 vm.runInContext(midi,midiContext,{filename:"native-midi.js"});
 midiContext.MultiSynthNativeMidi.receive([0x90,60,0xf8,100,61,0xf8,110,0xb0,7,96]);
-assert.deepEqual(wireNotes,[[60,100],[61,110]],"realtime bytes must not corrupt Note On running status");
+assert.deepEqual(wireMidi.filter(e=>e.type==="noteOn").map(e=>[e.note,e.velocity]),[[60,100],[61,110]],"realtime bytes must not corrupt Note On running status");
 assert.deepEqual(wireClocks,[0xf8,0xf8],"interleaved F8 bytes must reach transport individually");
-assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain a real MIDI channel event");
+assert.ok(wireMidi.some(e=>e.type==="controlChange"&&e.control===7&&e.value===96),"CC must enter the real module MIDI path");
+assert.ok(wireEvents.some(e=>e.type==="multisynth-midi-message"&&e.detail?.type==="controlChange"&&e.detail?.control===7&&e.detail?.value===96),"CC must remain observable as a real MIDI channel event");
 
-console.log("clock smoke: PASS — real MIDI notes + one 24 PPQN transport with explicit clock jacks");
+console.log("clock smoke: PASS — real MIDI channel messages + one 24 PPQN transport with explicit clock jacks");
