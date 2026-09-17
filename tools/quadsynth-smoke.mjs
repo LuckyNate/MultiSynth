@@ -84,7 +84,12 @@ near(quad.quadNormalizedTick(.75,100),.25,1e-12,"shape100 curved right shoulder"
 near(quad.quadNormalizedTick(1,100),0,1e-12,"shape100 right foot");
 if(!(quad.quadNormalizedTick(.4,100)>quad.quadNormalizedTick(.4,0)))throw new Error("increasing SHAPE must spread the normalized tick");
 if(!(quad.quadNormalizedTick(.05,100)<quad.quadNormalizedTick(.25,100)))throw new Error("normalized tick must smooth into the foot instead of remaining triangular");
-for(const [u,s] of [[.5,0],[.4,100],[.25,100]])near(quad.quadClickSamplePhase(u,s),quad.quadNormalizedTick(u,s)*2-1,1e-12,"CLICK must be normalized spike ×2 −1");
+near(quad.quadClickSamplePhase(0,0),-1,1e-12,"CLICK shape0 minimum");
+near(quad.quadClickSamplePhase(.5,0),1,1e-12,"CLICK shape0 peak");
+near(quad.quadClickSamplePhase(0,100),-1,1e-12,"CLICK shape100 minimum");
+near(quad.quadClickSamplePhase(.5,100),1,1e-12,"CLICK shape100 peak");
+if(!(quad.quadClickSamplePhase(.1,0)>quad.quadClickSamplePhase(.1,100)))throw new Error("less CLICK SHAPE must make the minimum narrower and spikier");
+if(!(quad.quadClickSamplePhase(.9,0)>quad.quadClickSamplePhase(.9,100)))throw new Error("CLICK minimum-width behavior must remain symmetric across the cycle");
 for(const [u,s] of [[.25,0],[.2,100]])near(quad.quadTwinSamplePhase(u,s),-quad.quadNormalizedTick(u*2,s),1e-12,"TWIN lower half must be normalized tick ×−1");
 for(const [u,s] of [[.75,0],[.7,100]])near(quad.quadTwinSamplePhase(u,s),quad.quadNormalizedTick((u-.5)*2,s),1e-12,"TWIN upper half must be normalized tick");
 
@@ -122,18 +127,17 @@ if(click?.quadEngine!=="click")throw new Error("CLICK context did not select cli
 const clickSource=click.sources[0];
 if(click.clickRepeater)throw new Error("CLICK still creates the retired trigger/repeater path");
 if(clickSource.buffer)throw new Error("CLICK still uses a finite sample buffer");
-if(clickSource.__msQuadShapeModel!=="click-bipolar-spike-periodic")throw new Error("CLICK is not the rebuilt bipolar spike periodic voice");
+if(clickSource.__msQuadShapeModel!=="click-multifocus-cycloid-periodic")throw new Error("CLICK is not the direct multifocus cycloid periodic voice");
 if(clickSource.__msQuadShapeAcceleration!==0)throw new Error("CLICK zero SHAPE was not applied");
 if(clickSource.periodicWaveCount!==1||!clickSource.periodicWave)throw new Error("CLICK did not create a real PeriodicWave oscillator");
 const expectedHz=440*Math.pow(2,(62-69)/12);
 if(Math.abs(clickSource.frequency.value-expectedHz)>.001)throw new Error("CLICK oscillator frequency is not the played note frequency");
 const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice();
-if(zeroReal.length<100||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks harmonic content");
-if(!zeroReal.some((v,i)=>i>0&&Math.abs(v)>.000001)&&!zeroImag.some((v,i)=>i>0&&Math.abs(v)>.000001))throw new Error("CLICK periodic waveform is silent");
-if(clickSource.periodicWave.options?.disableNormalization!==true)throw new Error("CLICK PeriodicWave normalization must remain disabled");
+if(zeroReal.length<4||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks direct harmonic definition");
+if(clickSource.periodicWave.options?.disableNormalization!==true)throw new Error("CLICK PeriodicWave must preserve its direct -1/+1 definition");
 let range=extents(clickSource.periodicWave);
-near(range.lo,-1,1e-5,"CLICK shape0 rendered floor");
-near(range.hi,1,1e-5,"CLICK shape0 rendered peak");
+near(range.lo,-1,1e-6,"CLICK shape0 rendered floor");
+near(range.hi,1,1e-6,"CLICK shape0 rendered peak");
 state.clickAcceleration=100;
 def.setState({runtime,state});
 if(click.sources[0]!==clickSource)throw new Error("CLICK SHAPE replaced the oscillator instead of reshaping it");
@@ -141,10 +145,10 @@ if(clickSource.__msQuadShapeAcceleration!==100)throw new Error("CLICK full SHAPE
 if(clickSource.periodicWaveCount<2)throw new Error("CLICK SHAPE did not rebuild the periodic waveform");
 const fullWave=clickSource.periodicWave;
 range=extents(fullWave);
-near(range.lo,-1,1e-5,"CLICK shape100 rendered floor");
-near(range.hi,1,1e-5,"CLICK shape100 rendered peak");
+near(range.lo,-1,1e-6,"CLICK shape100 rendered floor");
+near(range.hi,1,1e-6,"CLICK shape100 rendered peak");
 const changed=fullWave.real.some((v,i)=>Math.abs(v-(zeroReal[i]||0))>.000001)||fullWave.imag.some((v,i)=>Math.abs(v-(zeroImag[i]||0))>.000001);
-if(!changed)throw new Error("CLICK SHAPE does not change the periodic waveform");
+if(!changed)throw new Error("CLICK SHAPE does not change the cycloid geometry");
 state.pitchBend=1;
 def.setState({runtime,state});
 const retunedHz=440*Math.pow(2,(63-69)/12);
@@ -179,4 +183,4 @@ if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same perio
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: rebuilt CLICK from the normalized curved-foot spike; SHAPE only widens it; rendered PeriodicWave is calibrated to -1/+1 at both shape extremes; TWIN and all other engines remain unchanged");
+console.log("quadsynth: CLICK is a direct continuous multifocus cycloid from -1 to +1; less SHAPE narrows/sharpens the minima, more SHAPE widens/rounds them; TWIN remains unchanged");
