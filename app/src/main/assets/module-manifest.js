@@ -36,6 +36,7 @@
     [I.PURE_SYNTH]:row(I.PURE_SYNTH,"instrument","#f4f4f0",["audioInput","audioOutput","generator","noteInput"],[]),
     [I.QUAD_SYNTH]:row(I.QUAD_SYNTH,"instrument","#ffb000",["audioInput","audioOutput","generator","noteInput"],[]),
     [I.LADDERSYNTH]:row(I.LADDERSYNTH,"instrument","#58ff78",["audioInput","audioOutput","generator","noteInput"],["midi"]),
+    [I.HOOK_AND_LADDER]:row(I.HOOK_AND_LADDER,"instrument","#d7261e",["audioOutput","generator","noteInput"],["midi"]),
     [I.NO_QUARTER]:row(I.NO_QUARTER,"instrument","#77a4ff",["audioInput","audioOutput","generator","noteInput"],[]),
     [I.RANDRONE]:row(I.RANDRONE,"generator","#9efcff",["audioInput","audioOutput","generator","noteInput","clockFollower"],["midi"]),
     [I.HOOKWORM]:row(I.HOOKWORM,"looper","#e98232",["audioInput","audioOutput","mic"],["mic","storage"]),
