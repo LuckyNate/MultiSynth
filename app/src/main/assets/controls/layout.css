@@ -10,9 +10,18 @@
 .ms-layout-pads{--ms-grid-min:124px}
 .ms-layout-steps{--ms-grid-min:58px}
 .ms-layout-list{--ms-grid-min:100%}
-.ms-layout-ladder-row{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
-.ms-layout-ladder-row>.ms-encoder{grid-row:1}
-.ms-layout-ladder-row>.ms-knob,.ms-layout-ladder-row>.ms-switch{grid-row:2}
+html[data-module-type="laddersynth"] .ms-module-surface{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ms-grid-gap-y) var(--ms-grid-gap-x)}
+html[data-module-type="laddersynth"] .ms-module-bank:first-child{grid-column:1/-1}
+html[data-module-type="laddersynth"] .ms-module-bank:not(:first-child),html[data-module-type="laddersynth"] .ms-module-bank:not(:first-child)>.ms-control-grid{display:contents}
+html[data-module-type="laddersynth"] .ms-module-bank:not(:first-child)>.ms-module-bank-title{display:none}
+html[data-module-type="laddersynth"] [data-state-key^="voice"],html[data-module-type="laddersynth"] [data-state-key^="shape"],html[data-module-type="laddersynth"] [data-state-key^="phase"],html[data-module-type="laddersynth"] [data-state-key^="octave"]{grid-column:span 2}
+html[data-module-type="laddersynth"] [data-state-key^="voice"]{order:10}
+html[data-module-type="laddersynth"] [data-state-key^="shape"]{order:20}
+html[data-module-type="laddersynth"] [data-state-key^="phase"]{order:30}
+html[data-module-type="laddersynth"] [data-state-key^="octave"]{order:40}
+html[data-module-type="laddersynth"] [data-state-key^="amount"]{order:50}
+html[data-module-type="laddersynth"] [data-state-key^="detune"]{order:60}
+html[data-module-type="laddersynth"] [data-state-key^="bypass"]{order:70}
 .ms-layout-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ms-layout-context{grid-template-columns:repeat(4,minmax(0,1fr))}
 .ms-layout-timing{grid-template-columns:repeat(4,minmax(0,1fr));align-items:center}
