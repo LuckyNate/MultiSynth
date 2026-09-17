@@ -13,9 +13,11 @@ Progress — COMPLETE
 - Father Time
 - Whitman Sampler
 - Time Bandits
-- MIDIchlorian
 - PureSynth
 - QuadSynth
+
+Progress — LOW PRIORITY REBUILD
+- MIDIchlorian — rebuild to suit its intended purpose as MIDI output to an event recorder
 
 Progress — PERFORMANCE SYNTH FAMILY FOUNDATION PORTED, INDIVIDUAL REBUILDS STILL OPEN
 - Pulsynth
