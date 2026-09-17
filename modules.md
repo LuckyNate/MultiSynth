@@ -19,9 +19,12 @@ Completed in the current rebuild pass:
 - **Father Time — COMPLETE**
 - **Whitman Sampler — COMPLETE**
 - **Time Bandits — COMPLETE**
-- **MIDIchlorian — COMPLETE**
 - **PureSynth — COMPLETE**
 - **QuadSynth — COMPLETE**
+
+Low-priority rebuild:
+
+- **MIDIchlorian — REBUILD PENDING** — intended purpose is MIDI output to an event recorder.
 
 Completed means the module has been rebuilt against the current real-MIDI/timing architecture, has relevant smoke coverage for its rebuilt behavior, and the full CI/build passes. A module must not be marked COMPLETE while its relevant smoke or build is failing. Completed modules leave the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens them.
 
@@ -296,19 +299,11 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** terminal level/drive processing; no private control protocol.
 
-## MIDIchlorian — build spec — COMPLETE
+## MIDIchlorian — build spec — LOW-PRIORITY REBUILD
 
-**Purpose:** Physical MIDI output endpoint for the patch. It is the MIDI counterpart to the audio output path: normal performance/control MIDI leaves MultiSynth through this module and the selected native MIDI destination.
+**Purpose:** MIDI output to an event recorder.
 
-**MIDI OUT:** Forwards standard channel messages already produced by the patch, including Note On/Off, CC, Pitch Bend, Channel Pressure, Poly Pressure, Program Change, and channel-mode messages. It does not synthesize a private packet format.
-
-**Realtime ownership:** MIDIchlorian does not duplicate F8/FA/FB/FC. Father Time remains the single physical realtime-clock/transport bridge so external devices cannot be double-clocked.
-
-**Controls:** output/status presentation only as required by the selected native MIDI destination. No musical timing controls.
-
-**State:** output enable/destination state where provided by the native bridge.
-
-**Behavior:** terminal physical MIDI sink. Module-emitted sequencer MIDI from Whitman Sampler and Time Bandits follows the same standard MIDI output path as externally generated/internal performance messages.
+**Status:** Rebuild pending. The current implementation is not considered complete and should be revisited after higher-priority module rebuilds.
 
 ## No Quarter — build spec
 
