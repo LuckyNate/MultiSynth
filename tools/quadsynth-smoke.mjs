@@ -128,6 +128,8 @@ if(Math.abs(clickSource.frequency.value-expectedHz)>.001)throw new Error("CLICK 
 const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice();
 if(zeroReal.length<100||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks harmonic content");
 if(!zeroReal.some((v,i)=>i>0&&Math.abs(v)>.000001)&&!zeroImag.some((v,i)=>i>0&&Math.abs(v)>.000001))throw new Error("CLICK periodic waveform is silent");
+if(clickSource.periodicWave.options?.disableNormalization!==true)throw new Error("CLICK PeriodicWave normalization must remain disabled");
+near(clickSource.periodicWave.real[0],-1,1e-12,"CLICK shape0 DC floor must preserve -1 amplitude");
 state.clickAcceleration=100;
 def.setState({runtime,state});
 if(click.sources[0]!==clickSource)throw new Error("CLICK SHAPE replaced the oscillator instead of reshaping it");
@@ -170,4 +172,4 @@ if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same perio
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: one normalized curved-foot 0→1 spike; SHAPE only widens it; CLICK = spike×2−1; TWIN = lower spike×−1 plus upper spike; both remain continuous note-pitched oscillators");
+console.log("quadsynth: one normalized curved-foot 0→1 spike; SHAPE only widens it; CLICK = spike×2−1 with preserved DC floor; TWIN = lower spike×−1 plus upper spike; both remain continuous note-pitched oscillators");
