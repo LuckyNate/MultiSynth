@@ -21,6 +21,7 @@ Completed in the current rebuild pass:
 - **Time Bandits — COMPLETE**
 - **MIDIchlorian — COMPLETE**
 - **PureSynth — COMPLETE**
+- **QuadSynth — COMPLETE**
 
 Completed means the module has been rebuilt against the current real-MIDI/timing architecture, has relevant smoke coverage for its rebuilt behavior, and the full CI/build passes. A module must not be marked COMPLETE while its relevant smoke or build is failing. Completed modules leave the pending rebuild queue unless a later dedicated feature/polish pass explicitly reopens them.
 
@@ -345,7 +346,7 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** basic complete real-MIDI synthesizer and reference voice.
 
-## QuadSynth — build spec
+## QuadSynth — build spec — COMPLETE
 
 **Purpose:** Layer four distinct sound components into one playable synth voice, letting the musician balance and tune the components as a single instrument.
 
