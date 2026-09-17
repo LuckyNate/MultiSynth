@@ -1,5 +1,19 @@
 # MultiSynth Development Log
 
+## 2026-09-17 — Active roster closed, fixed ladder family retired, Hook and Ladder adopted
+
+The active registered module roster is now treated as the complete current module set. `module-manifest.js` is the authoritative runtime roster and `modules.md` is the musician-facing rebuild/status ledger for the same set.
+
+The fixed ladder-synth family has been retired: Pulsynth, SinLadder, Razorback, Stinger and LadderSynth are no longer active registered modules. They remain available only through Git history and must not return as aliases or compatibility registrations.
+
+Hook and Ladder replaces that family with a generalized dynamic +1 operator-ladder instrument. Source 1 is always present. One inactive next rung is always exposed; activating the current last rung creates another inactive rung. Each active rung receives the accumulated signal from the previous rung and applies its selected source/operator to create the next accumulated result. The current operator vocabulary includes add, subtract, multiply/ring-style, AM and FM behavior. Dynamic rung count and rung parameters are persistent module state.
+
+The architectural distinction is explicit: Hook and Ladder's +1 growth is internal instrument composition, not a Patch Graph dynamic-jack contract. Live rung changes apply inside the module runtime and do not rebuild the Patch Graph.
+
+The project TODO has been reduced to one program-level task: finish the full real-MIDI rebuild across every active production module. TEST MODULE remains the canonical development/control verification harness and is not a production-module rebuild target.
+
+`modules.md` and `docs/APP_ARCHITECTURE.md` were refreshed to match the active roster, the retired ladder status, Hook and Ladder's role, and the current real-MIDI completion rule.
+
 ## 2026-09-16 — Timing stabilization, shared pattern architecture, and physical MIDI output
 
 This rebuild pass closed the timing/output loop around the real-MIDI architecture.
@@ -20,7 +34,7 @@ Father Time remains the sole owner of physical MIDI realtime timing output. MIDI
 
 The clock smoke path now guards Whitman's scheduled transport architecture so a regression back to main-thread live-F8 pattern timing fails CI. The MIDIchlorian integration build completed successfully.
 
-Completed in `modules.md` for this rebuild pass: Father Time, Whitman Sampler, Time Bandits and MIDIchlorian.
+Completed in `modules.md` for this rebuild pass: Father Time, Whitman Sampler and Time Bandits. MIDIchlorian was integrated into the real-MIDI output architecture but remains part of the production-module rebuild completion pass until explicitly marked COMPLETE.
 
 ## 2026-09-14 — Real MIDI performance architecture
 
