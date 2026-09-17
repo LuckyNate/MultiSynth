@@ -10,8 +10,9 @@
 .ms-layout-pads{--ms-grid-min:124px}
 .ms-layout-steps{--ms-grid-min:58px}
 .ms-layout-list{--ms-grid-min:100%}
-.ms-layout-ladder-main,.ms-layout-ladder-row{display:flex;flex-flow:row nowrap;justify-content:flex-start;align-items:flex-start;gap:var(--ms-grid-gap-x);overflow-x:auto;padding-bottom:4px}
-.ms-layout-ladder-main>.ms-control,.ms-layout-ladder-row>.ms-control{flex:0 0 auto}
+.ms-layout-ladder-row{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
+.ms-layout-ladder-row>.ms-encoder{grid-row:1}
+.ms-layout-ladder-row>.ms-knob,.ms-layout-ladder-row>.ms-switch{grid-row:2}
 .ms-layout-pair{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ms-layout-context{grid-template-columns:repeat(4,minmax(0,1fr))}
 .ms-layout-timing{grid-template-columns:repeat(4,minmax(0,1fr));align-items:center}
