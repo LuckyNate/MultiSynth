@@ -170,9 +170,9 @@ The working jobs include:
 - TAPE
 - MIXER
 
-These are views/jobs over rack material, not duplicate synth, drum-machine or mixer implementations.
+These are views/jobs over module material, not duplicate synth, drum-machine or mixer implementations.
 
-For example, DRUM material may originate in the existing MultiSynth drum machine, be captured as a loop, then be moved/slipped across the Rearranger timeline until it aligns correctly.
+For example, DRUM material may originate in Time Bandits, be captured as a loop, then be moved/slipped across the Rearranger timeline until it aligns correctly.
 
 TAPE is the direct loop/timeline workspace: recorded material becomes tangible arrangement events that can be placed, moved, trimmed, slipped, repeated and organized.
 
@@ -188,11 +188,18 @@ The same physical controls rebind contextually rather than spawning unrelated on
 
 ## Timing
 
-Rearranger has an internal clock and also consumes incoming CV timing.
+Rearranger does **not** own an independent musical clock.
 
-The internal clock can set BPM directly. When appropriate incoming CV timing is present, Rearranger can derive and synchronize its BPM and musical position from that timing.
+`PatchTransport` is the sole internal timing authority for the application. Rearranger consumes the shared real-MIDI transport semantics:
 
-Rearranger therefore supports both internally timed arrangement playback and synchronization to incoming CV timing without requiring the arrangement data to change.
+- F8 Timing Clock at 24 PPQN
+- FA Start
+- FB Continue
+- FC Stop
+
+Internal arrangement playback, quantized launches and loop scheduling derive from the same shared transport/subdivision stream used by other timing-aware modules. When precise internal scheduling is required, Rearranger uses transport lookahead/scheduled pulse timing rather than a private main-thread timer.
+
+External MIDI clock enters the same `PatchTransport`; Rearranger follows the resulting effective timeline rather than deriving a separate BPM from a private CV/tick path.
 
 ### Dedicated timing strip
 
@@ -200,13 +207,25 @@ A dedicated timing strip sits at the bottom of the Rearranger working surface, i
 
 **TAP PAD | TAP / TEMPO LED / BPM | 3-DIGIT BPM READOUT | BPM KNOB**
 
-- The TAP pad derives the internal BPM from repeated taps.
-- The tempo LED blinks once per beat at the effective current BPM, with TAP labeled above it and BPM below it.
-- The three-digit BPM readout always shows the effective BPM.
-- The TAP pad, BPM readout, and BPM knob have matching visual scale/weight.
-- The BPM knob sets the internal BPM directly.
-- When Rearranger is synchronized from incoming CV timing, the BPM readout reflects the effective derived tempo.
+These controls address the shared patch transport rather than an internal Rearranger clock:
+
+- The TAP pad updates the shared transport BPM from repeated taps.
+- The tempo LED reflects the shared beat timeline.
+- The three-digit BPM readout shows the effective shared BPM.
+- The BPM knob writes the shared transport BPM.
+- When external MIDI realtime is authoritative, the readout reflects that effective transport tempo/position rather than starting a second clock.
 - This timing strip is dedicated and does not change meaning with Rearranger context.
+
+## MIDI behavior
+
+Rearranger is a real-MIDI arranger.
+
+- MIDI loop playback emits actual Note On/Off, velocity, CC, Pitch Bend, Program Change and pressure messages represented by the loop data.
+- Section/song launch controls receive explicit real MIDI mappings.
+- Program Change may select sections/songs or recall arrangement states where agreed.
+- Mapped notes/pads may launch section slots.
+- Internal arrangement events use the same real MIDI receiver paths used by external performance wherever applicable.
+- No private trigger/CV event vocabulary is introduced for arrangement playback.
 
 ## Design rules
 
@@ -221,4 +240,4 @@ A dedicated timing strip sits at the bottom of the Rearranger working surface, i
 9. Existing modules create material; Rearranger arranges it.
 10. Use canonical MultiSynth controls and default styling unless a genuinely missing primitive is identified.
 11. Preserve the reel pair's left/right editing semantics across contexts.
-12. Support both the internal clock and synchronization from incoming CV timing.
+12. Use the shared real-MIDI transport; do not create a Rearranger-local clock or CV timing path.
