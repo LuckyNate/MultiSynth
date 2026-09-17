@@ -15,15 +15,15 @@ Progress — COMPLETE
 - Time Bandits
 - PureSynth
 - QuadSynth
+- Pulsynth
+- SinLadder
+- Razorback
+- Stinger
 
 Progress — LOW PRIORITY REBUILD
 - MIDIchlorian — rebuild to suit its intended purpose as MIDI output to an event recorder
 
 Progress — PERFORMANCE SYNTH FAMILY FOUNDATION PORTED, INDIVIDUAL REBUILDS STILL OPEN
-- Pulsynth
-- SinLadder
-- Razorback
-- Stinger
 - No Quarter
 
 Shared performance-synth implementation now copied where applicable
@@ -37,6 +37,19 @@ Shared performance-synth implementation now copied where applicable
 - active-voice state application
 - persistence/restore and lifecycle cleanup
 - family behavioral smoke coverage is green
+
+Completed ladder-synth real-MIDI contract
+- Pulsynth, SinLadder, Razorback, and Stinger share one guarded real-MIDI implementation
+- CC1 modulation
+- CC7 level
+- CC11 expression
+- CC64 sustain
+- Pitch Bend and Program Change
+- ADSR MIDI control
+- per-stage CC20–37 mapping in six-control groups: amount, instrument-specific shape, phase, detune, octave, direction
+- instrument-specific shape is duty for Pulsynth, harmonic for SinLadder, peak for Razorback, acceleration for Stinger
+- dedicated ladder MIDI smoke plus full CI/build green
+- No Quarter is excluded from the ladder contract and remains open for its own rebuild
 
 Remaining work for each open module
 - review musician-facing identity and exact feature set
