@@ -21,6 +21,10 @@ Completed in the current rebuild pass:
 - **Time Bandits — COMPLETE**
 - **PureSynth — COMPLETE**
 - **QuadSynth — COMPLETE**
+- **Pulsynth — COMPLETE**
+- **SinLadder — COMPLETE**
+- **Razorback — COMPLETE**
+- **Stinger — COMPLETE**
 
 Low-priority rebuild:
 
@@ -317,11 +321,11 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** complete polyphonic real-MIDI instrument with Carrier output.
 
-## Pulsynth — build spec
+## Pulsynth — build spec — COMPLETE
 
 **Purpose:** Playable pulse/PWM synthesizer whose identity comes from pulse width and PWM motion rather than a different control architecture.
 
-**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation defaults to PWM depth; CC11 expression; CC64 sustain; assigned CCs control duty, PWM rate/depth, oscillator amounts, tuning, ADSR, and any retained tone/filter control; Program Change presets.
+**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC7 level; CC11 expression; CC64 sustain; CC73 attack; CC75 decay; CC70 sustain; CC72 release; Program Change stored in module state. Stage 1 uses CC20–25 for amount, duty, phase, detune, octave, direction; stage 2 uses CC26–31; stage 3 uses CC32–37.
 
 **Controls:** keyboard — performance keyboard; DUTY/PWM — knobs; oscillator AMOUNT/TUNE — knobs; ADSR — prefab; MOD — knob/ribbon; LEVEL — fader; program — encoder/readout.
 
@@ -365,11 +369,11 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** generative decisions may be internal, but all external musical control is real MIDI.
 
-## Razorback — build spec
+## Razorback — build spec — COMPLETE
 
 **Purpose:** Aggressive playable synthesizer centered on sharp/movable-peak wave behavior and cutting harmonic character.
 
-**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC11 expression; CC64 sustain; assigned CCs control peak positions, oscillator amounts, drive/tone, ADSR; Program Change presets.
+**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC7 level; CC11 expression; CC64 sustain; CC73 attack; CC75 decay; CC70 sustain; CC72 release; Program Change stored in module state. Stage 1 uses CC20–25 for amount, peak, phase, detune, octave, direction; stage 2 uses CC26–31; stage 3 uses CC32–37.
 
 **Controls:** PEAK — knobs; stage/oscillator AMOUNT — knobs; DRIVE/TONE — knobs; ADSR — prefab; keyboard — performance keyboard; LEVEL — fader.
 
@@ -415,11 +419,11 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** edits remain explicit; MIDI controls the same functions as the front panel.
 
-## SinLadder — build spec
+## SinLadder — build spec — COMPLETE
 
 **Purpose:** Smooth playable synthesizer that builds increasingly complex harmonic tones from sine-based stages arranged as a ladder voice.
 
-**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 harmonic modulation; CC11 expression; CC64 sustain; assigned CCs control harmonic numbers/amounts, stage tuning/phase, ADSR; Program Change presets.
+**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC7 level; CC11 expression; CC64 sustain; CC73 attack; CC75 decay; CC70 sustain; CC72 release; Program Change stored in module state. Stage 1 uses CC20–25 for amount, harmonic, phase, detune, octave, direction; stage 2 uses CC26–31; stage 3 uses CC32–37.
 
 **Controls:** stage AMOUNT — knobs; HARMONIC/TUNE — encoders; PHASE — knobs; ADSR — prefab; keyboard — performance keyboard; LEVEL — fader.
 
@@ -427,11 +431,11 @@ When a module rename is approved, the rename is exhaustive and atomic. Every rep
 
 **Behavior:** standard real-MIDI instrument semantics with sine/harmonic synthesis identity.
 
-## Stinger — build spec
+## Stinger — build spec — COMPLETE
 
 **Purpose:** Bright, pointed, fast-edged playable synthesizer emphasizing sharp attacks and cutting harmonic motion.
 
-**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC11 expression; CC64 sustain; assigned CCs control acceleration/shape, stage amount/tune, ADSR; Program Change presets.
+**MIDI:** Note On/Off + velocity; Pitch Bend; CC1 modulation; CC7 level; CC11 expression; CC64 sustain; CC73 attack; CC75 decay; CC70 sustain; CC72 release; Program Change stored in module state. Stage 1 uses CC20–25 for amount, acceleration, phase, detune, octave, direction; stage 2 uses CC26–31; stage 3 uses CC32–37.
 
 **Controls:** ACCELERATION/SHAPE — knobs; stage AMOUNT/TUNE — knobs; ADSR — prefab; keyboard — performance keyboard; LEVEL — fader.
 
