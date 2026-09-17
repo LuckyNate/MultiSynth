@@ -1,63 +1,36 @@
 MULTISYNTH TODO
 
-1. REAL MIDI MODULE REBUILD
+1. FINISH THE FULL REAL-MIDI MODULE REBUILD
+
+This is the only active project-level TODO.
 
 Goal
-- Rebuild every production module against the current real-MIDI architecture and canonical control library.
-- Reuse established software patterns and implementations wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, persistence, editor/runtime separation, and canonical control behavior.
-- Diverge only for genuine instrument-specific behavior.
-- No bespoke module control geometry/layout. Modules consume canonical controls/prefabs only.
-- A module is COMPLETE only after its actual rebuilt behavior has relevant smoke coverage and the full CI/build is green.
+- Finish rebuilding every registered production module against the current real-MIDI architecture and canonical control library.
+- `app/src/main/assets/module-manifest.js` is the authoritative active module roster.
+- `modules.md` is the musician-facing rebuild contract and status ledger for that roster.
+- Reuse established software patterns wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, persistence, editor/runtime separation, canonical controls/prefabs, and smoke coverage.
+- Diverge only for genuine module-specific behavior.
+- Do not restore retired ladder synths or compatibility paths. Hook and Ladder is the active expandable operator-ladder instrument.
+- No fake CV/private MIDI-like substitute where real MIDI already defines the message.
+- No bespoke replacements for canonical controls.
 
-Progress — COMPLETE
+Completion gate for each module
+- exact musician-facing behavior agreed
+- real MIDI mappings complete
+- UI and external MIDI address the same module state
+- timing uses the shared transport where applicable
+- persistence/restore and lifecycle cleanup work
+- actual behavior has relevant smoke coverage
+- full CI/build is green
+- `modules.md` status updated
+
+Known COMPLETE in the current rebuild pass
 - Father Time
 - Whitman Sampler
 - Time Bandits
 - PureSynth
 - QuadSynth
-- Pulsynth
-- SinLadder
-- Razorback
-- Stinger
 
-Progress — LOW PRIORITY REBUILD
-- MIDIchlorian — rebuild to suit its intended purpose as MIDI output to an event recorder
+Everything else in the active production roster remains part of this same MIDI rebuild pass until explicitly marked COMPLETE.
 
-Progress — PERFORMANCE SYNTH FAMILY FOUNDATION PORTED, INDIVIDUAL REBUILDS STILL OPEN
-- No Quarter
-
-Shared performance-synth implementation now copied where applicable
-- real MIDI Note On/Off with velocity
-- Pitch Bend on active voices
-- CC64 sustain with correct UI-switch release behavior
-- CC7 level
-- CC11 expression
-- ADSR MIDI control
-- shared voice bookkeeping and panic
-- active-voice state application
-- persistence/restore and lifecycle cleanup
-- family behavioral smoke coverage is green
-
-Completed ladder-synth real-MIDI contract
-- Pulsynth, SinLadder, Razorback, and Stinger share one guarded real-MIDI implementation
-- CC1 modulation
-- CC7 level
-- CC11 expression
-- CC64 sustain
-- Pitch Bend and Program Change
-- ADSR MIDI control
-- per-stage CC20–37 mapping in six-control groups: amount, instrument-specific shape, phase, detune, octave, direction
-- instrument-specific shape is duty for Pulsynth, harmonic for SinLadder, peak for Razorback, acceleration for Stinger
-- dedicated ladder MIDI smoke plus full CI/build green
-- No Quarter is excluded from the ladder contract and remains open for its own rebuild
-
-Remaining work for each open module
-- review musician-facing identity and exact feature set
-- verify/adjust module-specific real MIDI mappings
-- verify surface uses canonical controls/prefabs with zero bespoke control geometry/layout
-- preserve only instrument-specific DSP/behavior differences
-- add/update module-specific behavioral smoke coverage
-- run full CI/build and fix failures
-- update modules.md and mark COMPLETE only when green
-
-Continue the rebuild module-by-module until every production module in modules.md is COMPLETE.
+TEST MODULE is the development/control verification harness and is not a production-module rebuild target.
