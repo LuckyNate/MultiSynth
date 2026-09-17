@@ -11,7 +11,7 @@ function purePeriodicWave(c,s){const w=s.waveform||"sine",harmonics=96,real=new 
 function pureOscillator(c,s,frequency){const o=c.createOscillator();o.frequency.value=frequency;o.setPeriodicWave(purePeriodicWave(c,s));return o}
 const QUAD_SHAPE_SAMPLES=2048,QUAD_SHAPE_HARMONICS=192;
 function quadTickWidth(shape=88){return clamp(shape,0,100)/200}
-function quadNormalizedTick(u,shape=88){u=Number(u);if(u<0||u>1)return 0;const w=quadTickWidth(shape),d=Math.abs(u-.5);if(w===0)return d===0?1:0;return d>=w?0:1-d/w}
+function quadNormalizedTick(u,shape=88){u=Number(u);if(u<0||u>1)return 0;const w=quadTickWidth(shape),d=Math.abs(u-.5);if(w===0)return d===0?1:0;if(d>=w)return 0;const x=1-d/w;return x*x}
 function quadClickSamplePhase(u,shape=88){u=Number(u);if(u<0||u>=1)return-1;return quadNormalizedTick(u,shape)*2-1}
 function quadTwinSamplePhase(u,shape=88){u=Number(u);if(u<0||u>=1)return 0;if(u<.5)return-quadNormalizedTick(u*2,shape);return quadNormalizedTick((u-.5)*2,shape)}
 function quadShapePeriodicWave(c,shapeAmount=88,variant="click"){const sample=variant==="twin"?quadTwinSamplePhase:quadClickSamplePhase,real=new Float32Array(QUAD_SHAPE_HARMONICS+1),imag=new Float32Array(QUAD_SHAPE_HARMONICS+1);for(let n=1;n<=QUAD_SHAPE_HARMONICS;n++){let a=0,b=0;for(let i=0;i<QUAD_SHAPE_SAMPLES;i++){const t=i/QUAD_SHAPE_SAMPLES,y=sample(t,shapeAmount),ang=t*Math.PI*2*n;a+=y*Math.cos(ang);b+=y*Math.sin(ang)}real[n]=2*a/QUAD_SHAPE_SAMPLES;imag[n]=2*b/QUAD_SHAPE_SAMPLES}return c.createPeriodicWave(real,imag)}

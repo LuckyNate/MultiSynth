@@ -76,11 +76,12 @@ near(quad.quadTickWidth(100),.5,1e-12,"shape100 width");
 near(quad.quadNormalizedTick(.5,0),1,1e-12,"shape0 spike peak");
 near(quad.quadNormalizedTick(.49,0),0,1e-12,"shape0 vertical side");
 near(quad.quadNormalizedTick(0,100),0,1e-12,"shape100 left foot");
-near(quad.quadNormalizedTick(.25,100),.5,1e-12,"shape100 left ramp");
-near(quad.quadNormalizedTick(.5,100),1,1e-12,"shape100 peak");
-near(quad.quadNormalizedTick(.75,100),.5,1e-12,"shape100 right ramp");
+near(quad.quadNormalizedTick(.25,100),.25,1e-12,"shape100 curved left shoulder");
+near(quad.quadNormalizedTick(.5,100),1,1e-12,"shape100 acute peak");
+near(quad.quadNormalizedTick(.75,100),.25,1e-12,"shape100 curved right shoulder");
 near(quad.quadNormalizedTick(1,100),0,1e-12,"shape100 right foot");
 if(!(quad.quadNormalizedTick(.4,100)>quad.quadNormalizedTick(.4,0)))throw new Error("increasing SHAPE must spread the normalized tick");
+if(!(quad.quadNormalizedTick(.05,100)<quad.quadNormalizedTick(.25,100)))throw new Error("normalized tick must smooth into the foot instead of remaining triangular");
 for(const [u,s] of [[.5,0],[.4,100],[.25,100]])near(quad.quadClickSamplePhase(u,s),quad.quadNormalizedTick(u,s)*2-1,1e-12,"CLICK must be normalized tick ×2 −1");
 for(const [u,s] of [[.25,0],[.2,100]])near(quad.quadTwinSamplePhase(u,s),-quad.quadNormalizedTick(u*2,s),1e-12,"TWIN lower half must be normalized tick ×−1");
 for(const [u,s] of [[.75,0],[.7,100]])near(quad.quadTwinSamplePhase(u,s),quad.quadNormalizedTick((u-.5)*2,s),1e-12,"TWIN upper half must be normalized tick");
@@ -169,4 +170,4 @@ if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same perio
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: one normalized 0→1 tick; SHAPE only spreads its straight ramps; CLICK = tick×2−1; TWIN = lower tick×−1 plus upper tick; both remain continuous note-pitched oscillators");
+console.log("quadsynth: one normalized curved-foot 0→1 spike; SHAPE only widens it; CLICK = spike×2−1; TWIN = lower spike×−1 plus upper spike; both remain continuous note-pitched oscillators");
