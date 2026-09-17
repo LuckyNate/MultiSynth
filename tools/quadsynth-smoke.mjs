@@ -65,6 +65,9 @@ const expected={click:"clickAcceleration",twin:"clickAcceleration",sine:"sinePha
 for(const [engine,state] of Object.entries(expected))if(shape.meta?.contexts?.[engine]?.state!==state)throw new Error(`${engine} SHAPE binding is not ${state}`);
 for(const forbidden of ["carrier","level","clickLevel","sineLevel","sawLevel","squareLevel","clickOctave","clickTune","clickPhase","clickMute","clickSolo"]){if(surface.controls.some(x=>x?.id===forbidden))throw new Error(`obsolete QuadSynth control remains: ${forbidden}`)}
 
+const reconstruct=(wave,t)=>{let y=0;for(let n=1;n<wave.real.length;n++){const a=t*Math.PI*2*n;y+=(wave.real[n]||0)*Math.cos(a)+(wave.imag[n]||0)*Math.sin(a)}return y};
+const waveArea=wave=>{const samples=1024;let sum=0;for(let i=0;i<samples;i++)sum+=Math.abs(reconstruct(wave,(i+.5)/samples));return sum/samples};
+
 const ctx=new AudioContext();
 const state={...def.defaults,selectedEngine:"triangle"};
 let input=null,output=null;
@@ -99,22 +102,23 @@ if(click?.quadEngine!=="click")throw new Error("CLICK context did not select cli
 const clickSource=click.sources[0];
 if(click.clickRepeater)throw new Error("CLICK still creates the retired trigger/repeater path");
 if(clickSource.buffer)throw new Error("CLICK still uses a finite sample buffer");
-if(clickSource.__msQuadShapeModel!=="hyperbolic-ramp-periodic")throw new Error("CLICK is not the hyperbolic periodic ramp voice");
+if(clickSource.__msQuadShapeModel!=="hyperbolic-ramp-periodic")throw new Error("CLICK is not the periodic ramp voice");
 if(clickSource.__msQuadShapeAcceleration!==0)throw new Error("CLICK zero SHAPE was not applied");
 if(clickSource.periodicWaveCount!==1||!clickSource.periodicWave)throw new Error("CLICK did not create a real PeriodicWave oscillator");
 const expectedHz=440*Math.pow(2,(62-69)/12);
 if(Math.abs(clickSource.frequency.value-expectedHz)>.001)throw new Error("CLICK oscillator frequency is not the played note frequency");
-const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice();
+const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice(),zeroClickWave=clickSource.periodicWave,zeroClickArea=waveArea(zeroClickWave);
 if(zeroReal.length<100||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks harmonic content");
 if(!zeroReal.some((v,i)=>i>0&&Math.abs(v)>.000001)&&!zeroImag.some((v,i)=>i>0&&Math.abs(v)>.000001))throw new Error("CLICK periodic waveform is silent");
 state.clickAcceleration=100;
 def.setState({runtime,state});
 if(click.sources[0]!==clickSource)throw new Error("CLICK SHAPE replaced the oscillator instead of reshaping it");
 if(clickSource.__msQuadShapeAcceleration!==100)throw new Error("CLICK full SHAPE was not retained");
-if(clickSource.periodicWaveCount<2)throw new Error("CLICK SHAPE did not rebuild the hyperbolic periodic waveform");
-const fullWave=clickSource.periodicWave;
+if(clickSource.periodicWaveCount<2)throw new Error("CLICK SHAPE did not rebuild the periodic waveform");
+const fullWave=clickSource.periodicWave,fullClickArea=waveArea(fullWave);
 const changed=fullWave.real.some((v,i)=>Math.abs(v-(zeroReal[i]||0))>.000001)||fullWave.imag.some((v,i)=>Math.abs(v-(zeroImag[i]||0))>.000001);
 if(!changed)throw new Error("CLICK SHAPE does not change the periodic waveform");
+if(!(fullClickArea>zeroClickArea+.01))throw new Error(`CLICK SHAPE must increase tick area: shape0=${zeroClickArea.toFixed(4)} shape100=${fullClickArea.toFixed(4)}`);
 state.pitchBend=1;
 def.setState({runtime,state});
 const retunedHz=440*Math.pow(2,(63-69)/12);
@@ -125,20 +129,27 @@ if(clickSource.stoppedAt==null)throw new Error("CLICK Note Off did not stop the 
 
 state.pitchBend=0;
 state.selectedEngine="twin";
-state.clickAcceleration=100;
+state.clickAcceleration=0;
 def.noteOn({runtime,state},63,100);
 const twin=user.voices.get("63");
 if(twin?.quadEngine!=="twin")throw new Error("TWIN context did not select twin engine");
 const twinSource=twin.sources[0];
 if(twin.clickRepeater)throw new Error("TWIN still creates the retired trigger/repeater path");
 if(twinSource.buffer)throw new Error("TWIN still uses a finite sample buffer");
-if(twinSource.__msQuadShapeModel!=="hyperbolic-twin-periodic")throw new Error("TWIN is not the hyperbolic periodic twin voice");
-if(twinSource.__msQuadShapeAcceleration!==100)throw new Error("TWIN full SHAPE was not retained");
+if(twinSource.__msQuadShapeModel!=="hyperbolic-twin-periodic")throw new Error("TWIN is not the periodic reflected-ramp voice");
+if(twinSource.__msQuadShapeAcceleration!==0)throw new Error("TWIN zero SHAPE was not applied");
 if(twinSource.periodicWaveCount!==1||!twinSource.periodicWave)throw new Error("TWIN did not create a real PeriodicWave oscillator");
-const twinWave=twinSource.periodicWave;
+const zeroTwinWave=twinSource.periodicWave,zeroTwinArea=waveArea(zeroTwinWave);
+state.clickAcceleration=100;
+def.setState({runtime,state});
+if(twin.sources[0]!==twinSource)throw new Error("TWIN SHAPE replaced the oscillator instead of reshaping it");
+if(twinSource.__msQuadShapeAcceleration!==100)throw new Error("TWIN full SHAPE was not retained");
+if(twinSource.periodicWaveCount<2)throw new Error("TWIN SHAPE did not rebuild the periodic waveform");
+const twinWave=twinSource.periodicWave,fullTwinArea=waveArea(twinWave);
+if(!(fullTwinArea>zeroTwinArea+.01))throw new Error(`TWIN SHAPE must increase tick area: shape0=${zeroTwinArea.toFixed(4)} shape100=${fullTwinArea.toFixed(4)}`);
 const differsFromClick=twinWave.real.some((v,i)=>Math.abs(v-(fullWave.real[i]||0))>.000001)||twinWave.imag.some((v,i)=>Math.abs(v-(fullWave.imag[i]||0))>.000001);
 if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same periodic waveform");
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: CLICK uses the asymmetric 0→2 minus 1 bipolar ramp with one sharp +1 spine; TWIN uses the reflected bipolar ramp with a slow smooth zero crossing between down and up spikes; neither uses trigger, delay, overlap, or finite-click playback");
+console.log("quadsynth: CLICK and TWIN are continuous periodic ramp oscillators; SHAPE increases tick area from thin/steep to broad; CLICK uses the 0→2 minus 1 ramp split at zero; TWIN uses the 0→2 ramp divided by 2 and reflected around amplitude 0; neither uses trigger, delay, overlap, or finite-click playback");
