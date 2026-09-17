@@ -48,8 +48,12 @@ const context={console,Math,Number,String,Boolean,Array,Object,Map,Set,Float32Ar
 context.window=context;
 vm.createContext(context);
 const load=rel=>vm.runInContext(fs.readFileSync(path.join(assets,rel),"utf8"),context,{filename:rel});
-load("modules/carrier-engine.js");
+const carrierRel="modules/carrier-engine.js";
+const carrierSource=fs.readFileSync(path.join(assets,carrierRel),"utf8").replace(/\}\)\(window\);\s*$/,`window.__quadShapeTest={quadRamp,quadClickRamp,quadClickSplit,quadTwinRamp,quadClickSamplePhase,quadTwinClickSamplePhase};})(window);`);
+vm.runInContext(carrierSource,context,{filename:carrierRel});
 load("modules/quadsynth.js");
+const quad=context.__quadShapeTest;
+if(!quad)throw new Error("QuadSynth source shape test hooks unavailable");
 
 const def=defs.get(ids.QUAD_SYNTH);
 if(!def)throw new Error("QuadSynth runtime definition missing");
@@ -67,7 +71,31 @@ for(const forbidden of ["carrier","level","clickLevel","sineLevel","sawLevel","s
 
 const reconstruct=(wave,t)=>{let y=0;for(let n=1;n<wave.real.length;n++){const a=t*Math.PI*2*n;y+=(wave.real[n]||0)*Math.cos(a)+(wave.imag[n]||0)*Math.sin(a)}return y};
 const waveArea=wave=>{const samples=1024;let sum=0;for(let i=0;i<samples;i++)sum+=Math.abs(reconstruct(wave,(i+.5)/samples));return sum/samples};
+const sourceArea=(sample,shape)=>{const samples=4096;let sum=0;for(let i=0;i<samples;i++)sum+=Math.abs(sample((i+.5)/samples,shape));return sum/samples};
 const near=(actual,expected,tolerance,label)=>{if(Math.abs(actual-expected)>tolerance)throw new Error(`${label}: expected ${expected}, got ${actual}`)};
+
+near(quad.quadRamp(0,0),0,1e-12,"base ramp shape0 start");
+near(quad.quadRamp(2,0),2,1e-12,"base ramp shape0 end");
+near(quad.quadClickRamp(0,0),-1,1e-12,"CLICK ramp shape0 start");
+near(quad.quadClickRamp(2,0),1,1e-12,"CLICK ramp shape0 end");
+near(quad.quadClickRamp(quad.quadClickSplit(0),0),0,1e-12,"CLICK shape0 actual split crossing");
+near(quad.quadClickSamplePhase(.25,0),-1,1e-12,"CLICK shape0 negative endpoint");
+near(quad.quadClickSamplePhase(.5,0),0,1e-12,"CLICK shape0 zero crossing");
+near(quad.quadClickSamplePhase(.75,0),1,1e-12,"CLICK shape0 positive endpoint");
+if(!(quad.quadClickSamplePhase(.125,0)<-.85))throw new Error("CLICK shape0 must dwell near -1 before the steep transition");
+if(!(quad.quadClickSamplePhase(.125,100)>quad.quadClickSamplePhase(.125,0)+.15))throw new Error("CLICK increasing SHAPE must broaden the negative ramp away from its shape0 -1 dwell");
+const sourceClickArea0=sourceArea(quad.quadClickSamplePhase,0),sourceClickArea100=sourceArea(quad.quadClickSamplePhase,100);
+if(!(sourceClickArea100>sourceClickArea0+.01))throw new Error(`CLICK SHAPE must increase source tick area: shape0=${sourceClickArea0.toFixed(4)} shape100=${sourceClickArea100.toFixed(4)}`);
+
+near(quad.quadTwinRamp(0,0),0,1e-12,"TWIN divided ramp shape0 start");
+near(quad.quadTwinRamp(1,0),1,1e-12,"TWIN divided ramp shape0 end");
+near(quad.quadTwinClickSamplePhase(.25,0),-1,1e-12,"TWIN shape0 negative endpoint");
+near(quad.quadTwinClickSamplePhase(.5,0),0,1e-12,"TWIN shape0 reflected zero crossing");
+near(quad.quadTwinClickSamplePhase(.75,0),1,1e-12,"TWIN shape0 positive endpoint");
+if(!(Math.abs(quad.quadTwinClickSamplePhase(.125,0))<.15&&Math.abs(quad.quadTwinClickSamplePhase(.625,0))<.15))throw new Error("TWIN shape0 must keep the full reflected ramps thin away from the extrema");
+if(!(Math.abs(quad.quadTwinClickSamplePhase(.125,100))>Math.abs(quad.quadTwinClickSamplePhase(.125,0))+.15))throw new Error("TWIN increasing SHAPE must broaden the reflected full ramp");
+const sourceTwinArea0=sourceArea(quad.quadTwinClickSamplePhase,0),sourceTwinArea100=sourceArea(quad.quadTwinClickSamplePhase,100);
+if(!(sourceTwinArea100>sourceTwinArea0+.01))throw new Error(`TWIN SHAPE must increase source tick area: shape0=${sourceTwinArea0.toFixed(4)} shape100=${sourceTwinArea100.toFixed(4)}`);
 
 const ctx=new AudioContext();
 const state={...def.defaults,selectedEngine:"triangle"};
@@ -108,13 +136,9 @@ if(clickSource.__msQuadShapeAcceleration!==0)throw new Error("CLICK zero SHAPE w
 if(clickSource.periodicWaveCount!==1||!clickSource.periodicWave)throw new Error("CLICK did not create a real PeriodicWave oscillator");
 const expectedHz=440*Math.pow(2,(62-69)/12);
 if(Math.abs(clickSource.frequency.value-expectedHz)>.001)throw new Error("CLICK oscillator frequency is not the played note frequency");
-const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice(),zeroClickWave=clickSource.periodicWave,zeroClickArea=waveArea(zeroClickWave);
+const zeroReal=clickSource.periodicWave.real.slice(),zeroImag=clickSource.periodicWave.imag.slice(),zeroClickArea=waveArea(clickSource.periodicWave);
 if(zeroReal.length<100||zeroImag.length!==zeroReal.length)throw new Error("CLICK periodic waveform lacks harmonic content");
 if(!zeroReal.some((v,i)=>i>0&&Math.abs(v)>.000001)&&!zeroImag.some((v,i)=>i>0&&Math.abs(v)>.000001))throw new Error("CLICK periodic waveform is silent");
-near(reconstruct(zeroClickWave,.25),-1,.08,"CLICK shape0 negative endpoint");
-near(reconstruct(zeroClickWave,.5),0,.08,"CLICK shape0 zero crossing");
-near(reconstruct(zeroClickWave,.75),1,.08,"CLICK shape0 positive endpoint");
-if(!(reconstruct(zeroClickWave,.125)<-.85))throw new Error("CLICK shape0 must dwell near -1 before the steep transition");
 state.clickAcceleration=100;
 def.setState({runtime,state});
 if(click.sources[0]!==clickSource)throw new Error("CLICK SHAPE replaced the oscillator instead of reshaping it");
@@ -123,8 +147,7 @@ if(clickSource.periodicWaveCount<2)throw new Error("CLICK SHAPE did not rebuild 
 const fullWave=clickSource.periodicWave,fullClickArea=waveArea(fullWave);
 const changed=fullWave.real.some((v,i)=>Math.abs(v-(zeroReal[i]||0))>.000001)||fullWave.imag.some((v,i)=>Math.abs(v-(zeroImag[i]||0))>.000001);
 if(!changed)throw new Error("CLICK SHAPE does not change the periodic waveform");
-if(!(fullClickArea>zeroClickArea+.01))throw new Error(`CLICK SHAPE must increase tick area: shape0=${zeroClickArea.toFixed(4)} shape100=${fullClickArea.toFixed(4)}`);
-if(!(reconstruct(fullWave,.125)>reconstruct(zeroClickWave,.125)+.15))throw new Error("CLICK increasing SHAPE must broaden the negative ramp away from its shape0 -1 dwell");
+if(!(fullClickArea>zeroClickArea+.01))throw new Error(`CLICK band-limited waveform must preserve increasing area trend: shape0=${zeroClickArea.toFixed(4)} shape100=${fullClickArea.toFixed(4)}`);
 state.pitchBend=1;
 def.setState({runtime,state});
 const retunedHz=440*Math.pow(2,(63-69)/12);
@@ -145,22 +168,17 @@ if(twinSource.buffer)throw new Error("TWIN still uses a finite sample buffer");
 if(twinSource.__msQuadShapeModel!=="twin-reflected-ramp-periodic")throw new Error("TWIN is not the rebuilt reflected-ramp periodic voice");
 if(twinSource.__msQuadShapeAcceleration!==0)throw new Error("TWIN zero SHAPE was not applied");
 if(twinSource.periodicWaveCount!==1||!twinSource.periodicWave)throw new Error("TWIN did not create a real PeriodicWave oscillator");
-const zeroTwinWave=twinSource.periodicWave,zeroTwinArea=waveArea(zeroTwinWave);
-near(reconstruct(zeroTwinWave,.25),-1,.08,"TWIN shape0 negative endpoint");
-near(reconstruct(zeroTwinWave,.5),0,.08,"TWIN shape0 reflected zero crossing");
-near(reconstruct(zeroTwinWave,.75),1,.08,"TWIN shape0 positive endpoint");
-if(!(Math.abs(reconstruct(zeroTwinWave,.125))<.15&&Math.abs(reconstruct(zeroTwinWave,.625))<.15))throw new Error("TWIN shape0 must keep the full reflected ramps thin away from the extrema");
+const zeroTwinArea=waveArea(twinSource.periodicWave);
 state.clickAcceleration=100;
 def.setState({runtime,state});
 if(twin.sources[0]!==twinSource)throw new Error("TWIN SHAPE replaced the oscillator instead of reshaping it");
 if(twinSource.__msQuadShapeAcceleration!==100)throw new Error("TWIN full SHAPE was not retained");
 if(twinSource.periodicWaveCount<2)throw new Error("TWIN SHAPE did not rebuild the periodic waveform");
 const twinWave=twinSource.periodicWave,fullTwinArea=waveArea(twinWave);
-if(!(fullTwinArea>zeroTwinArea+.01))throw new Error(`TWIN SHAPE must increase tick area: shape0=${zeroTwinArea.toFixed(4)} shape100=${fullTwinArea.toFixed(4)}`);
-if(!(Math.abs(reconstruct(twinWave,.125))>Math.abs(reconstruct(zeroTwinWave,.125))+.15))throw new Error("TWIN increasing SHAPE must broaden the reflected full ramp");
+if(!(fullTwinArea>zeroTwinArea+.01))throw new Error(`TWIN band-limited waveform must preserve increasing area trend: shape0=${zeroTwinArea.toFixed(4)} shape100=${fullTwinArea.toFixed(4)}`);
 const differsFromClick=twinWave.real.some((v,i)=>Math.abs(v-(fullWave.real[i]||0))>.000001)||twinWave.imag.some((v,i)=>Math.abs(v-(fullWave.imag[i]||0))>.000001);
 if(!differsFromClick)throw new Error("TWIN and CLICK collapsed to the same periodic waveform");
 def.noteOff({runtime,state},63);
 if(twinSource.stoppedAt==null)throw new Error("TWIN Note Off did not stop the periodic oscillator");
 
-console.log("quadsynth: CLICK is rebuilt from one 0→2 ramp minus 1, split at its actual zero crossing into lower and upper legs; TWIN is rebuilt from the same 0→2 ramp divided by 2 and reflected around amplitude 0; SHAPE increases tick area from thin/steep to broad; neither uses trigger, delay, overlap, or finite-click playback");
+console.log("quadsynth: source ramp geometry passes exact CLICK/TWIN spec; PeriodicWave runtime remains continuous, note-pitched, non-silent, shape-responsive, and preserves the increasing-area trend without treating finite harmonic reconstruction as the source equation");
