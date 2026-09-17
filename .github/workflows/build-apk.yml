@@ -88,6 +88,9 @@ jobs:
       - name: Runtime smoke
         run: node tools/runtime-smoke.mjs
 
+      - name: Ladder synth MIDI smoke
+        run: node tools/ladder-midi-smoke.mjs
+
       - name: QuadSynth rebuild smoke
         run: node tools/quadsynth-smoke.mjs
 
