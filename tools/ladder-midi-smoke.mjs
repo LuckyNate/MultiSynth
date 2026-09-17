@@ -28,7 +28,7 @@ midi(0xb0,70,100);if(Math.abs(state.sustain-100/127)>.0001)throw new Error("CC70
 midi(0xb0,72,40);if(Math.abs(state.release-(40/127*4))>.0001)throw new Error("CC72 release failed");
 
 for(let n=1;n<=4;n++){
-  const cc=20+(n-1)*8;
+  const cc=20+(n-1)*7;
   midi(0xb0,cc,127);if(state[`voice${n}`]!=="stinger")throw new Error(`rung ${n} voice failed`);
   midi(0xb0,cc+1,127);if(state[`bypass${n}`]!==true)throw new Error(`rung ${n} bypass failed`);
   midi(0xb0,cc+2,127);if(Math.abs(state[`amount${n}`]-.85)>.0001)throw new Error(`rung ${n} amount failed`);
@@ -36,12 +36,12 @@ for(let n=1;n<=4;n++){
   midi(0xb0,cc+4,64);if(Math.abs(state[`phase${n}`]-(64/127*360))>.0001)throw new Error(`rung ${n} phase failed`);
   midi(0xb0,cc+5,0);if(state[`detune${n}`]!==-100)throw new Error(`rung ${n} detune failed`);
   midi(0xb0,cc+6,127);if(state[`octave${n}`]!==4)throw new Error(`rung ${n} octave failed`);
-  midi(0xb0,cc+7,127);if(state[`direction${n}`]!=="down")throw new Error(`rung ${n} direction failed`);
 }
 
 midi(0xe0,127,127);if(state.pitchBend<1.9||state.pitchBend>2.01)throw new Error("Pitch Bend failed");
 midi(0xc0,11);if(state.program!==11)throw new Error("Program Change failed");
 if(def.version!=="real-midi-1")throw new Error(`unexpected LadderSynth runtime version ${def.version}`);
-if(surface.package?.behavior?.rungMidi!=="voice-bypass-amount-shape-phase-detune-octave-direction")throw new Error("LadderSynth rung MIDI surface contract missing");
+if(surface.package?.behavior?.rungMidi!=="voice-bypass-amount-shape-phase-detune-octave")throw new Error("LadderSynth rung MIDI surface contract missing");
+if(Object.keys(def.defaults).some(k=>k.startsWith("direction")))throw new Error("LadderSynth exposes obsolete direction state");
 
-console.log("LadderSynth MIDI smoke passed: four rung voice/bypass/amount/shape/phase/detune/octave/direction mappings plus standard performance MIDI");
+console.log("LadderSynth MIDI validation passed: four rung voice/bypass/amount/shape/phase/detune/octave mappings plus standard performance MIDI");
