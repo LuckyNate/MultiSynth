@@ -215,11 +215,11 @@ The live preview should contain at least:
 - canonical main-style knob with integrated numeric value;
 - inactive and active button;
 - small display/readout;
-- Carrier/CV jack treatment;
+- Carrier/Clock jack treatment;
 - label typography;
 - LED/active indicator.
 
-The preview uses the real shared control CSS once that library exists.
+The preview uses the real current shared control CSS and shared jack presentation. It must not carry a separate mock control vocabulary.
 
 A theme is not considered successful merely because its four swatches look good together.
 
@@ -246,4 +246,4 @@ The theme generator is part of module authoring, not a global app skin chooser.
 
 Each module may have its own theme.
 
-The shared control library consumes that module theme so the same beautiful knob, switch, screen, keyboard and jack construction automatically belongs visually to whichever instrument uses it.
+The shared control library consumes that module theme so the same canonical knob, switch, screen, keyboard and jack construction automatically belongs visually to whichever instrument uses it.
