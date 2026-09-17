@@ -49,7 +49,7 @@ context.window=context;
 vm.createContext(context);
 const load=rel=>vm.runInContext(fs.readFileSync(path.join(assets,rel),"utf8"),context,{filename:rel});
 const carrierRel="modules/carrier-engine.js";
-const carrierSource=fs.readFileSync(path.join(assets,carrierRel),"utf8").replace(/\}\)\(window\);\s*$/,`window.__quadShapeTest={quadRamp,quadClickRamp,quadClickSplit,quadTwinRamp,quadClickSamplePhase,quadTwinClickSamplePhase};})(window);`);
+const carrierSource=fs.readFileSync(path.join(assets,carrierRel),"utf8").replace(/\}\)\(window\);\s*$/,`window.__quadShapeTest={quadTickRamp,quadClickAmplitude,quadClickZeroCrossing,quadTwinAmplitude,quadClickSamplePhase,quadTwinSamplePhase};})(window);`);
 vm.runInContext(carrierSource,context,{filename:carrierRel});
 load("modules/quadsynth.js");
 const quad=context.__quadShapeTest;
@@ -74,11 +74,11 @@ const waveArea=wave=>{const samples=1024;let sum=0;for(let i=0;i<samples;i++)sum
 const sourceArea=(sample,shape)=>{const samples=4096;let sum=0;for(let i=0;i<samples;i++)sum+=Math.abs(sample((i+.5)/samples,shape));return sum/samples};
 const near=(actual,expected,tolerance,label)=>{if(Math.abs(actual-expected)>tolerance)throw new Error(`${label}: expected ${expected}, got ${actual}`)};
 
-near(quad.quadRamp(0,0),0,1e-12,"base ramp shape0 start");
-near(quad.quadRamp(2,0),2,1e-12,"base ramp shape0 end");
-near(quad.quadClickRamp(0,0),-1,1e-12,"CLICK ramp shape0 start");
-near(quad.quadClickRamp(2,0),1,1e-12,"CLICK ramp shape0 end");
-near(quad.quadClickRamp(quad.quadClickSplit(0),0),0,1e-12,"CLICK shape0 actual split crossing");
+near(quad.quadTickRamp(0,0),0,1e-12,"base ramp shape0 start");
+near(quad.quadTickRamp(2,0),2,1e-12,"base ramp shape0 end");
+near(quad.quadClickAmplitude(0,0),-1,1e-12,"CLICK ramp shape0 start");
+near(quad.quadClickAmplitude(2,0),1,1e-12,"CLICK ramp shape0 end");
+near(quad.quadClickAmplitude(quad.quadClickZeroCrossing(0),0),0,1e-12,"CLICK shape0 actual split crossing");
 near(quad.quadClickSamplePhase(.25,0),-1,1e-12,"CLICK shape0 negative endpoint");
 near(quad.quadClickSamplePhase(.5,0),0,1e-12,"CLICK shape0 zero crossing");
 near(quad.quadClickSamplePhase(.75,0),1,1e-12,"CLICK shape0 positive endpoint");
@@ -87,14 +87,14 @@ if(!(quad.quadClickSamplePhase(.125,100)>quad.quadClickSamplePhase(.125,0)+.15))
 const sourceClickArea0=sourceArea(quad.quadClickSamplePhase,0),sourceClickArea100=sourceArea(quad.quadClickSamplePhase,100);
 if(!(sourceClickArea100>sourceClickArea0+.01))throw new Error(`CLICK SHAPE must increase source tick area: shape0=${sourceClickArea0.toFixed(4)} shape100=${sourceClickArea100.toFixed(4)}`);
 
-near(quad.quadTwinRamp(0,0),0,1e-12,"TWIN divided ramp shape0 start");
-near(quad.quadTwinRamp(1,0),1,1e-12,"TWIN divided ramp shape0 end");
-near(quad.quadTwinClickSamplePhase(.25,0),-1,1e-12,"TWIN shape0 negative endpoint");
-near(quad.quadTwinClickSamplePhase(.5,0),0,1e-12,"TWIN shape0 reflected zero crossing");
-near(quad.quadTwinClickSamplePhase(.75,0),1,1e-12,"TWIN shape0 positive endpoint");
-if(!(Math.abs(quad.quadTwinClickSamplePhase(.125,0))<.15&&Math.abs(quad.quadTwinClickSamplePhase(.625,0))<.15))throw new Error("TWIN shape0 must keep the full reflected ramps thin away from the extrema");
-if(!(Math.abs(quad.quadTwinClickSamplePhase(.125,100))>Math.abs(quad.quadTwinClickSamplePhase(.125,0))+.15))throw new Error("TWIN increasing SHAPE must broaden the reflected full ramp");
-const sourceTwinArea0=sourceArea(quad.quadTwinClickSamplePhase,0),sourceTwinArea100=sourceArea(quad.quadTwinClickSamplePhase,100);
+near(quad.quadTwinAmplitude(0,0),0,1e-12,"TWIN divided ramp shape0 start");
+near(quad.quadTwinAmplitude(2,0),1,1e-12,"TWIN divided ramp shape0 end");
+near(quad.quadTwinSamplePhase(.25,0),-1,1e-12,"TWIN shape0 negative endpoint");
+near(quad.quadTwinSamplePhase(.5,0),0,1e-12,"TWIN shape0 reflected zero crossing");
+near(quad.quadTwinSamplePhase(.75,0),1,1e-12,"TWIN shape0 positive endpoint");
+if(!(Math.abs(quad.quadTwinSamplePhase(.125,0))<.15&&Math.abs(quad.quadTwinSamplePhase(.625,0))<.15))throw new Error("TWIN shape0 must keep the full reflected ramps thin away from the extrema");
+if(!(Math.abs(quad.quadTwinSamplePhase(.125,100))>Math.abs(quad.quadTwinSamplePhase(.125,0))+.15))throw new Error("TWIN increasing SHAPE must broaden the reflected full ramp");
+const sourceTwinArea0=sourceArea(quad.quadTwinSamplePhase,0),sourceTwinArea100=sourceArea(quad.quadTwinSamplePhase,100);
 if(!(sourceTwinArea100>sourceTwinArea0+.01))throw new Error(`TWIN SHAPE must increase source tick area: shape0=${sourceTwinArea0.toFixed(4)} shape100=${sourceTwinArea100.toFixed(4)}`);
 
 const ctx=new AudioContext();
