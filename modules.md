@@ -1,8 +1,8 @@
 # MultiSynth Modules — Real MIDI Rebuild Contract
 
-This file is the musician-facing rebuild contract and status ledger for the active registered module roster.
+This file is the musician-facing rebuild contract and status ledger for the active registered module roster plus explicitly approved planned modules.
 
-The authoritative runtime roster is `app/src/main/assets/module-manifest.js`. Historical or retired modules do not belong in this file merely because they still exist in Git history.
+The authoritative runtime roster is `app/src/main/assets/module-manifest.js`. Historical or retired modules do not belong in this file merely because they still exist in Git history. Approved planned modules remain here until they are instantiated and registered.
 
 ## Hard architecture rules
 
@@ -57,7 +57,9 @@ This is the complete current registered module list:
 
 The former Pulsynth, SinLadder, Razorback, Stinger, and LadderSynth family is retired. Hook and Ladder replaces that fixed ladder family with a generalized dynamically expanding operator ladder.
 
-Gene Sequencer is not currently a registered module and is not part of the active roster.
+## Approved planned module
+
+- **Gene Sequencer** — approved 32-step monophonic real-MIDI sequencer. It remains part of the rebuild plan even though it is not yet registered in `module-manifest.js`.
 
 ## Rebuild status
 
@@ -71,7 +73,7 @@ Gene Sequencer is not currently a registered module and is not part of the activ
 
 ### ACTIVE / REBUILD PASS NOT YET CLOSED
 
-Every other production module in the roster remains part of the same full real-MIDI rebuild pass until explicitly marked COMPLETE.
+Every other production module in the roster, plus Gene Sequencer once instantiated, remains part of the same full real-MIDI rebuild pass until explicitly marked COMPLETE.
 
 `TEST MODULE` is the canonical development/control verification harness rather than a production-module rebuild target.
 
@@ -106,6 +108,17 @@ Sixteen-voice, 32-step drum machine. Notes 36–51 address drum voices with velo
 
 ### Rearranger
 Section/song arranger and synchronized launcher. Uses real MIDI notes/CC/program/transport to command participating modules and follows the shared transport for quantized launches.
+
+### Gene Sequencer — PLANNED
+Simple 32-step monophonic sequencer. Selecting a step and playing a note records that note and its velocity directly into the selected step. Velocity defaults to 127 when not otherwise supplied.
+
+The sequence stores 32 step records containing note, active/rest state, per-step length and velocity. Per-step length determines matching Note Off timing. REST/CLEAR disables the selected step. Loop length is independently selectable from 1–32 steps.
+
+MIDI IN uses real Note On/Off for recording/audition, CC64 where sustain is useful, and F8/FA/FB/FC for shared timing and transport. MIDI OUT emits actual Note On with stored velocity and matching Note Off according to each step's stored length so the sequence can drive internal modules or external MIDI destinations.
+
+The module includes a minimal sine/saw/square internal carrier for direct audition. External Carrier input hard-overrides the internal carrier rather than blending with it.
+
+Controls: 32 step-select buttons, performance keyboard, step length, rest/clear, loop length, division, play/stop, reset, sine/saw/square selection, selected note/velocity readout and playback-position indication. Playback follows `PatchTransport`; it must not create a private scheduler.
 
 ### The Chopper
 MIDI-playable slice/chop instrument for longer recordings. Slice slots respond to real Note On/Off + velocity; pitch, reverse, boundaries, level and choke behavior are MIDI-addressable.
@@ -202,4 +215,4 @@ Terminal audio-routing module for supported Android/Bluetooth output destination
 
 ## Completion rule
 
-The full MIDI rebuild is finished only when every active production module above is explicitly COMPLETE, each rebuilt behavior has relevant smoke coverage, and the full CI/build is green.
+The full MIDI rebuild is finished only when every active production module above, including the approved Gene Sequencer once instantiated, is explicitly COMPLETE, each rebuilt behavior has relevant smoke coverage, and the full CI/build is green.
