@@ -54,9 +54,13 @@ The Patch Graph does not own internal module behavior or physical control intera
 
 ---
 
-## 4. ModuleContract
+## 4. Module Identity, Manifest and Contract
 
-`ModuleContract` is the canonical runtime owner and registry for modules.
+`module-ids.js` owns registered module identity.
+
+`module-manifest.js` is the authoritative active module roster and owns category/capability/resource/routing metadata for those registered identities.
+
+`ModuleContract` is the canonical runtime owner and registry for module behavior and module-owned control surfaces.
 
 A registered module has two canonical pieces: its runtime definition and its module surface.
 
@@ -67,9 +71,11 @@ The runtime definition may own:
 - default persistent state;
 - DSP/runtime construction;
 - state application;
+- MIDI message handling;
 - MIDI Note On/Off handlers;
 - clock handlers;
 - lifecycle behavior;
+- serialization/restore behavior;
 - other module-specific runtime responsibilities.
 
 Playable musical events use MIDI Note On/Off semantics. `ModuleContract` does not expose a parallel generic trigger bus.
@@ -94,7 +100,52 @@ The old Module Builder definition/catalog runtime is retired and must not be rei
 
 ---
 
-## 5. Module Ownership
+## 5. Current Registered Module Roster
+
+The current registered roster is:
+
+- Live Wire
+- Father Time
+- Whitman Sampler
+- Time Bandits
+- Rearranger
+- The Chopper
+- Sample Surgery
+- Sample Library
+- Big Deal
+- Big Mouth
+- Grain Liqour
+- Been Served
+- Garage Band
+- Master of Levels
+- Alchemy Mixer
+- +1 Splitter
+- +1 Merger
+- Denzel's Equalizer
+- Echo Canyon
+- Control Freak
+- LOWRIDER LFO
+- Unstable Diffusion
+- Keyless88
+- TEST MODULE
+- PureSynth
+- QuadSynth
+- Hook and Ladder
+- No Quarter
+- Randrone
+- Hookworm
+- Tapeworm
+- Tail Gator
+- MIDIchlorian
+- Bluetooth Output
+
+The former Pulsynth, SinLadder, Razorback, Stinger and LadderSynth family is retired. Those identities and implementations are historical only and must not be restored as compatibility architecture.
+
+`modules.md` is the rebuild/status contract for this active roster.
+
+---
+
+## 6. Module Ownership
 
 A module owns the things that make it a particular instrument or processor, including identity, metadata, theme, persistent state, parameter meaning, DSP/runtime behavior, control bindings, jack policy, intentional composition, artwork, and MIDI note/clock semantics where applicable.
 
@@ -102,11 +153,11 @@ A module does not own generic physical controller behavior.
 
 **The module decides what a control means. The control decides how that physical control works.**
 
-When two modules solve the same class of problem, the established software pattern is reused wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, editor/runtime separation, and control behavior. Instrument-specific behavior is the reason to diverge; similarity is the reason to copy the working pattern rather than invent a parallel implementation.
+When two modules solve the same class of problem, the established software pattern is reused wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, editor/runtime separation, persistence, panic/cleanup, and control behavior. Instrument-specific behavior is the reason to diverge; similarity is the reason to copy the working pattern rather than invent a parallel implementation.
 
 ---
 
-## 6. Shared Control Architecture
+## 7. Shared Control Architecture
 
 Recurring physical controls come from the canonical shared control system.
 
@@ -126,7 +177,7 @@ The aggregate public layers remain:
 
 ---
 
-## 7. Canonical Control Ownership
+## 8. Canonical Control Ownership
 
 A canonical control owns appearance, geometry, physical proportions, touch behavior, pointer capture, gesture interpretation, generic value/state I/O, pressed/active feedback, lock feedback where supported, approved variants, and control-specific accessibility semantics.
 
@@ -136,17 +187,17 @@ The canonical control-family audit is complete.
 
 ---
 
-## 8. Canon Protection
+## 9. Canon Protection
 
 Existing canonical controls are locked.
 
-Changes to an existing canonical control’s appearance, geometry, interaction, generic I/O, renderer behavior, shared state behavior, or existing approved variants require two explicit confirmations for that exact proposed change.
+Changes to an existing canonical control's appearance, geometry, interaction, generic I/O, renderer behavior, shared state behavior, or existing approved variants require two explicit confirmations for that exact proposed change.
 
 Authorization is single-use and does not authorize adjacent cleanup or unrelated refactors.
 
 ---
 
-## 9. Control Prefabs
+## 10. Control Prefabs
 
 Reusable assemblies of canonical controls belong in `controls/prefabs.js`.
 
@@ -156,7 +207,7 @@ A prefab is a composition, not a second physical-control implementation.
 
 ---
 
-## 10. Module Interface Composition
+## 11. Module Interface Composition
 
 Module faces use canonical controls plus intentional structural composition.
 
@@ -166,7 +217,7 @@ Specialized module compositions are allowed when the instrument itself requires 
 
 ---
 
-## 11. Module Editors
+## 12. Module Editors
 
 The shared module editor consumes runtime definitions and surfaces from `ModuleContract`.
 
@@ -174,21 +225,23 @@ For ordinary modules it identifies the module instance, retrieves the runtime de
 
 Specialized editors may exist for genuinely specialized instruments but do not create private control systems.
 
+Hook and Ladder is an example of a specialized dynamic composition: the editor creates/removes visible rung composition from module state while still using canonical controls for the rung hardware.
+
 ---
 
-## 12. State and Control Binding
+## 13. State and Control Binding
 
 Module state is authoritative.
 
 A mounted control reflects the state target to which it is currently bound. Interaction writes through the active binding into module state. External and restored state changes must be reflected back into the mounted control.
 
-Live control movement uses the state/runtime application path. It must not structurally rebuild the audio graph.
+Live control movement uses the state/runtime application path. It must not structurally rebuild the Patch Graph.
 
 Graph rebuilds are structural operations. Control interaction is state application.
 
 ---
 
-## 13. Contextual Binding
+## 14. Contextual Binding
 
 One physical control may remain mounted while its semantic target changes.
 
@@ -198,24 +251,26 @@ An interaction begun against one binding must never continue writing into anothe
 
 ---
 
-## 14. Freewheel and Test Module
+## 15. Freewheel and Test Module
 
-The Test Module is the canonical control test harness. Freewheel lets a physical control perform its normal interaction without requiring a real module/DSP destination.
+The TEST MODULE is the canonical control test harness. Freewheel lets a physical control perform its normal interaction without requiring a real module/DSP destination.
 
 Freewheel does not create a second implementation; it exercises the real canonical behavior independently of leaf semantics.
 
+TEST MODULE is development infrastructure and is not a production-module MIDI rebuild target.
+
 ---
 
-## 15. Signal, MIDI and Jack Architecture
+## 16. Signal, MIDI and Jack Architecture
 
-MultiSynth currently has two graph routing domains:
+MultiSynth has two Patch Graph routing domains:
 
 - **Carrier** — audio signal routing.
 - **Clock** — patchable timing routing.
 
 A **jack** is the visible patch point on a module. Direction is encoded by the graph connection contract, but the physical UI remains a jack rather than being described as a device input/output.
 
-There is currently no general control-voltage routing domain.
+There is no general control-voltage routing domain.
 
 Performance/control semantics are MIDI-native:
 
@@ -232,7 +287,7 @@ Clock packets use clock semantics only. A clock packet must never enter a module
 
 ---
 
-## 16. Master Timing Architecture
+## 17. Master Timing Architecture
 
 `PatchTransport` is the sole internal timing authority.
 
@@ -253,7 +308,7 @@ External MIDI clock remains live because future external F8 pulses cannot be kno
 
 ---
 
-## 17. Father Time
+## 18. Father Time
 
 Father Time is the visible master-clock module and timing-jack bridge. It is not a second timing authority.
 
@@ -272,7 +327,7 @@ Multiple Father Time module instances share one physical MIDI-out clock stream s
 
 ---
 
-## 18. Timing Followers and Playable MIDI Modules
+## 19. Timing Followers and Playable MIDI Modules
 
 Timing-aware modules are identified by `clockFollower` capability metadata.
 
@@ -280,19 +335,21 @@ Their sequencers consume the shared transport/subdivision stream directly. Patch
 
 A clock-aware module must not infer BPM by running its own timer, start a private scheduler, or reinterpret a Clock packet as a performance event.
 
-Playable modules use `noteInput` capability metadata and `ModuleContract.noteOn()` / `noteOff()` handlers.
+Playable modules use `noteInput` capability metadata and `ModuleContract.noteOn()` / `noteOff()` handlers where appropriate.
 
 Whitman Sampler maps MIDI notes 36–51 to its 16 sample slots. Time Bandits maps MIDI notes 36–51 to its 16 drum voices. Both internal sequencers emit real MIDI Note On/Off into the same note-receiver path used by external MIDI instead of directly invoking private playback functions.
 
 Whitman Sampler is the reference implementation for the shared 16-slot/32-step pattern architecture. Time Bandits copies that applicable pattern/event/timing implementation and retains only the drum-machine behavior that is genuinely instrument-specific.
 
-RanDrone uses MIDI Note On as its explicit manual/random-event performance input.
+Randrone uses MIDI Note On as its explicit manual/random-event performance input.
 
-The current timing participants include Father Time, Whitman Sampler, Time Bandits and RanDrone.
+The current timing participants include Father Time, Whitman Sampler, Time Bandits and Randrone.
 
 ---
 
-## 19. Dynamic Jacks and the +1 Contract
+## 20. Dynamic +1 Contracts
+
+### Patch-routing used +1
 
 Some routing modules expose a **used + 1** jack boundary:
 
@@ -302,11 +359,24 @@ Some routing modules expose a **used + 1** jack boundary:
 
 The dynamic-jack policy belongs to the module contract and the Patch Graph owns rendering/connection of those declared jacks.
 
-Current examples include Alchemy dynamic Carrier jacks, Splitter/Merger dynamic Carrier routing, and Father Time dynamic Clock jacks.
+Current routing examples include Alchemy dynamic Carrier jacks, +1 Splitter/+1 Merger dynamic Carrier routing, and Father Time dynamic Clock jacks.
+
+### Hook and Ladder operator used +1
+
+Hook and Ladder uses the same growth idea internally, but it is not a Patch Graph jack contract.
+
+- Source 1 is always active.
+- One inactive next operator/source rung always exists.
+- Activating the current last rung appends another inactive rung.
+- Every active rung receives the accumulated signal from the previous rung and applies its selected operator/source to produce the next accumulated signal.
+- Dynamic rung count and rung parameters are persistent module state.
+- Rung changes apply inside the module runtime; they do not rebuild the Patch Graph.
+
+This generalized operator ladder replaces the retired fixed ladder-synth family.
 
 ---
 
-## 20. Audio Runtime
+## 21. Audio Runtime
 
 The audio/runtime layer owns module DSP/runtime instances, applying module state, Carrier signal construction, runtime MIDI note/clock behavior, structural audio graph connections, and active AudioNode lifecycle.
 
@@ -314,29 +384,29 @@ Normal control movement applies state to the existing runtime. Structural routin
 
 ---
 
-## 21. Output Ownership
+## 22. Output Ownership
 
 Only the designated output path reaches the device audio destination.
 
-The Output Mixer is the terminal audio path to the device speaker. Ordinary modules do not silently connect themselves directly to device output. Audio output modules are explicit members of the module/routing architecture.
+Terminal audio modules are explicit members of the module/routing architecture; ordinary modules do not silently connect themselves directly to device output.
 
-Physical MIDI output is likewise explicit. `MIDIchlorian` is the terminal physical MIDI sink for ordinary MIDI channel/performance messages and module-emitted pattern MIDI. It uses the existing native MIDI bridge rather than introducing a second MIDI protocol.
+Physical MIDI output is likewise explicit. `MIDIchlorian` owns ordinary physical MIDI channel/performance output through the existing native MIDI bridge rather than introducing a second MIDI protocol.
 
 Physical realtime clock/transport ownership remains separate: Father Time is the sole F8/FA/FB/FC hardware bridge. MIDIchlorian does not duplicate realtime messages, so adding a MIDI output module cannot double-clock external devices.
 
 ---
 
-## 22. Persistence
+## 23. Persistence
 
 Persistence reconstructs the playable project, not merely its drawing.
 
-Persistent project state includes module instances, positions, module state, graph camera state, patch cables, dynamic routing state, referenced assets, meaningful presentation state, contextual binding targets, binding-associated values and persistent lock state where applicable.
+Persistent project state includes module instances, positions, module state, graph camera state, patch cables, dynamic routing state, dynamic Hook and Ladder rung state, referenced assets, meaningful presentation state, contextual binding targets, binding-associated values and persistent lock state where applicable.
 
-The current node-graph serialization format uses explicit Carrier and Clock connections. Obsolete timing connections from the retired routing domain are not restored into the new graph format.
+The current node-graph serialization format uses explicit Carrier and Clock connections. Obsolete timing connections from retired routing domains are not restored into the new graph format.
 
 ---
 
-## 23. CSS Ownership
+## 24. CSS Ownership
 
 Shared CSS owns shared control and ordinary module layout infrastructure. Module CSS owns identity and intentional specialized composition.
 
@@ -344,7 +414,7 @@ Module CSS must not recreate canonical control anatomy or generic responsive inf
 
 ---
 
-## 24. Standards and Verification
+## 25. Standards and Verification
 
 The standards path validates active modules against registered identity, manifest metadata, `ModuleContract` runtime definition and surface, declared capabilities, and routing/boilerplate expectations.
 
@@ -360,29 +430,41 @@ Timing/MIDI smoke tests must prove:
 - MIDIchlorian cannot duplicate Father Time realtime clock/transport output;
 - MIDI Note On/Off reaches modules through the note contract rather than a generic trigger/CV bus;
 - internal sequencer events use the same real MIDI note path as external performance where applicable;
-- MIDI channel messages remain MIDI channel messages.
+- MIDI channel messages remain MIDI channel messages;
+- dynamic module state such as Hook and Ladder rung growth persists and restores correctly;
+- UI and external MIDI alter the same authoritative module state.
 
 Control verification remains separate and must not be changed as part of timing/MIDI work.
 
+A module is not COMPLETE merely because it mounts or because a generic smoke passes. Its actual musician-facing behavior must have relevant coverage and the full CI/build must be green.
+
 ---
 
-## 25. Legacy Architecture
+## 26. Legacy Architecture
 
 The old Module Builder runtime/catalog/definition path is retired. It must not return as a compatibility registry, shadow surface registry, second runtime owner, adapter around `ModuleContract`, or fallback editor source.
 
-Retired CV/trigger timing-routing concepts likewise stay in Git history rather than remaining as active compatibility paths.
+Retired CV/trigger timing-routing concepts stay in Git history rather than remaining as active compatibility paths.
+
+The retired ladder synth identities and implementations likewise stay in Git history. Hook and Ladder is the active generalized operator-ladder architecture; do not preserve or restore the retired ladder family through aliases or compatibility registration.
 
 Git history is reference material, not active architecture.
 
 ---
 
-## 26. Architectural Direction
+## 27. Current Project Direction
+
+The only active project-level TODO is finishing the full real-MIDI rebuild across the current production roster.
+
+The completion ledger and musician-facing contracts live in `modules.md`; the active runtime roster lives in `module-manifest.js`.
 
 **Application** owns project lifecycle, navigation, persistence and host integration.
 
 **Patch Graph** owns module instances, spatial arrangement, Carrier routing and Clock-jack routing.
 
 **PatchTransport** owns time.
+
+**ModuleManifest** owns the active registered roster and capability/routing metadata.
 
 **ModuleContract** owns canonical runtime definitions and module-owned surfaces.
 
