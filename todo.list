@@ -5,9 +5,9 @@ MULTISYNTH TODO
 This is the only active project-level TODO.
 
 Goal
-- Finish rebuilding every registered production module against the current real-MIDI architecture and canonical control library.
-- `app/src/main/assets/module-manifest.js` is the authoritative active module roster.
-- `modules.md` is the musician-facing rebuild contract and status ledger for that roster.
+- Finish rebuilding every registered production module plus the approved planned Gene Sequencer against the current real-MIDI architecture and canonical control library.
+- `app/src/main/assets/module-manifest.js` is the authoritative active registered module roster.
+- `modules.md` is the musician-facing rebuild contract and status ledger for the registered roster plus approved planned modules.
 - Reuse established software patterns wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, persistence, editor/runtime separation, canonical controls/prefabs, and smoke coverage.
 - Diverge only for genuine module-specific behavior.
 - Do not restore retired ladder synths or compatibility paths. Hook and Ladder is the active expandable operator-ladder instrument.
@@ -31,6 +31,6 @@ Known COMPLETE in the current rebuild pass
 - PureSynth
 - QuadSynth
 
-Everything else in the active production roster remains part of this same MIDI rebuild pass until explicitly marked COMPLETE.
+Everything else in the active production roster, plus Gene Sequencer once instantiated, remains part of this same MIDI rebuild pass until explicitly marked COMPLETE.
 
 TEST MODULE is the development/control verification harness and is not a production-module rebuild target.
