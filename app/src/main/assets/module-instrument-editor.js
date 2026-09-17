@@ -9,7 +9,8 @@ const banks=new Map();function bank(name,layout){const k=name+layout;if(banks.ha
 const targets={params:()=>bank("PARAMETERS","ms-layout-params"),actions:()=>bank("ACTIONS","ms-layout-transport"),pads:()=>bank("PERFORMANCE","ms-layout-pads"),screens:()=>bank("DISPLAY","ms-layout-list")};
 const isLadder=/ladder/i.test(String(surface.package?.behavior?.role||"")),isFatherTime=type===P.ModuleIds?.FATHER_TIME;
 const fatherTarget=()=>bank("CLOCK","ms-layout-transport");
-const targetFor=(d,fallback)=>{const t=isFatherTime?fatherTarget():fallback();if(isLadder&&/^amount[23]$/.test(String(d.id||""))){const s=document.createElement("div");s.setAttribute("aria-hidden","true");s.style.gridColumn="1 / -1";s.style.height="1px";s.style.background="currentColor";s.style.opacity=".28";s.style.margin="6px 0 2px";t.appendChild(s)}return t};
+const ladderTarget=d=>{const id=String(d?.id||d?.state||""),m=id.match(/^(?:voice|bypass|octave|detune|amount|shape|phase)([1-4])$/);return m?bank(`RUNG ${m[1]}`,"ms-layout-rung"):bank("MAIN","ms-layout-main")};
+const targetFor=(d,fallback)=>isFatherTime?fatherTarget():isLadder?ladderTarget(d):fallback();
 const dynamicControls=[];
 const refreshDynamic=()=>dynamicControls.forEach(fn=>{try{fn()}catch(e){console.error(e)}});
 // IMPORTANT: Live controls must NEVER call NodeAudioGraph.rebuild(). Rebuilds are structural-only; doing one during knob/fader/ribbon movement tears/reconnects the audio graph and causes audible crackling. State changes belong on the runtime's setModuleState/apply path.
