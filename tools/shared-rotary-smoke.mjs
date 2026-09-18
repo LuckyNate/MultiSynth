@@ -53,6 +53,7 @@ let knobLockEvents=0;
 knob.node.addEventListener("multisynth-control-lock-change",e=>{knobLockEvents++;if(e.detail?.locked!==true)throw new Error("knob tap did not report locked state")});
 knob.node.dispatchEvent(pointer("pointerdown",1,10,10));
 knob.node.dispatchEvent(pointer("pointerup",1,10,10));
+await new Promise(resolve=>setTimeout(resolve,320));
 if(knob.node.dataset.locked!=="1"||knob.node.isControlLocked?.()!==true)throw new Error("knob tap did not lock control");
 if(knobLockEvents!==1)throw new Error(`knob lock event count wrong: ${knobLockEvents}`);
 
