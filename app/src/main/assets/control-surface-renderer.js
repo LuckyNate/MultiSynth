@@ -59,7 +59,7 @@
     if(d.control!==C.KNOB)return root;
     const face=root.querySelector(".ms-control-face");if(!face)return root;
     const locked="#e23b35",baseBorder=face.style.borderColor||"",baseShadow=face.style.boxShadow||"";let pointer=null,startX=0,startY=0,turning=false,feedback=false,feedbackTimer=null,blinkTimers=[];
-    const highlight=()=>String(getComputedStyle(root).getPropertyValue("--ms-control-accent")||"#d8d8d8").trim()||"#d8d8d8";
+    const highlight=()=>String(global.getComputedStyle?.(root)?.getPropertyValue("--ms-control-accent")||root.style.getPropertyValue?.("--ms-control-accent")||root.style["--ms-control-accent"]||"#d8d8d8").trim()||"#d8d8d8";
     const clearFeedback=()=>{if(feedbackTimer){clearTimeout(feedbackTimer);feedbackTimer=null}for(const t of blinkTimers)clearTimeout(t);blinkTimers=[];feedback=false};
     const paint=()=>{const isLocked=root.dataset.locked==="1",color=isLocked?locked:(turning||feedback)?highlight():null;face.style.borderColor=color||baseBorder;face.style.boxShadow=color?`${baseShadow}${baseShadow?",":""}0 0 9px ${color}, inset 0 0 7px ${color}`:baseShadow;root.dataset.knobStatus=isLocked?"locked":turning?"turning":feedback?"feedback":"idle"};
     root.__msKnobTouchFeedback=()=>{if(root.dataset.locked==="1"){paint();return}clearFeedback();feedback=true;paint();feedbackTimer=setTimeout(()=>{feedback=false;feedbackTimer=null;paint()},110)};
