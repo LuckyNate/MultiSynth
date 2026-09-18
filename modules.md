@@ -70,6 +70,7 @@ The former Pulsynth, SinLadder, Razorback, Stinger, and LadderSynth family is re
 - Time Bandits
 - PureSynth
 - QuadSynth
+- Hook and Ladder
 
 ### ACTIVE / REBUILD PASS NOT YET CLOSED
 
@@ -183,7 +184,7 @@ Reference conventional synth voice. Real Note On/Off + velocity, Pitch Bend, mod
 ### QuadSynth — COMPLETE
 Layered synth voice using the current Quad engine choices. Real MIDI performance, sustain, expression, pitch and component/shared controls use the same module state as the UI.
 
-### Hook and Ladder
+### Hook and Ladder — COMPLETE
 Dynamic +1 serial operator-ladder synth and the active replacement for the retired fixed ladder family.
 
 Source 1 is always active. The module always exposes one inactive next rung. Activating the current last rung creates another inactive rung, so the chain grows only as used.
@@ -191,6 +192,8 @@ Source 1 is always active. The module always exposes one inactive next rung. Act
 Each active rung receives the accumulated output from the previous rung and combines its own waveform/source with that signal using its selected operator. Current operator vocabulary includes additive, subtractive, multiply/ring-style, AM and FM behavior. Each rung owns its source type/shape, phase, octave, detune, amount and operator state.
 
 Real MIDI performance follows the established synth-family pattern: Note On/Off + velocity, Pitch Bend, CC1 modulation, CC7 level, CC11 expression, CC64 sustain, ADSR controls and Program Change/state persistence. Dynamic rung state must persist and live changes must apply to active voices without rebuilding the patch graph.
+
+Feature behavior is COMPLETE. UI requires a dedicated cleanup/polish pass. In particular, enumerated knobs must display the selected enumerated value on their label rather than the underlying numeric index/value.
 
 ### No Quarter
 Electric-piano-style polyphonic instrument. Real MIDI controls notes, velocity, pitch, sustain, expression and its tone/character parameters; instrument-specific DSP remains the reason it differs from the generic synth pattern.
