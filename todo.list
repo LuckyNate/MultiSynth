@@ -14,6 +14,9 @@ Goal
 - No fake CV/private MIDI-like substitute where real MIDI already defines the message.
 - No bespoke replacements for canonical controls.
 
+Design issue
+- Sustain persistence: Sustain must continue playing the module’s current tone when the module UI is closed and the user returns to the node graph. Sustain is runtime audio state, not UI state. This is required so a sustained synth can act as a carrier or source for downstream recording/sampling.
+
 Completion gate for each module
 - exact musician-facing behavior agreed
 - real MIDI mappings complete
