@@ -52,8 +52,26 @@ calls.length=0;
 A.noteOn(61,99);
 if(calls.map(x=>x.id).sort().join(",")!=="quad,sampler")throw new Error("global MIDI Note On no longer broadcasts to enabled modules");
 
-const quadHtml=fs.readFileSync(path.join(repo,"app/src/main/assets/quadsynth.html"),"utf8");
-for(const required of ["noteOnTo?.(instance","noteOffTo?.(instance","retuneModuleNote?.(instance","panicModule?.(instance)"]){if(!quadHtml.includes(required))throw new Error(`QuadSynth keyboard missing scoped adapter: ${required}`)}
-if(quadHtml.includes("K.mount(host,{audio:A})"))throw new Error("QuadSynth keyboard still mounts the global broadcast audio API");
-
-console.log("module keyboard scope: onboard QuadSynth MIDI and performance ribbon stay local, including realtime finite CLICK retune; global MIDI broadcast remains intact");
+const scopedFiles=[
+  "app/src/main/assets/quadsynth.html",
+  "app/src/main/assets/puresynth.html",
+  "app/src/main/assets/no-quarter.html",
+  "app/src/main/assets/hook-and-ladder.html",
+  "app/src/main/assets/grain-liqour-editor.js",
+  "app/src/main/assets/modules/control-freak.js",
+  "app/src/main/assets/rearranger-ui.js"
+];
+for(const rel of scopedFiles){
+  const text=fs.readFileSync(path.join(repo,rel),"utf8");
+  for(const required of ["noteOnTo?.(instance","noteOffTo?.(instance","retuneModuleNote?.(instance","panicModule?.(instance)"]){
+    if(!text.includes(required))throw new Error(`${rel} keyboard missing scoped adapter: ${required}`);
+  }
+  if(/(?:PerformanceKeyboard|PK)\??\.mount\??\([^\n;]*\{audio:A\}/.test(text)||text.includes("K.mount(host,{audio:A})"))throw new Error(`${rel} keyboard still mounts the global broadcast audio API`);
+}
+const assets=path.join(repo,"app/src/main/assets");
+for(const rel of fs.readdirSync(assets)){
+  if(!/\.(?:html|js)$/.test(rel))continue;
+  const text=fs.readFileSync(path.join(assets,rel),"utf8");
+  if(text.includes("K.mount(host,{audio:A})")||text.includes("PerformanceKeyboard.mount(keyboardHost,{audio:A})")||text.includes("PK?.mount?.(keyboardHost,{audio:A})"))throw new Error(`${rel} contains an unscoped onboard performance keyboard`);
+}
+console.log("module keyboard scope: every onboard performance keyboard stays local to its owning module; global MIDI broadcast remains available only through explicit global APIs");

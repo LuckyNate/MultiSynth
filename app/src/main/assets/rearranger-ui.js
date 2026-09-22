@@ -300,9 +300,10 @@
     document.body.classList.remove("hasPinnedKeyboard");
   };
   const keyboardHost=document.getElementById("performanceKeyboard");
-  if(keyboardHost&&MS.PerformanceKeyboard?.mount){
+  if(keyboardHost&&MS.PerformanceKeyboard?.mount&&A&&instance){
+    const audio={resume:()=>A.resume?.(),noteOn:(n,v)=>A.noteOnTo?.(instance,n,v),noteOff:n=>A.noteOffTo?.(instance,n),retuneNote:(a,t)=>A.retuneModuleNote?.(instance,a,t),panic:()=>A.panicModule?.(instance)};
     document.body.classList.add("hasPinnedKeyboard");
-    const keyboard=MS.PerformanceKeyboard.mount(keyboardHost,{audio:A});
+    const keyboard=MS.PerformanceKeyboard.mount(keyboardHost,{audio});
     const destroy=()=>{cleanup();try{keyboard?.destroy?.()}catch(_){}};
     addEventListener("pagehide",destroy,{once:true});
     addEventListener("beforeunload",destroy,{once:true});

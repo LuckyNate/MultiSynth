@@ -18,5 +18,5 @@ const module=E.getModule(instance);if(!module)return;
 root.innerHTML="";
 root.classList.add("ms-module-surface");
 R.mount(root,{id:"scope",control:"oscilloscope",meta:{visual:{width:320,height:140}}});
-if(keyboardHost)PK?.mount?.(keyboardHost,{audio:A});
+if(keyboardHost){const audio={resume:()=>A?.resume?.(),noteOn:(n,v)=>A?.noteOnTo?.(instance,n,v),noteOff:n=>A?.noteOffTo?.(instance,n),retuneNote:(a,t)=>A?.retuneModuleNote?.(instance,a,t),panic:()=>A?.panicModule?.(instance)};PK?.mount?.(keyboardHost,{audio})}
 })(window);
