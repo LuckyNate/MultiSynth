@@ -100,6 +100,9 @@ jobs:
       - name: Master of Levels MIDI smoke
         run: node tools/master-of-levels-midi-smoke.mjs
 
+      - name: Denzel EQ MIDI smoke
+        run: node tools/denzels-equalizer-midi-smoke.mjs
+
       - name: Module keyboard scope smoke
         run: node tools/module-keyboard-scope-smoke.mjs
 
