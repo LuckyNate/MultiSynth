@@ -94,6 +94,9 @@ jobs:
       - name: Been Served MIDI smoke
         run: node tools/been-served-midi-smoke.mjs
 
+      - name: Garage Band MIDI smoke
+        run: node tools/garage-band-midi-smoke.mjs
+
       - name: Module keyboard scope smoke
         run: node tools/module-keyboard-scope-smoke.mjs
 
