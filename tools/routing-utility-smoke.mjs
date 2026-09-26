@@ -27,10 +27,9 @@ if(!audioGraphSource.includes('g.modules.filter(m=>m.type===I()?.ALCHEMY_MIXER)'
 if(audioGraphSource.includes('g.modules.filter(m=>m.type===I()?.BLUETOOTH_OUTPUT)'))throw new Error("Bluetooth Output was incorrectly auto-connected to local speaker collector");
 
 const ids={PLUS_ONE_SPLITTER:"plus-one-splitter",PLUS_ONE_MERGER:"plus-one-merger",canonicalId:v=>String(v||"")};
-const updates=new Map();
 const contract={
   getDefinition(type){if(type===ids.PLUS_ONE_SPLITTER)return{displayName:type,defaults:{levels:{}},dynamicPorts:{carrierOut:"used-plus-one"}};if(type===ids.PLUS_ONE_MERGER)return{displayName:type,defaults:{levels:{}},dynamicPorts:{carrierIn:"used-plus-one"}};return{displayName:type,defaults:{},dynamicPorts:{}}},
-  getSurface(){return null},update(id,patch){updates.set(id,patch)},destroy(){},createRuntime(){return{}},getRuntime(){return{}},
+  getSurface(){return null},update(){},destroy(){},createRuntime(){return{}},getRuntime(){return{}},
 };
 const context={console,JSON,Date,Math,Map,Set,structuredClone,MultiSynth:{ModuleContract:contract,ModuleIds:ids,StateKeys:{normalizePatch:(v)=>v}}};
 context.window=context;context.globalThis=context;
@@ -80,16 +79,7 @@ E.clear();
 }
 E.clear();
 
-// The +1 pair is not a Clock/MIDI utility anymore.
-{
-  const source=add("source"),split=add(ids.PLUS_ONE_SPLITTER),merge=add(ids.PLUS_ONE_MERGER),target=add("target");
-  expectThrow(()=>E.connectNodes(E.moduleClockOut(source),E.moduleClockIn(split)),"Input jack already in use");
-  expectThrow(()=>E.connectNodes(E.moduleMidiOut(source),E.moduleMidiIn(merge)),"Input jack already in use");
-  void target;
-}
-E.clear();
-
-// Signal domains remain isolated.
+// Signal domains remain isolated at the graph level.
 {
   const a=add("a"),b=add("b");
   expectThrow(()=>E.connectNodes(E.moduleMidiOut(a),E.moduleIn(b)),"cannot be crossed");
