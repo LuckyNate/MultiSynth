@@ -5,6 +5,7 @@ import {fileURLToPath} from "node:url";
 
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const source=fs.readFileSync(path.join(repo,"app/src/main/assets/modules/been-served.js"),"utf8");
+const audioGraphSource=fs.readFileSync(path.join(repo,"app/src/main/assets/node-audio-graph.js"),"utf8");
 let def=null,surface=null;
 
 class Param{
@@ -16,13 +17,18 @@ class Param{
   exponentialRampToValueAtTime(v){this.value=v}
 }
 class Node{
-  constructor(){this.gain=new Param(1)}
+  constructor(){
+    this.gain=new Param(1);this.frequency=new Param(0);this.threshold=new Param();this.ratio=new Param();this.knee=new Param();this.attack=new Param();this.release=new Param();this.fftSize=0;
+  }
   connect(n){return n}
   disconnect(){}
 }
 class AudioContext{
-  constructor(){this.currentTime=0}
+  constructor(){this.currentTime=0;this.state="running";this.destination=new Node()}
   createGain(){return new Node()}
+  createDynamicsCompressor(){return new Node()}
+  createAnalyser(){return new Node()}
+  resume(){return Promise.resolve()}
 }
 
 const ids={BEEN_SERVED:"been-served"};
@@ -38,6 +44,8 @@ if(!surface)throw new Error("Been Served surface missing");
 if(def.version!=="real-midi-1")throw new Error(`unexpected Been Served version ${def.version}`);
 if(!def.resources?.includes("midi"))throw new Error("Been Served does not declare MIDI resource");
 if(typeof def.midiMessage!=="function")throw new Error("Been Served MIDI receiver missing");
+if(surface.sources?.find(x=>x.id==="source.midi")?.type!=="midiInput")throw new Error("Been Served surface is missing real MIDI input");
+if(surface.sources?.find(x=>x.id==="source.audio")?.type!=="audioInput")throw new Error("Been Served surface is missing Carrier input");
 
 const ccByControl={attack:73,decay:75,sustain:70,release:72};
 for(const [id,cc] of Object.entries(ccByControl)){
@@ -95,4 +103,38 @@ const restored=def.restore({saved});
 near(restored.expression,state.expression,1e-12,"expression persistence");
 near(restored.attack,state.attack,1e-12,"attack persistence");
 
-console.log("Been Served MIDI smoke passed");
+// Prove the production patch path: Control Freak MIDI OUT -> Been Served MIDI IN.
+const routedCtx=new AudioContext();
+const makeBeenServedRuntime=()=>{
+  const routedState={...def.defaults};
+  const routedUser=def.create({context:routedCtx,state:routedState,setInput(){},setOutput(){}});
+  return {state:routedState,runtime:{user:routedUser}};
+};
+const routedA=makeBeenServedRuntime(),routedB=makeBeenServedRuntime();
+const modules=[{id:"cf",type:"control-freak",enabled:true},{id:"adsr-a",type:"been-served",enabled:true},{id:"adsr-b",type:"been-served",enabled:true}];
+const connections=[{id:"midi-edge",type:"midi",from:"module:cf:midi-out",to:"module:adsr-a:midi-in"}];
+const runtimes=new Map([["adsr-a",routedA.runtime],["adsr-b",routedB.runtime],["cf",{}]]);
+const states=new Map([["adsr-a",routedA.state],["adsr-b",routedB.state]]);
+const parseNode=value=>{const m=/^module:(.+):(midi-in|midi-out)$/.exec(String(value||""));return m?{id:m[1],signal:"midi",direction:m[2].endsWith("out")?"out":"in"}:null};
+const routeMS={
+  NodeGraphEngine:{graph:()=>({modules,connections}),getModule:id=>modules.find(m=>m.id===id),on(){},createModuleRuntime:id=>runtimes.get(id),parseNode},
+  ModuleContract:{
+    getRuntime:id=>runtimes.get(id),
+    midi:(id,packet)=>{if(!states.has(id))return false;return def.midiMessage({runtime:runtimes.get(id),state:states.get(id)},packet)},
+    panic:()=>true,update:()=>true
+  },
+  ModuleManifest:{get:()=>({capabilities:[]})},
+  ModuleIds:{CONTROL_FREAK:"control-freak",ALCHEMY_MIXER:"alchemy-mixer",PURE_SYNTH:"puresynth"}
+};
+const routeContext={console,Math,Promise,Map,Set,WeakMap,URL,queueMicrotask,AudioContext,webkitAudioContext:AudioContext,location:{href:"file:///index.html"},MultiSynth:routeMS};
+routeContext.window=routeContext;
+vm.createContext(routeContext);
+vm.runInContext(audioGraphSource,routeContext,{filename:"node-audio-graph.js"});
+const A=routeContext.MultiSynth.NodeAudioGraph;
+if(A.noteOnFrom("cf",64,111)!==1)throw new Error("Control Freak routed Note On did not reach exactly one patched ADSR");
+if(!routedA.runtime.user.held.has("64"))throw new Error("patched Been Served did not receive routed Note On");
+if(routedB.runtime.user.held.size)throw new Error("unpatched Been Served received routed Note On");
+A.noteOffFrom("cf",64);
+if(routedA.runtime.user.held.size)throw new Error("patched Been Served did not receive routed Note Off");
+
+console.log("Been Served MIDI smoke passed — direct ADSR behavior and patched Control Freak MIDI OUT -> Been Served MIDI IN routing verified");
