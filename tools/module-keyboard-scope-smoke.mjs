@@ -48,9 +48,6 @@ const oldClickSource=clickVoice.sources[0];
 A.retuneModuleNote("quad",62,74);
 if(Math.abs(clickRetuneHz-880)>.001)throw new Error("performance ribbon did not retune finite CLICK repeater by musical pitch ratio");
 if(clickVoice.sources[0]===oldClickSource||clickVoice.sources[0]!==clickRepeater.source)throw new Error("performance ribbon did not adopt regenerated CLICK sample source");
-calls.length=0;
-A.noteOn(61,99);
-if(calls.map(x=>x.id).sort().join(",")!=="quad,sampler")throw new Error("global MIDI Note On no longer broadcasts to enabled modules");
 
 const scopedFiles=[
   "app/src/main/assets/quadsynth.html",
@@ -74,4 +71,4 @@ for(const rel of fs.readdirSync(assets)){
   const text=fs.readFileSync(path.join(assets,rel),"utf8");
   if(text.includes("K.mount(host,{audio:A})")||text.includes("PerformanceKeyboard.mount(keyboardHost,{audio:A})")||text.includes("PK?.mount?.(keyboardHost,{audio:A})"))throw new Error(`${rel} contains an unscoped onboard performance keyboard`);
 }
-console.log("module keyboard scope: every onboard performance keyboard stays local to its owning module; global MIDI broadcast remains available only through explicit global APIs");
+console.log("module keyboard scope: every onboard performance keyboard stays local to its owning module; patch-wide MIDI now requires explicit MIDI routing");
