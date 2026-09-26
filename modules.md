@@ -72,9 +72,13 @@ The former Pulsynth, SinLadder, Razorback, Stinger, and LadderSynth family is re
 - QuadSynth
 - Hook and Ladder
 
+### FUNCTIONALLY COMPLETE — APPEARANCE PASS REMAINS
+
+- The Chopper — capture, PCM-library loading, high-frequency/envelope-change auto chopping, manual cut editing, saving, and host-targeted MIDI control are functionally complete. Final appearance/polish pass remains.
+
 ### ACTIVE / REBUILD PASS NOT YET CLOSED
 
-Every other production module in the roster, plus Gene Sequencer once instantiated, remains part of the same full real-MIDI rebuild pass until explicitly marked COMPLETE.
+Every other production module in the roster, plus Gene Sequencer once instantiated, remains part of the same full real-MIDI rebuild pass until explicitly marked COMPLETE or FUNCTIONALLY COMPLETE with a documented remaining presentation-only pass.
 
 `TEST MODULE` is the canonical development/control verification harness rather than a production-module rebuild target.
 
@@ -121,8 +125,12 @@ The module includes a minimal sine/saw/square internal carrier for direct auditi
 
 Controls: 32 step-select buttons, performance keyboard, step length, rest/clear, loop length, division, play/stop, reset, sine/saw/square selection, selected note/velocity readout and playback-position indication. Playback follows `PatchTransport`; it must not create a private scheduler.
 
-### The Chopper
-MIDI-playable slice/chop instrument for longer recordings. Slice slots respond to real Note On/Off + velocity; pitch, reverse, boundaries, level and choke behavior are MIDI-addressable.
+### The Chopper — FUNCTIONALLY COMPLETE
+PCM chopping utility. It loads recorded samples from the PCM library and can record either microphone audio or incoming Carrier audio. Its existing automatic slicing behavior is preserved: chop boundaries are found from the current high-frequency/envelope-change analysis, with manual waveform cut editing available afterward.
+
+The Chopper is not a MIDI performance instrument and does not expose MIDI IN or MIDI OUT graph jacks. MIDI support is host-targeted control of the utility's existing actions rather than a new playback path: CC16 controls auto sensitivity, CC17 triggers AUTO FIND SAMPLES, CC18 clears cuts, CC19 saves chops, CC20 saves the whole source, CC21 gates microphone recording, and CC22 gates Carrier/input recording.
+
+Functional behavior is complete. Appearance will receive a final dedicated cleanup/polish pass.
 
 ### Sample Surgery
 Sample editor for trimming, boundaries, gain, audition and processing. MIDI controls the same editor state/actions as the front panel; audition uses real note semantics where applicable.
@@ -218,4 +226,4 @@ Terminal audio-routing module for supported Android/Bluetooth output destination
 
 ## Completion rule
 
-The full MIDI rebuild is finished only when every active production module above, including the approved Gene Sequencer once instantiated, is explicitly COMPLETE, each rebuilt behavior has relevant smoke coverage, and the full CI/build is green.
+The full MIDI rebuild is finished only when every active production module above, including the approved Gene Sequencer once instantiated, is explicitly COMPLETE or FUNCTIONALLY COMPLETE with only a documented presentation-only pass remaining, each rebuilt behavior has relevant smoke coverage, and the full CI/build is green.
