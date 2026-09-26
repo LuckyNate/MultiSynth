@@ -8,10 +8,9 @@
   contract.getDefinition(ids.PURE_SYNTH);
 
   const defaults={
-    level:.8,carrier:1,waveform:"sine",
+    level:.8,carrier:1,waveform:"sine",frequencyHz:440,
     phase:0,pwm:50,peak:.5,
-    modulation:0,expression:1,sustainPedal:false,pitchBend:0,program:0,
-    ...prefabs.ADSR_DEFAULTS
+    modulation:0,expression:1,pitchBend:0,program:0
   };
   const waveforms=["sine","square","triangle","white","pink","red","blue"];
   const controls=waveforms.map(name=>({
@@ -20,6 +19,7 @@
     node:"controller.waveform."+name
   }));
   controls.push(
+    {id:"pitch",control:"encoder",state:"frequencyHz",label:"PITCH",value:{default:440,min:20,max:20000,step:1},meta:{unit:"Hz",scale:"logarithmic"},node:"controller.pitch"},
     {id:"shape",control:"encoder",label:"SHAPE",value:{default:0,min:0,max:360,step:1},
       meta:{contextState:"waveform",contexts:{
         sine:{state:"phase",label:"PHASE",min:0,max:360,step:1,unit:"°"},
@@ -27,48 +27,43 @@
         triangle:{state:"peak",label:"PEAK",min:0,max:1,step:.01,unit:""}
       }},node:"controller.shape"},
     {id:"modulation",control:"knob",state:"modulation",label:"MOD",value:{default:0,min:0,max:1,step:.01},meta:{midi:{cc:1}},node:"controller.modulation"},
-    {id:"sustain-pedal",control:"switch",state:"sustainPedal",label:"SUSTAIN",value:{default:false},meta:{midi:{cc:64}},node:"controller.sustain"},
     {id:"level",control:"knob",state:"level",label:"LEVEL",value:{default:.8,min:0,max:1,step:.01},meta:{midi:{cc:7}},node:"controller.level"},
-    prefabs.adsr(),
     prefabs.performanceKeyboard(),
     {id:"scope",control:"oscilloscope",label:"OUTPUT",meta:{displayOnly:true},node:"indicator.scope"}
   );
 
   contract.defineSurface(ids.PURE_SYNTH,{
-    version:12,
-    package:{id:ids.PURE_SYNTH,version:12,behavior:{
-      role:"canonical-basic-midi-synth",audioMode:"generator-or-carrier-processor",noise:true,
+    version:13,
+    package:{id:ids.PURE_SYNTH,version:13,behavior:{
+      role:"continuous-oscillator-source",audioMode:"generator",noise:true,
       stateOwnership:"module",trianglePeakMorphsToSaw:true,sourceLayer:"DspSources",
-      sourceOwnership:"shared-bottom-layer",voiceEnvelope:"built-in-adsr",
-      midi:"note-on-off-velocity-pitch-bend-cc1-cc7-cc11-cc64-program-change",
+      sourceOwnership:"shared-bottom-layer",voiceEnvelope:"none",
+      pitch:"frequency-hz-or-keyboard-note-last-control-wins",
+      midi:"note-on-sets-frequency-pitch-bend-cc1-cc7-cc11-program-change",
       shape:"waveform-context-sensitive"
     }},
     faceplate:{livery:"pure-white",primary:"#111",secondary:"#f4f4f0",tertiary:"#aaa"},
     defaults,controls,
     sources:[
-      {id:"source.audio",type:"audioInput",mode:"optional"},
-      {id:"source.generated",type:"dspSource",primitive:"DspSources.oscillator|DspSources.noise",mode:"waveform-selected"},
-      {id:"source.midi",type:"midiInput",mode:"note-and-channel-messages"}
+      {id:"source.generated",type:"dspSource",primitive:"DspSources.oscillator|DspSources.noise",mode:"continuous-waveform-selected"},
+      {id:"source.midi",type:"midiInput",mode:"note-selects-frequency-and-channel-messages"}
     ],
     actions:[
-      {id:"action.voice",type:"pureOscillator"},
-      {id:"action.envelope",type:"builtInAdsrVca"},
+      {id:"action.voice",type:"continuousPureOscillator"},
       {id:"action.shape",type:"waveShape"},
       {id:"action.expression",type:"midiExpression"},
-      {id:"action.modulation",type:"midiModulation"},
-      {id:"action.sustain",type:"midiSustain"}
+      {id:"action.modulation",type:"midiModulation"}
     ],
     nodes:{connections:[
       ["source.generated","action.voice"],["source.midi","action.voice"],
-      ["controller.keyboard","action.voice"],["controller.modulation","action.modulation"],
-      ["controller.sustain","action.sustain"],
-      ["action.voice","action.envelope"],["controller.adsr","action.envelope"],
+      ["controller.keyboard","action.voice"],["controller.pitch","action.voice"],
+      ["controller.modulation","action.modulation"],
       ["controller.waveform.sine","action.shape"],["controller.waveform.square","action.shape"],
       ["controller.waveform.triangle","action.shape"],["controller.waveform.white","action.shape"],
       ["controller.waveform.pink","action.shape"],["controller.waveform.red","action.shape"],
       ["controller.waveform.blue","action.shape"],["controller.shape","action.shape"],
       ["controller.level","action.voice"],["action.expression","action.voice"],
-      ["action.envelope","indicator.scope"]
+      ["action.voice","indicator.scope"]
     ]}
   });
 })(window);
