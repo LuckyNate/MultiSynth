@@ -148,7 +148,7 @@ Formant/vocal-shape processor for incoming Carrier audio. Real MIDI controls for
 Playable granular instrument. Real Note On/Off + velocity, Pitch Bend, CC1, CC11, CC64 and explicit granular CC mappings control voices and grain state.
 
 ### Been Served
-MIDI-articulated Carrier envelope. Note On/Off drives gating with velocity; CC64 sustain plus ADSR/expression mappings control the same envelope state as the UI.
+Carrier envelope generator. Carrier audio is multiplied by a MIDI-gated ADSR envelope; it is not a synth voice and does not generate its own carrier. Note On starts the envelope and velocity sets the envelope peak. Note Off releases it unless CC64 sustain pedal is holding the note. CC11 controls expression after the ADSR stage. Standard MIDI Sound Controllers are used where they exist: CC73 Attack Time, CC75 Decay Time, and CC72 Release Time. Sustain level has no standard MIDI controller, so it uses the module-specific CC16 rather than repurposing a defined standard CC. All Notes Off / All Sound Off clear held and sustained state.
 
 ### Garage Band
 Three-band Carrier processor. Band frequency/Q/level/mute plus overall mix/bypass are real-MIDI addressable.
