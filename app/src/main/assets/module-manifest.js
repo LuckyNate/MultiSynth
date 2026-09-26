@@ -22,7 +22,7 @@
     [I.GRAIN_LIQOUR]:row(I.GRAIN_LIQOUR,"granular","#8d5fa8",["audioOutput","generator","noteInput","midiInput","pcm"],["pcm","storage"]),
     [I.BEEN_SERVED]:row(I.BEEN_SERVED,"effect","#d6a04b",["audioInput","audioOutput","noteInput","midiInput"],[]),
     [I.GARAGE_BAND]:row(I.GARAGE_BAND,"effect","#8b8b8b",["audioInput","audioOutput","midiInput"],["midi"]),
-    [I.MASTER_OF_LEVELS]:row(I.MASTER_OF_LEVELS,"utility","#d0d0d0",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal"}),
+    [I.MASTER_OF_LEVELS]:row(I.MASTER_OF_LEVELS,"effect","#d0d0d0",["audioInput","audioOutput","midiInput"],["midi"]),
     [I.ALCHEMY_MIXER]:row(I.ALCHEMY_MIXER,"mixer","#9a6734",["audioInput","audioOutput","terminalOutput"],[],{audioRole:"terminal",carrierBehavior:"passthrough"}),
     [I.PLUS_ONE_SPLITTER]:row(I.PLUS_ONE_SPLITTER,"routing","#6ec7ff",["audioInput","audioOutput","clockFollower","clockSource"],[],{carrierBehavior:"passthrough"}),
     [I.PLUS_ONE_MERGER]:row(I.PLUS_ONE_MERGER,"routing","#ffb86e",["audioInput","audioOutput","midiInput","midiOutput","clockFollower","clockSource"],[],{carrierBehavior:"passthrough"}),
