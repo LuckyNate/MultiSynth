@@ -28,7 +28,7 @@
     [I.PLUS_ONE_MERGER]:row(I.PLUS_ONE_MERGER,"routing","#ffb86e",["audioInput","audioOutput"],[],{carrierBehavior:"passthrough"}),
     [I.DENZELS_EQUALIZER]:row(I.DENZELS_EQUALIZER,"effect","#72b9a7",["audioInput","audioOutput"],[]),
     [I.ECHO_CANYON]:row(I.ECHO_CANYON,"effect","#c47b48",["audioInput","audioOutput"],[]),
-    [I.CONTROL_FREAK]:row(I.CONTROL_FREAK,"controller","#75b7ff",["noteInput","midi","midiInput","midiOutput"],["midi"]),
+    [I.CONTROL_FREAK]:row(I.CONTROL_FREAK,"controller","#75b7ff",["midiOutput"],[]),
     [I.LOWRIDER_LFO]:row(I.LOWRIDER_LFO,"modulator","#d6aa3c",["audioOutput","generator","midiOutput"],[],{audioRole:"generator"}),
     [I.UNSTABLE_DIFFUSION]:row(I.UNSTABLE_DIFFUSION,"instrument","#e8e8e8",["audioInput","audioOutput","generator","noteInput","midiInput","pcm"],["pcm","storage"],{audioRole:"processor",carrierBehavior:"transform"}),
     [I.KEYLESS88]:row(I.KEYLESS88,"instrument","#7ee7ff",["audioInput","audioOutput","generator"],[],{audioRole:"processor",carrierBehavior:"transform"}),
