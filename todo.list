@@ -18,7 +18,7 @@ TOP PRIORITY — FIRST-CLASS MIDI PATCHING
 - This MIDI-jack foundation is completed before continuing broad module-by-module MIDI rebuild work.
 
 Goal
-- Finish rebuilding every registered production module plus the approved planned Gene Sequencer against the current real-MIDI architecture and canonical control library.
+- Finish rebuilding the remaining production modules against the current real-MIDI architecture and canonical control library.
 - `app/src/main/assets/module-manifest.js` is the authoritative active registered module roster.
 - `modules.md` is the musician-facing rebuild contract and status ledger for the registered roster plus approved planned modules.
 - Reuse established software patterns wherever applicable: state shape, MIDI/event flow, timing/scheduling, lifecycle handling, persistence, editor/runtime separation, canonical controls/prefabs, and smoke coverage.
@@ -44,14 +44,20 @@ Completion gate for each module
 - full CI/build is green
 - `modules.md` status updated
 
-Known COMPLETE in the current rebuild pass
-- Father Time
-- Whitman Sampler
-- Time Bandits
-- PureSynth
-- QuadSynth
-- Hook and Ladder
+REMAINING MIDI REBUILD MODULES — AUTHORITATIVE
+- Echo Canyon
+- Control Freak
+- LOWRIDER LFO
+- Unstable Diffusion
+- Keyless88
+- No Quarter
+- Randrone
+- Hookworm
+- Tapeworm
+- Tail Gator
+- MIDIchlorian
+- Bluetooth Output
 
-Everything else in the active production roster, plus Gene Sequencer once instantiated, remains part of this same MIDI rebuild pass until explicitly marked COMPLETE.
+This list is the authoritative remaining module set for the current MIDI rebuild pass. Modules not listed here are not remaining MIDI-rebuild targets.
 
 TEST MODULE is the development/control verification harness and is not a production-module rebuild target.
