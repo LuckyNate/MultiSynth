@@ -6,6 +6,8 @@ import {fileURLToPath} from "node:url";
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const engineSource=fs.readFileSync(path.join(repo,"app/src/main/assets/node-graph-engine.js"),"utf8");
 const manifestSource=fs.readFileSync(path.join(repo,"app/src/main/assets/module-manifest.js"),"utf8");
+const audioGraphSource=fs.readFileSync(path.join(repo,"app/src/main/assets/node-audio-graph.js"),"utf8");
+const alchemySource=fs.readFileSync(path.join(repo,"app/src/main/assets/modules/alchemy-mixer.js"),"utf8");
 const splitterSource=fs.readFileSync(path.join(repo,"app/src/main/assets/modules/plus-one-splitter.js"),"utf8");
 const mergerSource=fs.readFileSync(path.join(repo,"app/src/main/assets/modules/plus-one-merger.js"),"utf8");
 const visualSource=fs.readFileSync(path.join(repo,"app/src/main/assets/node-card-visuals.js"),"utf8");
@@ -14,6 +16,13 @@ if(!manifestSource.includes('[I.PLUS_ONE_SPLITTER]:row(I.PLUS_ONE_SPLITTER,"rout
 if(splitterSource.includes('midiMessage')||splitterSource.includes('source.midi'))throw new Error("splitter still implements MIDI");
 if(!mergerSource.includes('midiMessage')||!mergerSource.includes('emit?.("midi"'))throw new Error("merger does not forward MIDI");
 if(!visualSource.includes('nodePort.midi')||!visualSource.includes('I.PLUS_ONE_SPLITTER'))throw new Error("splitter MIDI jack removal missing from node visuals");
+
+// Alchemy Mixer is the local-speaker output path, while keeping a normal Carrier output
+// available for explicit chaining to Bluetooth/car-audio/other destination gates.
+if(!manifestSource.includes('destination:"local-speaker",chainableOutput:true'))throw new Error("Alchemy manifest does not declare local-speaker + chainable output routing");
+if(!alchemySource.includes('physicalOutput:"local-speaker-only"')||!alchemySource.includes('carrierOutput:"chainable-for-additional-output-gates"'))throw new Error("Alchemy surface output contract missing");
+if(!audioGraphSource.includes('g.modules.filter(m=>m.type===I()?.ALCHEMY_MIXER)'))throw new Error("Alchemy is not the explicit local collector source");
+if(audioGraphSource.includes('g.modules.filter(m=>m.type===I()?.BLUETOOTH_OUTPUT)'))throw new Error("Bluetooth Output was incorrectly auto-connected to local speaker collector");
 
 const ids={PLUS_ONE_SPLITTER:"plus-one-splitter",PLUS_ONE_MERGER:"plus-one-merger",canonicalId:v=>String(v||"")};
 const contract={
@@ -93,4 +102,4 @@ E.clear();
   expectThrow(()=>E.connectNodes(E.moduleMidiOut(a),E.moduleIn(b)),"cannot be crossed");
 }
 
-console.log("routing utility smoke passed — MIDI OUT fans out directly; +1 Splitter is Carrier/Clock only; merger still owns fan-in");
+console.log("routing utility smoke passed — Alchemy owns local-speaker output while remaining chainable; other output gates stay explicit; routing domain rules verified");
