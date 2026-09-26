@@ -106,6 +106,9 @@ jobs:
       - name: Sample utilities smoke
         run: node tools/sample-utilities-smoke.mjs
 
+      - name: Granular family smoke
+        run: node tools/granular-family-smoke.mjs
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
