@@ -103,6 +103,9 @@ jobs:
       - name: The Chopper MIDI smoke
         run: node tools/the-chopper-midi-smoke.mjs
 
+      - name: Sample utilities smoke
+        run: node tools/sample-utilities-smoke.mjs
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
