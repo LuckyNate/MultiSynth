@@ -2,7 +2,7 @@
 (function(global){
 const MS=global.MultiSynth||{},C=MS.ModuleContract,I=MS.ModuleIds;if(!C||!I)return;
 const defaults={levels:{}};
-const clamp=v=>Math.max(0,Math.min(1,Number(v)??1));
+const clamp=v=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):1};
 const levelFor=(state,index)=>clamp(state?.levels?.[index]??state?.levels?.[String(index)]??1);
 function apply(u,state){for(const[index,gain]of u.inputs)gain.gain.value=levelFor(state,index)}
 function create(api){const output=api.context.createGain(),inputs=new Map();const u={output,inputs,input(index){index=Math.max(0,index|0);let g=inputs.get(index);if(!g){g=api.context.createGain();g.connect(output);inputs.set(index,g);apply(u,api.state)}return g},sync(state){apply(u,state)}};api.setInput(u.input(0));api.setOutput(output);return u}
@@ -13,7 +13,7 @@ C.defineSurface(I.PLUS_ONE_MERGER,{family:"ROUTING",version:3,package:{id:I.PLUS
 
 (function(global){
 if(global.parent===global)return;const q=new URLSearchParams(global.location.search),instance=q.get("instance"),P=global.parent.MultiSynth||{},E=P.NodeGraphEngine,MS=global.MultiSynth||{},R=MS.ControlSurfaceRenderer,C=MS.ControlSurface?.CONTROL,out=document.getElementById("ratio"),detail=document.getElementById("detail"),levels=document.getElementById("levels");if(!instance||!E||!out||!levels||!R||!C)return;
-const clamp=v=>Math.max(0,Math.min(1,Number(v)||0));
+const clamp=v=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0};
 function state(){return E.getModule(instance)?.state||{levels:{}}}
 function usedInputs(){return(E.graph().connections||[]).map(c=>E.parseNode(c.to)).filter(p=>p?.id===instance&&p.signal==="carrier"&&p.index!=null).sort((a,b)=>a.index-b.index)}
 function level(i){return clamp(state().levels?.[i]??state().levels?.[String(i)]??1)}
