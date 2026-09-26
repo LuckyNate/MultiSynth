@@ -49,26 +49,35 @@ A.retuneModuleNote("quad",62,74);
 if(Math.abs(clickRetuneHz-880)>.001)throw new Error("performance ribbon did not retune finite CLICK repeater by musical pitch ratio");
 if(clickVoice.sources[0]===oldClickSource||clickVoice.sources[0]!==clickRepeater.source)throw new Error("performance ribbon did not adopt regenerated CLICK sample source");
 
-const scopedFiles=[
+const localKeyboardFiles=[
   "app/src/main/assets/quadsynth.html",
   "app/src/main/assets/puresynth.html",
   "app/src/main/assets/no-quarter.html",
   "app/src/main/assets/hook-and-ladder.html",
   "app/src/main/assets/grain-liqour-editor.js",
-  "app/src/main/assets/modules/control-freak.js",
   "app/src/main/assets/rearranger-ui.js"
 ];
-for(const rel of scopedFiles){
+for(const rel of localKeyboardFiles){
   const text=fs.readFileSync(path.join(repo,rel),"utf8");
   for(const required of ["noteOnTo?.(instance","noteOffTo?.(instance","retuneModuleNote?.(instance","panicModule?.(instance)"]){
     if(!text.includes(required))throw new Error(`${rel} keyboard missing scoped adapter: ${required}`);
   }
   if(/(?:PerformanceKeyboard|PK)\??\.mount\??\([^\n;]*\{audio:A\}/.test(text)||text.includes("K.mount(host,{audio:A})"))throw new Error(`${rel} keyboard still mounts the global broadcast audio API`);
 }
+
+const controlFreak=fs.readFileSync(path.join(repo,"app/src/main/assets/modules/control-freak.js"),"utf8");
+for(const required of ["noteOnFrom?.(instance","noteOffFrom?.(instance","midiFrom?.(instance"]){
+  if(!controlFreak.includes(required))throw new Error(`Control Freak software controller missing MIDI OUT adapter: ${required}`);
+}
+for(const required of ["KNOBS 1–8","FADERS 1–8","PADS 1–16","control:\"xy\"","control:\"ribbon\"","control:\"button\",label:\"PANIC\""]){
+  if(!controlFreak.includes(required))throw new Error(`Control Freak default faceplate missing required software control: ${required}`);
+}
+if(controlFreak.includes("hardwareDiscovery")||controlFreak.includes("MIDI LEARN")||controlFreak.includes("hardware-midi"))throw new Error("Control Freak default software build still contains deferred hardware liaison scaffolding");
+
 const assets=path.join(repo,"app/src/main/assets");
 for(const rel of fs.readdirSync(assets)){
   if(!/\.(?:html|js)$/.test(rel))continue;
   const text=fs.readFileSync(path.join(assets,rel),"utf8");
   if(text.includes("K.mount(host,{audio:A})")||text.includes("PerformanceKeyboard.mount(keyboardHost,{audio:A})")||text.includes("PK?.mount?.(keyboardHost,{audio:A})"))throw new Error(`${rel} contains an unscoped onboard performance keyboard`);
 }
-console.log("module keyboard scope: every onboard performance keyboard stays local to its owning module; patch-wide MIDI now requires explicit MIDI routing");
+console.log("module keyboard scope: onboard instrument keyboards stay local; Control Freak is a full software MIDI source; patch-wide MIDI requires explicit routing");
