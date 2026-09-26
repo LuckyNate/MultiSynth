@@ -10,9 +10,9 @@
   const row=(id,category,color,capabilities=[],resources=[],routing={})=>{const ident=I.identityFor(id);if(!ident)throw new Error("Missing module identity: "+id);const caps=Object.freeze(capabilities.slice()),route=routingFor(caps,routing),role=B?.infer(caps,route)||"root",ports=B?.require(role)?.ports?.slice?.()||[],theme=B?.theme?.(ident,color)||Object.freeze({key:ident.themeKey||ident.id,color,decal:null});return Object.freeze({id:ident.id,displayName:ident.displayName,editorUrl:ident.editorUrl,moduleScript:ident.moduleScript,themeKey:theme.key||ident.themeKey||ident.id,theme,decal:theme.decal||null,category,color,capabilities:caps,resources:Object.freeze(resources.slice()),boilerplateRole:role,boilerplatePorts:Object.freeze(ports),routing:route});};
   const M=Object.freeze({
     [I.LIVE_WIRE]:row(I.LIVE_WIRE,"input","#72d7ff",["audioOutput","generator"],["nativeAudio"]),
-    [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["clockSource","clockFollower","midi"],["midi","storage"]),
-    [I.WHITMAN_SAMPLER]:row(I.WHITMAN_SAMPLER,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","midiInput","clockFollower","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
-    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"rhythm","#c89b52",["audioInput","audioOutput","noteInput","midiInput","clockFollower"],["midi"],{carrierBehavior:"add"}),
+    [I.FATHER_TIME]:row(I.FATHER_TIME,"clock","#8d6b45",["clockSource","clockFollower","midi","midiInput","midiOutput"],["midi","storage"]),
+    [I.WHITMAN_SAMPLER]:row(I.WHITMAN_SAMPLER,"sampler","#6b3f24",["audioInput","audioOutput","noteInput","midiInput","midiOutput","clockFollower","pcm"],["pcm","storage"],{carrierBehavior:"add"}),
+    [I.TIME_BANDITS]:row(I.TIME_BANDITS,"rhythm","#c89b52",["audioInput","audioOutput","noteInput","midiInput","midiOutput","clockFollower"],["midi"],{carrierBehavior:"add"}),
     [I.REARRANGER]:row(I.REARRANGER,"sequencer","#b75cff",["midiInput","midiOutput"]),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
     [I.SAMPLE_SURGERY]:row(I.SAMPLE_SURGERY,"utility","#7fc9b2",["pcm"],["pcm","storage"]),
