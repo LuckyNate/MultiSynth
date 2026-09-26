@@ -1,5 +1,24 @@
 # MultiSynth Development Log
 
+## 2026-09-26 — Remaining MIDI rebuild set fixed
+
+The authoritative remaining module set for the current real-MIDI rebuild pass is now fixed to exactly these modules:
+
+- Echo Canyon
+- Control Freak
+- LOWRIDER LFO
+- Unstable Diffusion
+- Keyless88
+- No Quarter
+- Randrone
+- Hookworm
+- Tapeworm
+- Tail Gator
+- MIDIchlorian
+- Bluetooth Output
+
+`modules.md` and `todo.list` carry this same authoritative list. Modules not listed above are not remaining MIDI-rebuild targets for this pass.
+
 ## 2026-09-17 — Active roster closed, fixed ladder family retired, Hook and Ladder adopted
 
 The active registered module roster is now treated as the complete current module set. `module-manifest.js` is the authoritative runtime roster and `modules.md` is the musician-facing rebuild/status ledger for the same set.
