@@ -16,7 +16,7 @@
     [I.REARRANGER]:row(I.REARRANGER,"sequencer","#b75cff",["midiInput","midiOutput"]),
     [I.THE_CHOPPER]:row(I.THE_CHOPPER,"sampler","#b88952",["audioInput","audioOutput","pcm","mic"],["pcm","mic","storage"]),
     [I.SAMPLE_SURGERY]:row(I.SAMPLE_SURGERY,"utility","#7fc9b2",["pcm"],["pcm","storage"]),
-    [I.SAMPLE_LIBRARY]:row(I.SAMPLE_LIBRARY,"utility","#c8b57a",["pcm"],["storage","pcm"]),
+    [I.SAMPLE_LIBRARY]:row(I.SAMPLE_LIBRARY,"utility","#c8b57a",["pcm"],["pcm","storage"]),
     [I.BIG_DEAL]:row(I.BIG_DEAL,"granular","#b4232f",["audioInput","audioOutput","noteInput","midiInput","pcm"],["pcm","storage"]),
     [I.BIG_MOUTH]:row(I.BIG_MOUTH,"effect","#ff4f87",["audioInput","audioOutput","midiInput","pcm","mic"],["pcm","mic","storage"]),
     [I.GRAIN_LIQOUR]:row(I.GRAIN_LIQOUR,"granular","#8d5fa8",["audioOutput","generator","noteInput","midiInput","pcm"],["pcm","storage"]),
