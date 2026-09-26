@@ -100,6 +100,9 @@ jobs:
       - name: Routing utility smoke
         run: node tools/routing-utility-smoke.mjs
 
+      - name: The Chopper MIDI smoke
+        run: node tools/the-chopper-midi-smoke.mjs
+
       - name: Prepare publishable signing key
         env:
           MULTISYNTH_KEYSTORE_B64: ${{ secrets.MULTISYNTH_KEYSTORE_B64 }}
