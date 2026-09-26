@@ -76,9 +76,22 @@ The former Pulsynth, SinLadder, Razorback, Stinger, and LadderSynth family is re
 
 - The Chopper — capture, PCM-library loading, high-frequency/envelope-change auto chopping, manual cut editing, saving, and host-targeted MIDI control are functionally complete. Final appearance/polish pass remains.
 
-### ACTIVE / REBUILD PASS NOT YET CLOSED
+### REMAINING MIDI REBUILD MODULES — AUTHORITATIVE
 
-Every other production module in the roster, plus Gene Sequencer once instantiated, remains part of the same full real-MIDI rebuild pass until explicitly marked COMPLETE or FUNCTIONALLY COMPLETE with a documented remaining presentation-only pass.
+- Echo Canyon
+- Control Freak
+- LOWRIDER LFO
+- Unstable Diffusion
+- Keyless88
+- No Quarter
+- Randrone
+- Hookworm
+- Tapeworm
+- Tail Gator
+- MIDIchlorian
+- Bluetooth Output
+
+This list is the authoritative remaining module set for the current MIDI rebuild pass. Modules not listed here are not remaining MIDI-rebuild targets.
 
 `TEST MODULE` is the canonical development/control verification harness rather than a production-module rebuild target.
 
@@ -226,4 +239,4 @@ Terminal audio-routing module for supported Android/Bluetooth output destination
 
 ## Completion rule
 
-The full MIDI rebuild is finished only when every active production module above, including the approved Gene Sequencer once instantiated, is explicitly COMPLETE or FUNCTIONALLY COMPLETE with only a documented presentation-only pass remaining, each rebuilt behavior has relevant smoke coverage, and the full CI/build is green.
+The current MIDI rebuild pass is finished when the modules in the authoritative remaining list above have each been explicitly closed with relevant smoke coverage and a green full CI/build. Modules not in that list are not remaining MIDI-rebuild targets.
